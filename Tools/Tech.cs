@@ -14,6 +14,7 @@ public class Tech
     public string[] effect;
     public int[] effectType;
     public float[] effectStrength;
+    public Effect[] effects;
     public int type;
 
     public void TakeTech(int civID)

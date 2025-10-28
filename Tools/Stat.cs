@@ -12,6 +12,7 @@ public class Stat
     public List<Modifier> modifiers = new List<Modifier>();
     bool tempActive;
     public bool isFlat;
+    public float decayAmount = 1f;
     public Stat(float BaseStat,string Name,bool IsFlat = false)
     {
         baseStat = BaseStat;
@@ -105,13 +106,40 @@ public class Stat
     }
     public void AddModifier(Modifier modifier)
     {
-        modifiers.Add(modifier);
-        SetValue();
-        if(modifier.duration != -1 && !tempActive)
+        if (!modifiers.Exists(i => i.name == modifier.name))
         {
-            Game.main.tenMinTick.AddListener(TickTempModifiers);
-            tempActive = true;
+            modifiers.Add(modifier);
+            SetValue();
+            if ((modifier.duration != -1 || modifier.decay) && !tempActive)
+            {
+                Game.main.tenMinTick.AddListener(TickTempModifiers);
+                tempActive = true;
+            }
         }
+        else
+        {
+            Debug.Log("Modifier with name " + modifier.name + " already exists on stat " + name);
+        }
+    }
+    public void IncreaseModifier(string name, float byAmount, int type = 0,bool Decay = true)
+    {
+        Modifier modifier;
+        if (modifiers.Exists(i => i.name == name))
+        {
+            modifier = modifiers.Find(i => i.name == name);
+            modifier.value += byAmount;
+        }
+        else
+        {
+            modifier = new Modifier(byAmount, type, name, decay: Decay);
+            AddModifier(modifier);
+            if ((modifier.duration != -1 || modifier.decay) && !tempActive)
+            {
+                Game.main.tenMinTick.AddListener(TickTempModifiers);
+                tempActive = true;
+            }
+        }
+        SetValue();
     }
     void TickTempModifiers()
     {
@@ -129,6 +157,26 @@ public class Stat
                 {
                     hasTemp = true;
                 }
+            }
+            if (modifier.decay)
+            {
+                if(modifier.value > 0)
+                {
+                    modifier.value -= 1f / 1440f;
+                    if(modifier.value < 0)
+                    {
+                        RemoveModifier(modifier);
+                    }
+                }
+                else if (modifier.value < 0)
+                {
+                    modifier.value += decayAmount / 1440f;
+                    if (modifier.value > 0)
+                    {
+                        RemoveModifier(modifier);
+                    }
+                }
+                hasTemp = true;
             }
         }
         if (!hasTemp)
@@ -153,16 +201,36 @@ public class Stat
     }
     public void UpdateModifier(string name,  float value, int type = 0)
     {
+        Modifier modifier = modifiers.Find(i => i.name == name);
+        try
+        {
+            modifier.value = value;
+        }
+        catch
+        {
+            modifier = new Modifier(value, type, name);
+            AddModifier(modifier);           
+        }
+        SetValue();
+    }
+    public void UpdateModifierDuration(string name,float value, int duration, int type = 0)
+    {
         Modifier modifier;
-        if(modifiers.Exists(i=>i.name == name))
+        if (modifiers.Exists(i => i.name == name))
         {
             modifier = modifiers.Find(i => i.name == name);
+            modifier.duration = duration;
             modifier.value = value;
         }
         else
         {
-            modifier = new Modifier(value, type,name);
+            modifier = new Modifier(value, type, name, duration);
             AddModifier(modifier);
+            if ((modifier.duration != -1 || modifier.decay) && !tempActive)
+            {
+                Game.main.tenMinTick.AddListener(TickTempModifiers);
+                tempActive = true;
+            }
         }
         SetValue();
     }

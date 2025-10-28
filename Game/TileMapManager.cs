@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using TreeEditor;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
-using UnityEngine.UIElements;
-using static UnityEditor.Progress;
 
 public class TileMapManager : MonoBehaviour
 {
@@ -16,13 +10,14 @@ public class TileMapManager : MonoBehaviour
     public Vector3Int OldselectedPos;
     private GameObject selector;
     [SerializeField] private GameObject selectorPrefab;
+    [SerializeField] public TileBase dropped, normal , raised,doubleRaised;
 
     private void OnMouseOver()
     {
         if (Player.myPlayer.isHoveringUI) { return; }
         Vector3Int tilemapPos = tilemap.WorldToCell(Camera.main.ScreenToWorldPoint(Input.mousePosition));
         TileData tileData = Map.main.GetTile(tilemapPos);
-        if (Input.GetMouseButtonDown(1))
+        if (Input.GetMouseButtonDown(1) && Game.main.Started)
         {          
             if(Player.myPlayer.selectedArmies.Count > 0 && Game.main.Started && Player.myPlayer.myCivID > -1)
             {
@@ -31,8 +26,10 @@ public class TileMapManager : MonoBehaviour
             else
             {             
                 UIManager.main.CivUI.SetActive(true);
+                Game.main.refreshMap = true;
                 UIManager.main.CivUI.GetComponent<CivUIPanel>().OpenMenu(2);
                 DiplomacyUIPanel.main.diploCivID = tileData.civID;
+                DiplomacyUIPanel.main.CancelWarDec();
                 DeselectTile();
             }
         }
@@ -67,30 +64,37 @@ public class TileMapManager : MonoBehaviour
             SelectTile(tilemapPos);
         }
     }
-    void DeselectTile()
+    public void DeselectTile()
     {
-        Destroy(selector);
+        if (selector != null)
+        {
+            Destroy(selector);
+        }
         OldselectedPos = selectedPos;
         selectedPos = Vector3Int.zero;
         Player.myPlayer.selectedTile = null;
         Player.myPlayer.tileSelected = false;
     }
-    void SelectTile(Vector3Int tilemapPos)
+    public void SelectTile(Vector3Int tilemapPos)
     {
         TileData tileData = Map.main.GetTile(tilemapPos);
         OldselectedPos = selectedPos;
         selectedPos = tilemapPos;
-        UIManager.main.CivUI.SetActive(false);
-        Player.myPlayer.tileSelected = true;
-        Player.myPlayer.selectedTile = tileData;
-        Player.myPlayer.siegeSelected = tileData.underSiege && !Player.myPlayer.siegeSelected;
-        Player.myPlayer.selectedArmies.Clear();
+        if (Game.main.Started)
+        {
+            UIManager.main.CivUI.SetActive(false);
+            Player.myPlayer.tileSelected = true;
+            Player.myPlayer.selectedTile = tileData;
+            Player.myPlayer.siegeSelected = tileData.underSiege && !Player.myPlayer.siegeSelected;
+            Player.myPlayer.selectedArmies.Clear();
+            MoveSelector(tilemapPos);
+        }
+        Debug.Log("On Tile " + tileData.armiesOnTile.Count);
         
         if (!Game.main.Started || Player.myPlayer.spectator)
         {
             Player.myPlayer.SelectCiv(Map.main.GetTile(selectedPos).civID);
         }
-        MoveSelector(tilemapPos);
     }
     public void ClearSelection()
     {

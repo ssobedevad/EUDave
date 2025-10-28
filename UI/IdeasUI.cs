@@ -25,7 +25,7 @@ public class IdeasUI : MonoBehaviour
             for (int j = 1; j < buttons.Length; j++)
             {
                 int level = j - 1;
-                buttons[j].onClick.AddListener(delegate { BuyIdea(index, level); });
+                buttons[j].onClick.AddListener(delegate { BuyIdeaLocal(index, level); });
             }
         }
     }
@@ -36,10 +36,14 @@ public class IdeasUI : MonoBehaviour
         cost += (int)(baseCost * (civ.ideaCosts.value));        
         return Mathf.Max(1, cost);
     }
-    void BuyIdea(int index,int level)
+    void BuyIdeaLocal(int index, int level)
     {
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
+        BuyIdea(index, level, civ);
+    }
+    public static void BuyIdea(int index,int level,Civilisation civ)
+    {       
         IdeaGroupData ideaGroup = civ.ideaGroups[index];
         int points = ideaGroup.type == 0 ? civ.adminPower : ideaGroup.type == 1 ? civ.diploPower : civ.milPower;
         if (points < GetIdeaCost(civ))
@@ -51,21 +55,25 @@ public class IdeasUI : MonoBehaviour
         else { civ.milPower -= GetIdeaCost(civ); }
         IdeaGroup group = ideaGroup.type == 0 ? Map.main.IdeasA[ideaGroup.id] : ideaGroup.type == 1 ? Map.main.IdeasD[ideaGroup.id] : Map.main.IdeasM[ideaGroup.id];
         Idea idea = group.ideas[level];
-        for(int i = 0; i < idea.effect.Length; i++)
+        for(int i = 0; i < idea.effects.Length; i++)
         {
-            civ.ApplyCivModifier(idea.effect[i], idea.effectStrength[i], idea.name, idea.type[i]);
+            civ.ApplyCivModifier(idea.effects[i].name, idea.effects[i].amount, idea.name, idea.effects[i].type);
         }
         ideaGroup.unlockedLevel++;
         if ((civ.totalIdeas + 1) % 3 == 0)
         {
-            int ideaIndex = (int)(civ.totalIdeas + 1) / 3;
+            int ideaIndex = (int)(civ.totalIdeas - 2) / 3;
             
             if (civ.nationalIdeas.ideas.Length <= ideaIndex) { return; }
             
             Idea natI = civ.nationalIdeas.ideas[ideaIndex];
-            for (int i = 0; i < natI.effect.Length; i++)
+            if (civ == Player.myPlayer.myCiv)
             {
-                civ.ApplyCivModifier(natI.effect[i], natI.effectStrength[i], natI.name, natI.type[i]);
+                Debug.Log(natI.name + " Unlock");
+            }
+            for (int i = 0; i < natI.effects.Length; i++)
+            {
+                civ.ApplyCivModifier(natI.effects[i].name, natI.effects[i].amount, natI.name, natI.effects[i].type);
             }
         }
     }
@@ -73,14 +81,14 @@ public class IdeasUI : MonoBehaviour
     {
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
-        trad1.text = civ.nationalIdeas.traditionOne;
-        trad2.text = civ.nationalIdeas.traditonTwo;
-        trad1V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditonAmountOne,civ.GetStat(civ.nationalIdeas.traditionOne));
-        trad2V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditionAmountTwo, civ.GetStat(civ.nationalIdeas.traditonTwo));
+        trad1.text = civ.nationalIdeas.traditions[0].name;
+        trad2.text = civ.nationalIdeas.traditions[1].name;
+        trad1V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditions[0].amount, civ.GetStat(civ.nationalIdeas.traditions[0].name));
+        trad2V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditions[1].amount, civ.GetStat(civ.nationalIdeas.traditions[1].name));
         int unlocked = 0;
         foreach(var civIdea in civ.ideaGroups)
         {
-            if (civIdea.active)
+            if (civIdea != null && civIdea.active)
             {
                 unlocked += civIdea.unlockedLevel;
             }
@@ -97,7 +105,7 @@ public class IdeasUI : MonoBehaviour
             images.Remove(images[0]);
             if (civ.unlockedIdeaGroupSlots > i)
             {               
-                if (civ.ideaGroups[i].active)
+                if (civ.ideaGroups[i] != null && civ.ideaGroups[i].active)
                 {
                     ideaGroups[i].GetComponent<Button>().interactable = false;
                     images.ForEach(i => i.enabled = true);
@@ -133,7 +141,13 @@ public class IdeasUI : MonoBehaviour
             ideas[i].text = idea.GetHoverText(civ);
             ideas[i].text += "Cost " + IdeasUI.GetIdeaCost(civ) + (ideaGroup.type == 0 ? "<sprite index=1>" : ideaGroup.type == 1 ?"<sprite index=2>" : "<sprite index=3>");
             image.sprite = idea.icon;
-            image.color = ideaGroup.unlockedLevel < i ? Color.gray : ideaGroup.unlockedLevel == i? Color.green : Color.white;            
+            bool canAfford = true;
+            int points = ideaGroup.type == 0 ? civ.adminPower : ideaGroup.type == 1 ? civ.diploPower : civ.milPower;
+            if (points < GetIdeaCost(civ))
+            {
+                canAfford = false;
+            }
+            image.color = ideaGroup.unlockedLevel < i ? Color.gray : ideaGroup.unlockedLevel == i? (canAfford ?Color.green:Color.red) : Color.white;            
         }
         ideaGO.GetComponentInChildren<TextMeshProUGUI>().text = group.name + (group.type == 0 ? "<sprite index=1>" : group.type == 1 ? "<sprite index=2>" : "<sprite index=3>");
     }
@@ -210,7 +224,7 @@ public class IdeasUI : MonoBehaviour
         int index = ideaGroup.type == 0 ? Map.main.IdeasA.ToList().IndexOf(ideaGroup) : ideaGroup.type == 1 ? Map.main.IdeasD.ToList().IndexOf(ideaGroup) : Map.main.IdeasM.ToList().IndexOf(ideaGroup);
         foreach(var idea in civ.ideaGroups)
         {
-            if(idea.active &&idea.id == index && idea.type == ideaGroup.type ) { return; }
+            if(idea != null && idea.active &&idea.id == index && idea.type == ideaGroup.type ) { return; }
         }
         civ.ideaGroups[SelectedIndex] = new IdeaGroupData(index,ideaGroup.type,0);
         ideaShop.SetActive(false);

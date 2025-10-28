@@ -27,8 +27,8 @@ public class Notification
     {
         if (isProvince)
         {
-            Player.myPlayer.tileSelected = true;
-            Player.myPlayer.selectedTile = province;
+            Map.main.tileMapManager.SelectTile(province.pos);
+            CameraController.main.rb.position = province.worldPos();
             return;
         }
         if (isCivMenu)

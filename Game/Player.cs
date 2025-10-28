@@ -16,7 +16,7 @@ public class Player : MonoBehaviour
     public List<Army> selectedArmies = new List<Army>();
     public Battle selectedBattle = null;
     [SerializeField] private GameObject hexSpriteMaskPrefab;
-    [SerializeField] private GameObject spriteMaskMain;
+    [SerializeField] public LineRenderer armyMove;
     [SerializeField] public GameObject resoureIndicatorPrefab;
     public List<GameObject> spriteMasks = new List<GameObject>();
     public List<GameObject> resourceIndicators = new List<GameObject>();
@@ -33,6 +33,13 @@ public class Player : MonoBehaviour
     {
         Game.main.start.AddListener(HideMap);
     }
+    private void Update()
+    {
+        if(selectedArmies.Count != 1)
+        {
+            armyMove.gameObject.SetActive(false);
+        }
+    }
     private void HideMap()
     {
         if (myCivID == -1) { spectator = true; }
@@ -44,6 +51,7 @@ public class Player : MonoBehaviour
         {
             myCivID = civID;
         }
+
     }
     public bool isMouseValidClick()
     {
@@ -55,4 +63,5 @@ public class Player : MonoBehaviour
         }
         return false;
     }
+    
 }

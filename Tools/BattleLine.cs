@@ -67,7 +67,7 @@ public class BattleLine
         {
             newRegiments.AddRange(army.regiments);
         }
-        return RefillRegiments(newRegiments,dead, targetWidth);
+        return RefillRegimentsFront(newRegiments,dead, targetWidth);
     }
     public int GetUsedWidth()
     {
@@ -81,7 +81,7 @@ public class BattleLine
         }
         return count;
     }
-    public List<Regiment> RefillRegiments(List<Regiment> newRegiments,List<Regiment> dead,int targetWidth = -1)
+    public List<Regiment> RefillRegimentsFront(List<Regiment> newRegiments,List<Regiment> dead,int targetWidth = -1)
     {
         RecentreRegiments();
         int indent = 0;
@@ -99,18 +99,17 @@ public class BattleLine
         {
             List<Regiment> newInfantry = newRegiments.FindAll(i => i.type == 0);
             List<Regiment> newCavalrly = newRegiments.FindAll(i => i.type == 1);
-            List<Regiment> newArtillery = newRegiments.FindAll(i => i.type == 2);
             int index = i;
             if (j % 2 == 0) { index *= -1; }
             else { i++; index = i; }
             index = centre + index - 1;
-            Regiment next = GetNext(newInfantry, newCavalrly, newArtillery);
+            Regiment next = GetNext(newInfantry, newCavalrly);
             if (index < indent + bonusIndentLeft || index >= width - indent)
             {
                 int distToBattle = index < indent + bonusIndentLeft ? (indent + bonusIndentLeft) - index : index - (width - indent) + 1;
                 if (next != null && next.flankingRange < distToBattle)
                 {
-                    next = GetNext(newCavalrly, newInfantry, newArtillery);
+                    next = GetNext(newCavalrly, newInfantry);
                     if (next != null && next.flankingRange < distToBattle) { next = null; }
                 }
             }
@@ -134,9 +133,56 @@ public class BattleLine
         }
         return used;
     }
-    Regiment GetNext(List<Regiment> firstPrio, List<Regiment> secondPrio,List<Regiment> thirdPrio) 
+    public List<Regiment> RefillRegimentsBack(List<Regiment> newRegiments, List<Regiment> dead, int targetWidth = -1)
     {
-        return firstPrio.Count > 0 ? firstPrio.First() : secondPrio.Count > 0 ? secondPrio.First() : thirdPrio.Count > 0 ? thirdPrio.First() : null;
+        RecentreRegiments();
+        int indent = 0;
+        int bonusIndentLeft = 0;
+        if (targetWidth > -1)
+        {
+            indent = (int)Mathf.Floor((width - targetWidth) / 2f);
+            bonusIndentLeft = targetWidth % 2 == 0 ? 1 : 0;
+        }
+        List<Regiment> used = new List<Regiment>();
+        newRegiments.Sort((x, y) => (y.size * y.morale).CompareTo(x.size * x.morale));
+        List<Regiment> newArtillery = newRegiments.FindAll(i => i.type == 2);
+        if(newArtillery.Count == 0) { return used; }
+        int i = 0;
+        int centre = (width + 1) / 2;
+        for (int j = 0; j < width; j++)
+        {            
+            int index = i;
+            if (j % 2 == 0) { index *= -1; }
+            else { i++; index = i; }
+            index = centre + index - 1;
+            Regiment next = newArtillery.First();
+            if (index < indent + bonusIndentLeft || index >= width - indent)
+            {
+                int distToBattle = index < indent + bonusIndentLeft ? (indent + bonusIndentLeft) - index : index - (width - indent) + 1;
+            }
+            if ((regiments[index] == null || regiments[index].size <= 0 || regiments[index].morale <= 0))
+            {
+                if (regiments[index] != null && (regiments[index].size <= 0 || regiments[index].morale <= 0))
+                {
+                    dead.Add(regiments[index]);
+                }
+                if (next != null)
+                {
+                    regiments[index] = next;
+                    used.Add(next);
+                    newRegiments.Remove(next);
+                }
+                else
+                {
+                    regiments[index] = null;
+                }
+            }
+        }
+        return used;
+    }
+    Regiment GetNext(List<Regiment> firstPrio, List<Regiment> secondPrio) 
+    {
+        return firstPrio.Count > 0 ? firstPrio.First() : secondPrio.Count > 0 ? secondPrio.First() : null;
     }
     public void RecentreRegiments()
     {

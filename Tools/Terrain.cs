@@ -17,6 +17,7 @@ public class Terrain
     {
         string text = name + "\n\n";
         text += "Development Cost: " + (devCostMod > 0f ? "+" : "" )+ Mathf.Round(devCostMod * 100f) + "%\n";
+        text += "Supply Limit: " + (6 +supplyLimitBonus) +"\n";
         if (moveSpeedMod != 0)
         {
             text += "Movement Speed: " + (moveSpeedMod > 0f ? "+" : "") + Mathf.Round(moveSpeedMod * 100f) + "%\n";

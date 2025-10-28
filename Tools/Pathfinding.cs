@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using static UnityEditor.PlayerSettings;
-using UnityEngine.Tilemaps;
 
 public static class Pathfinding
 {
@@ -20,18 +18,16 @@ public static class Pathfinding
             Debug.Log("Start or end is sea tile. Start: " + startPos + " End: " + destination);
             return new Vector3Int[0];
         }
-        Vector3Int cubeStart = TileData.evenr_to_cube(startPos);
-        Vector3Int cubeEnd = TileData.evenr_to_cube(destination);
 
         PriorityQueue<Vector3Int, int> frontier = new PriorityQueue<Vector3Int, int>();
-        frontier.Enqueue(cubeStart, 0);
+        frontier.Enqueue(startPos, 0);
 
 
         Dictionary<Vector3Int, Vector3Int> cameFrom = new Dictionary<Vector3Int, Vector3Int>();
-        cameFrom[cubeStart] = cubeStart;
+        cameFrom[startPos] = startPos;
 
         Dictionary<Vector3Int, int> cost_so_far = new Dictionary<Vector3Int, int>();
-        cost_so_far[cubeStart] = 0;
+        cost_so_far[startPos] = 0;
 
         bool found = false;
         int maxLoops = 300;
@@ -39,28 +35,27 @@ public static class Pathfinding
         while (frontier.Count > 0 && loops < maxLoops)
         {
             Vector3Int current = frontier.Dequeue();
-            if (current == cubeEnd) { found = true; break; }
-            foreach (var n in TileData.GetCubeNeighbors(current))
-            {
-                Vector3Int evenr_n = TileData.cube_to_evenr(n);
-                Vector3Int evenr_current = TileData.cube_to_evenr(current);
+            if (current == destination) { found = true; break; }
+            TileData currentTile = Map.main.GetTile(current);
+            foreach (var n in currentTile.GetNeighbors())
+            {               
                 int newCost = cost_so_far[current] + 1;
-                if (!CanMoveToTile(evenr_n, isBoat)) { continue; }
+                if (!CanMoveToTile(n, isBoat)) { continue; }
                 if (army != null)
                 {
                     if (!army.exiled && army.civID > -1)
                     {
-                        TileData tile = Map.main.GetTile(evenr_n);
+                        TileData tile = Map.main.GetTile(n);
                         Civilisation civ = Game.main.civs[army.civID];
                         if (!army.HasAccess(tile.civID)) { continue; }
-                        if (!army.CanMoveHostileZOC(evenr_n, evenr_current)) { continue; }
-                        if (tile.armiesOnTile.Exists(i => civ.atWarWith.Contains(i.civID)) && evenr_n != destination && !army.retreating) { continue; }
+                        if (!army.CanMoveHostileZOC(n, current)) { continue; }
+                        if (tile.armiesOnTile.Exists(i => civ.atWarWith.Contains(i.civID)) && n != destination && !army.retreating) { continue; }
                     }
                 }
                 if (!cost_so_far.Keys.Contains(n) || newCost < cost_so_far[n])
                 {
                     cost_so_far[n] = newCost;
-                    frontier.Enqueue(n, newCost + BestCost_cube(n, cubeEnd));
+                    frontier.Enqueue(n, newCost + TileData.evenr_distance(n, destination));
                     cameFrom[n] = current;
                 }
             }
@@ -71,9 +66,9 @@ public static class Pathfinding
             //Debug.Log("Could not find after " + loops + " loops. From: " + startPos + " To: " + destination); 
             return new Vector3Int[0];
         }
-        Vector3Int currentPos = cubeEnd;
+        Vector3Int currentPos = destination;
         List<Vector3Int> newPath = new List<Vector3Int>();
-        while (currentPos != cubeStart)
+        while (currentPos != startPos)
         {
             newPath.Add(currentPos);
             currentPos = cameFrom[currentPos];
@@ -81,7 +76,45 @@ public static class Pathfinding
         //newPath.Add(cubeStart);
         newPath.Reverse();
 
-        return newPath.ConvertAll(tile => TileData.cube_to_evenr(tile)).ToArray();
+        return newPath.ToArray();
+    }
+
+    public static int CoringDistance(Vector3Int startPos, Vector3Int destination)
+    {
+        if (Map.main.GetTile(startPos) == null || Map.main.GetTile(destination) == null) { Debug.Log("Start or end does not exist start: " + startPos + " end: " + destination); return -1; }
+
+        PriorityQueue<Vector3Int, int> frontier = new PriorityQueue<Vector3Int, int>();
+        frontier.Enqueue(startPos, 0);
+
+        Dictionary<Vector3Int, int> cost_so_far = new Dictionary<Vector3Int, int>();
+        cost_so_far[startPos] = 0;
+
+        bool found = false;
+        int maxLoops = 300;
+        int loops = 0;
+        while (frontier.Count > 0 && loops < maxLoops)
+        {
+            Vector3Int current = frontier.Dequeue();
+            if (current == destination) { found = true; break; }
+            TileData currentTile = Map.main.GetTile(current);
+            foreach (var n in currentTile.GetNeighbors())
+            {
+                TileData nTile = Map.main.GetTile(n);
+                if (!nTile.terrain.isSea && n != destination) { continue; }
+                int newCost = cost_so_far[current] + 1;               
+                if (!cost_so_far.Keys.Contains(n) || newCost < cost_so_far[n])
+                {
+                    cost_so_far[n] = newCost;
+                    frontier.Enqueue(n, newCost + TileData.evenr_distance(n, destination));
+                }
+            }
+            loops++;
+        }
+        if (!found)
+        {
+            return -1;
+        }
+        return cost_so_far[destination];
     }
     public static int BestCost_cube(Vector3Int cubeStartPos, Vector3Int cubeEndPos)
     {

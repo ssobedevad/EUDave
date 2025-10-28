@@ -38,17 +38,17 @@ public class EventData
             {
                 desc += (opt.population > 0 ? "+" : "") + opt.population + " population<sprite index=4>\n";
             }
-            for (int i = 0; i < opt.Effect.Length; i++)
+            for (int i = 0; i < opt.effects.Length; i++)
             {
-                desc += opt.Effect[i] + Modifier.ToString(opt.EffectStrength[i], province.GetStat(opt.Effect[i])) + " for " + Mathf.Round(opt.EffectDuration[i] * 10f / 60f) / 10f + " days\n";
+                desc += opt.effects[i].name + Modifier.ToString(opt.effects[i].amount, province.GetStat(opt.effects[i].name)) + " for " + Mathf.Round(opt.effects[i].duration * 10f / 60f) / 10f + " days\n";
             }
         }
         else
         {
             desc += "The Following Effects on the nation:\n\n";
-            for (int i = 0; i < opt.Effect.Length; i++)
+            for (int i = 0; i < opt.effects.Length; i++)
             {
-                desc += opt.Effect[i] + Modifier.ToString(opt.EffectStrength[i], civilisation.GetStat(opt.Effect[i])) +" for " + Mathf.Round(opt.EffectDuration[i] * 10f/60f) / 10f + " days\n";
+                desc += opt.effects[i].name + Modifier.ToString(opt.effects[i].amount, civilisation.GetStat(opt.effects[i].name)) +" for " + Mathf.Round(opt.effects[i].duration * 10f/60f) / 10f + " days\n";
             }
         }
 

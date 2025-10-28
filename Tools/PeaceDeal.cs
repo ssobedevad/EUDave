@@ -1,24 +1,70 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 public class PeaceDeal
 {
     public List<Vector3Int> provinces = new List<Vector3Int>();
+    public List<int> civTo = new List<int>();
     public List<Vector3Int> possible = new List<Vector3Int>();
+    public int numLoans;
     public float warScore;
     public War war;
-    public bool attacker;
+    public Civilisation target;
+    public Civilisation taker;
     public bool fullAnnexation;
+    public bool subjugation;
 
-    public PeaceDeal(War War,bool Attacker)
+    public PeaceDeal(War War,Civilisation Target,Civilisation Taker)
     {
         war = War;
-        attacker = Attacker;
+        target = Target;
+        taker = Taker;
         warScore = 0f;
+        subjugation = false;
         SetPossible();
+    }
+    public void AddLoan()
+    {
+        if(numLoans < 5)
+        {
+            numLoans++;
+        }
+        RecalculateWarScore();
+    }
+    public void RemoveLoan()
+    {
+        if (numLoans > 0)
+        {
+            numLoans--;
+        }
+        RecalculateWarScore();
+    }
+    public float WarScoreForSubjugation()
+    {
+        float score = 0f;
+        foreach (var item in provinces)
+        {
+            TileData prov = Map.main.GetTile(item);
+            score += prov.GetWarScore(taker.CivID);
+        }
+        score = target.GetTotalWarScore(taker.CivID) - score;
+        
+        return score;
+    }
+    public void RequestSubjugation()
+    {
+        if (!war.casusBelli.canTakeProvinces) { return; }
+        if (target.GetTotalWarScore(taker.CivID) <= 100)
+        {
+            subjugation = true;
+        }
+        RecalculateWarScore();
+    }
+    public void RemoveSubjugation()
+    {
+        subjugation = false;
+        RecalculateWarScore();
     }
     void RecalculateWarScore()
     {
@@ -26,62 +72,105 @@ public class PeaceDeal
         foreach (var item in provinces)
         {
             TileData prov = Map.main.GetTile(item);
-            warScore += prov.GetWarScore(attacker? war.attackerCiv.CivID : war.defenderCiv.CivID);
+            warScore += prov.GetWarScore(taker.CivID);
         }
+        if (subjugation) 
+        {
+            warScore += WarScoreForSubjugation();
+        }
+        warScore += numLoans * 5f;
         SetPossible();
         UIManager.main.PeaceDealUI.GetComponent<PeaceDealUI>().refresh = true;
     }
     public void AddProvince(Vector3Int province)
     {
+        if (!war.casusBelli.canTakeProvinces) { return; }
+        TileData tileData = Map.main.GetTile(province);
+        if (tileData.occupied && (!taker.atWarTogether.Contains(tileData.occupiedByID) && tileData.occupiedByID != taker.CivID)) { return; }
         provinces.Add(province);
-        if(provinces.Count >= (attacker ? war.defenderCiv.GetAllCivTiles().Count : war.attackerCiv.GetAllCivTiles().Count))
+        civTo.Add(tileData.occupied ? tileData.occupiedByID : taker.CivID);
+        if(provinces.FindAll(i=>target.GetAllCivTiles().Contains(i)).Count >= target.GetAllCivTiles().Count)
         {
             fullAnnexation = true;
+            subjugation = false;
         }
         RecalculateWarScore();
     }
     public void SetPossible()
     {
-        Civilisation target = attacker ? war.defenderCiv : war.attackerCiv;
-        Civilisation taker = attacker ? war.attackerCiv : war.defenderCiv;
+        if (!war.casusBelli.canTakeProvinces) { return; }
         List<Vector3Int> provs = target.GetAllCivTiles();
-        possible.Clear();
-        foreach (var province in provs)
+        if (war.Between(taker.CivID, target.CivID))
         {
-            if (provinces.Contains(province)) { continue; }
-            TileData tileData = Map.main.GetTile(province);
-            List<Vector3Int> neighbors = tileData.GetNeighbors();
-            foreach (var neighbor in neighbors)
+            bool isAttacker = taker == war.attackerCiv;
+            if (isAttacker)
             {
-                TileData n = Map.main.GetTile(neighbor);
-                if (n.occupied && n.occupiedByID != taker.CivID) { continue; }
-                if (n.civID == taker.CivID || provinces.Contains(neighbor))
+                foreach(var defender in war.defenderAllies)
                 {
-                    possible.Add(province);
-                    break;
+                    provs.AddRange(defender.GetAllCivTiles());
                 }
             }
+            else
+            {
+                foreach (var attacker in war.attackerAllies)
+                {
+                    provs.AddRange(attacker.GetAllCivTiles());
+                }
+            }
+        }
+        possible.Clear();
+        foreach (var province in provs)
+        {           
+            TileData tileData = Map.main.GetTile(province);
+            List<Vector3Int> neighbors = tileData.GetNeighbors();
+            if(tileData.occupied && tileData.occupiedByID == -1) { continue; }
+            Civilisation takeCiv = tileData.occupied ? Game.main.civs[tileData.occupiedByID] : taker;
+            if ((taker == takeCiv || taker.atWarTogether.Contains(tileData.occupiedByID) )&& target.atWarWith.Contains(tileData.occupiedByID))
+            {
+                if (!provinces.Contains(province))
+                {
+                    if (takeCiv.CanCoreTile(tileData))
+                    {
+                        possible.Add(province);
+                    }
+                    else
+                    {
+                        if (tileData.occupied && (!taker.atWarTogether.Contains(tileData.occupiedByID) && tileData.occupiedByID != taker.CivID)) { continue; }
+                        foreach (var neighbor in neighbors)
+                        {
+                            TileData n = Map.main.GetTile(neighbor);
+                            if ((provinces.Contains(neighbor) && civTo[provinces.IndexOf(neighbor)] == takeCiv.CivID))
+                            {
+                                possible.Add(province);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }     
         }
     }
     public void CheckProvinces()
     {
-        Civilisation target = attacker ? war.defenderCiv : war.attackerCiv;
-        Civilisation taker = attacker ? war.attackerCiv : war.defenderCiv;
         foreach (var prov in provinces.ToList())
         {
             TileData tileData = Map.main.GetTile(prov);
-            if (tileData.occupied && tileData.occupiedByID != taker.CivID)
+            if (tileData.occupied && tileData.occupiedByID != civTo[provinces.IndexOf(prov)])
             {
+                int index = provinces.IndexOf(prov);
                 provinces.Remove(prov);
+                civTo.RemoveAt(index);
                 break;
             }                                                        
         }
     }
     public void RemoveProvince(Vector3Int province)
     {
-        Civilisation target = attacker ? war.defenderCiv : war.attackerCiv;
-        Civilisation taker = attacker ? war.attackerCiv : war.defenderCiv;
+        int index = provinces.IndexOf(province);
+        int civToID = civTo[index];
+        Civilisation takeCiv = Game.main.civs[civToID];
         provinces.Remove(province);
+        civTo.RemoveAt(index);
         CheckProvinces();
         fullAnnexation = false;
         TileData tileData = Map.main.GetTile(province);
@@ -91,21 +180,26 @@ public class PeaceDeal
         {
             if (provinces.Contains(neighbour))
             {
-                TileData nextTileData = Map.main.GetTile(neighbour);
-                List<Vector3Int> nextNeighbors = nextTileData.GetNeighbors();
-                bool valid = false;
-                foreach(var nextNeighbor in nextNeighbors)
+                index = provinces.IndexOf(neighbour);
+                if (civToID == civTo[index])
                 {
-                    TileData check = Map.main.GetTile(nextNeighbor);
-                    if (check.civID == taker.CivID)
+                    
+                    TileData nextTileData = Map.main.GetTile(neighbour);
+                    List<Vector3Int> nextNeighbors = nextTileData.GetNeighbors();
+                    bool valid = false;
+                    foreach (var nextNeighbor in nextNeighbors)
                     {
-                        valid = true;
-                        break;
+                        TileData check = Map.main.GetTile(nextNeighbor);
+                        if (takeCiv.CanCoreTile(check))
+                        {
+                            valid = true;
+                            break;
+                        }
                     }
-                }
-                if (!valid)
-                {
-                    TilesToChain.Add(neighbour);
+                    if (!valid)
+                    {
+                        TilesToChain.Add(neighbour);
+                    }
                 }
             }
         }
@@ -128,11 +222,15 @@ public class PeaceDeal
                     {
                         if (provinces.Contains(nb) && !chain.Contains(nb))
                         {
-                            chainCheck.Enqueue(nb);
-                            chain.Add(nb);
+                            index = provinces.IndexOf(nb);
+                            if (civToID == civTo[index])
+                            {
+                                chainCheck.Enqueue(nb);
+                                chain.Add(nb);
+                            }
                         }
                         TileData nbTile = Map.main.GetTile(nb);
-                        if(nbTile.civID == taker.CivID)
+                        if(takeCiv.CanCoreTile(nbTile))
                         {
                             validChain = true; 
                             break;
@@ -144,7 +242,9 @@ public class PeaceDeal
                 {
                     foreach(var chainPos in chain)
                     {
+                        index = provinces.IndexOf(chainPos);
                         provinces.Remove(chainPos);
+                        civTo.RemoveAt(index);
                     }
                 }
             }

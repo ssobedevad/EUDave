@@ -12,7 +12,7 @@ public class RebelFaction
     public float bonusTactics;
     public float totalUnrest;
     public int type;
-    public int seperatistCivID;
+    public int demandID;
 
     public RebelFaction(Vector3Int start)
     {
@@ -42,14 +42,20 @@ public class RebelFaction
             {
                 central = tile;
             }
-            size += tile.population - tile.avaliablePopulation;
+            size += (int)Mathf.Min(tile.population - tile.avaliablePopulation,tile.totalDev * 100);
             totalUnrest += tile.unrest;
-            if (tile.cores[0] != tile.civID)
-            {
-                type = 1;
-            }
         }
-        if(totalUnrest <= 0)
+        if (central.cores[0] != central.civID && central.seperatism > 0)
+        {
+            type = 1;
+            demandID = central.cores[0];
+        }
+        else if(central.religion != central.civ.religion)
+        {
+            type = 2;
+            demandID = central.religion;
+        }
+        if (totalUnrest <= 0)
         {
             provinces.Clear();
             uprisingProgress = 0;
@@ -75,7 +81,9 @@ public class RebelFaction
         List<TileData> tiles = provinces.ConvertAll(i => Map.main.GetTile(i));
         if(tiles.Count == 0 ) { return; }
         TileData central = tiles[0];
-        RebelArmyStats stats = new RebelArmyStats(central.civ.militaryTactics.value + bonusTactics, central.civ.moraleMax.value, central.civ.discipline.value, central.civ.units[0].meleeDamage.value,(int)central.civ.combatWidth.value,central.civ.infantryCombatAbility.value,central.civ.flankingCombatAbility.value,central.civ.siegeCombatAbility.value,rebelType:type);
+        RebelArmyStats stats = new RebelArmyStats(central.civ.militaryTactics.value + bonusTactics, central.civ.moraleMax.value, central.civ.discipline.value,(int)central.civ.combatWidth.value,central.civ.units.ToArray(),rebelType:type);
+        stats.rebelDemandsID = demandID;
+        stats.rebelType = type;
         size = 0;
         foreach(var tile in tiles.ToList())
         {
@@ -85,8 +93,8 @@ public class RebelFaction
                 central = tile;
             }
             tile.localUnrest.AddModifier(new Modifier(-100f, ModifierType.Flat, "Recent Uprising", 25920));
-            size += tile.population - tile.avaliablePopulation;
-            tile.population = tile.avaliablePopulation;
+            size += (int)Mathf.Min(tile.population - tile.avaliablePopulation, tile.totalDev * 100);
+            tile.population -= (int)Mathf.Min(tile.population - tile.avaliablePopulation, tile.totalDev * 100);
         }
         if(size > 1000)
         {

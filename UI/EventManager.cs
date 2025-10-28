@@ -32,22 +32,22 @@ public class EventManager : MonoBehaviour
     }
     void ButtonClick(int id)
     {
+        if(Player.myPlayer.myCivID == -1) { return; }
         EventOption selected = eventData.optionEffects[id];
-        TakeOption(selected);
+        TakeOption(eventData,selected,Player.myPlayer.myCiv);
         Game.main.paused = false;
         UIManager.main.UI.Remove(gameObject);
         Destroy(gameObject);
     }
-    void TakeOption(EventOption option)
+    public static void TakeOption(EventData eventData, EventOption option,Civilisation civilisation)
     {
-        Civilisation civilisation = Player.myPlayer.myCiv;
         if (option.provinceModifier)
         {
-            for (int i = 0; i < option.Effect.Length; i++)
+            for (int i = 0; i < option.effects.Length; i++)
             {
-                eventData.province.ApplyTileLocalModifier(option.Effect[i], option.EffectStrength[i], option.EffectType[i], eventData.Name, option.EffectDuration[i]);
+                eventData.province.ApplyTileLocalModifier(option.effects[i].name, option.effects[i].amount, option.effects[i].type, eventData.Name, option.effects[i].duration);
             }
-            if(option.devA != 0)
+            if (option.devA != 0)
             {
                 eventData.province.developmentA += option.devA;
             }
@@ -62,14 +62,14 @@ public class EventManager : MonoBehaviour
             if (option.population != 0)
             {
                 eventData.province.population = (int)Mathf.Clamp(eventData.province.population + option.population, 0, eventData.province.maxPopulation);
-                eventData.province.avaliablePopulation = (int)Mathf.Clamp(eventData.province.avaliablePopulation + (option.population * eventData.province.control/100f), 0, eventData.province.avaliableMaxPopulation);
+                eventData.province.avaliablePopulation = (int)Mathf.Clamp(eventData.province.avaliablePopulation + (option.population * eventData.province.control / 100f), 0, eventData.province.avaliableMaxPopulation);
             }
         }
         else
         {
-            for(int i = 0; i < option.Effect.Length; i++) 
+            for (int i = 0; i < option.effects.Length; i++)
             {
-                civilisation.ApplyCivModifier(option.Effect[i], option.EffectStrength[i], eventData.Name, option.EffectType[i], option.EffectDuration[i]);
+                civilisation.ApplyCivModifier(option.effects[i].name, option.effects[i].amount, eventData.Name, option.effects[i].type, option.effects[i].duration);
             }
         }
         if (option.manaA != 0)
@@ -96,9 +96,10 @@ public class EventManager : MonoBehaviour
         {
             civilisation.coins += option.coins;
         }
-        if(option.coinsYIncomePercent != 0)
+        if (option.coinsYIncomePercent != 0)
         {
             civilisation.coins += (civilisation.ProductionIncome() + civilisation.TaxIncome()) * 12f * option.coinsYIncomePercent;
         }
     }
+    
 }

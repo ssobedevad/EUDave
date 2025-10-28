@@ -10,12 +10,18 @@ public class NotificationsUI : MonoBehaviour
     List<Notification> notifications = new List<Notification>();
     List<GameObject> notifs = new List<GameObject>();
     public static NotificationsUI main;
-    public  Notification missingAdvisor;
-    public  Notification noHeir;
-    public  Notification nonCoreProvinces;
-    public  Notification canTakeTech;
-    public  Notification canTakeIdea;
-    public  Notification rebelFaction;
+    public Notification missingAdvisor;
+    public Notification noHeir;
+    public Notification nonCoreProvinces;
+    public Notification canTakeTech;
+    public Notification canTakeIdea;
+    public Notification rebelFaction;
+    public Notification canTakeReform;
+    public Notification loans;
+    public Notification lowStability;
+    public Notification bankruptcy;
+    public Notification greatProj;
+    public Notification fullMonarchPoints;
     private void Awake()
     {
         main = this;      

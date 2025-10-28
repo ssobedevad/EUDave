@@ -11,6 +11,7 @@ public class Ruler
     public Age age;
     public int civID;
     public bool active;
+    public Effect[] traits;
     bool isActive;
     public Ruler(int AdminSkill,int DiploSkill,int MilSkill,Age Age,int CivID,string name)
     {
@@ -29,7 +30,7 @@ public class Ruler
         adminSkill = clone.adminSkill;
         diploSkill = clone.diploSkill;
         milSkill = clone.milSkill;
-        age = clone.age;
+        age = new Age(clone.age);
         civID = clone.civID;
         active = clone.active;
         isActive = clone.isActive;

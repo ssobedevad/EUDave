@@ -9,18 +9,20 @@ public class Modifier
     public int duration;
     public string name;
     public bool isPercentage;
-    public Modifier(float Value,int Type, string Name, int Duration = -1, bool isPercentage = false)
+    public bool decay;
+    public Modifier(float Value,int Type, string Name, int Duration = -1, bool isPercentage = false,bool decay = false)
     {
         value = Value;
         type = Type;
         name = Name;
         duration = Duration;
         this.isPercentage = isPercentage;
+        this.decay = decay;
     }
     public static string ToString(float effect,Stat stat,bool forcePercentage = false)
     {
         string val = "";
-        string effectString = (stat != null && stat.isFlat && !forcePercentage) ? effect + "" : Mathf.Round(effect * 100f) + "%";
+        string effectString = (stat != null && stat.isFlat && !forcePercentage) ? Mathf.Round(effect * 100f)/100f + "" : Mathf.Round(effect * 100f) + "%";
         if (effect > 0)
         {     
             val += " +" + effectString;

@@ -1,16 +1,7 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using TMPro;
-using TreeEditor;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.Tilemaps;
 using UnityEngine.UI;
-using static UnityEditor.PlayerSettings;
-using static UnityEngine.UI.CanvasScaler;
 
 public class Army : MonoBehaviour
 {
@@ -20,9 +11,10 @@ public class Army : MonoBehaviour
     public bool retreating;
     public bool isMerging;
     public List<Army> mergeTargets = new List<Army>();
-    public Queue<Vector3Int> path = new Queue<Vector3Int>();
+    public List<Vector3Int> path = new List<Vector3Int>();
     public float moveTimer,moveTime;
     public bool exiled;
+    public bool isMercenary;
     public Vector3Int pos => Map.main.tileMapManager.tilemap.WorldToCell(transform.position);
     public Vector3Int lastPos;
 
@@ -38,15 +30,50 @@ public class Army : MonoBehaviour
             regiment.inBatle = true;
         }
     }
-    public static Army NewArmy(TileData tile, int civID, List<Regiment> regiments)
+    public float GetAttrition()
+    {
+        float percent = 0f;
+        if (ArmySize() / 1000f > tile.supplyLimit)
+        {
+            percent += Mathf.Clamp((ArmySize() / 1000f - tile.supplyLimit) / ((float)tile.supplyLimit * 10f), 0f, 5f);
+        }
+        if (civID > -1)
+        {
+            Civilisation civ = Game.main.civs[civID];
+            if (civ.atWarWith.Contains(tile.civID))
+            {
+                percent += 1f + tile.fortLevel;
+            }
+        }
+        return percent;
+    }
+    public void DayTick()
+    {
+        float percent = GetAttrition();
+        foreach (var regiment in regiments)
+        {
+            regiment.size = Mathf.Max((int)(regiment.size * (100f - percent) / 100f), 0);
+            if (!regiment.inBatle && regiment.type > -1 && civID > -1)
+            {
+                regiment.RecoverMorale();
+                if (!regiment.mercenary)
+                {
+                    regiment.RefillRegiment();
+                }
+            }
+        }       
+    }
+    public static Army NewArmy(TileData tile, int civID, List<Regiment> regiments,bool merc = false)
     {
         Army a = Instantiate(Map.main.armyPrefab, tile.worldPos(), Quaternion.identity, Map.main.indicatorTransform).GetComponent<Army>();
         ArmyUIProvince uIProvince = Instantiate(UIManager.main.ArmyUIPrefab, tile.worldPos(), Quaternion.identity, UIManager.main.worldCanvas).GetComponent<ArmyUIProvince>();
         uIProvince.army = a;
         UIManager.main.WorldSpaceUI.Add(uIProvince.gameObject);
+        Game.main.dayTick.AddListener(a.DayTick);
         a.civID = civID;
         tile.armiesOnTile.Add(a);
         a.regiments.AddRange(regiments);
+        a.isMercenary = merc;
         return a;
     }
     public void WinBattleMorale()
@@ -76,6 +103,16 @@ public class Army : MonoBehaviour
                 SpriteRenderer image = Instantiate(UIManager.main.DebugCirclePrefab, neighbour.worldPos(), Quaternion.identity).GetComponent<SpriteRenderer>();
                 image.color = CanMoveHostileZOC(n, pos)? Color.green : Color.red;
             }           
+        }
+        if (Input.GetKeyDown(KeyCode.U) && Player.myPlayer.selectedArmies.Contains(this))
+        {
+            var neighbors = tile.GetNeighbors();
+            foreach (var n in neighbors)
+            {
+                TileData neighbour = Map.main.GetTile(n);
+                SpriteRenderer image = Instantiate(UIManager.main.DebugCirclePrefab, neighbour.worldPos(), Quaternion.identity).GetComponent<SpriteRenderer>();
+                image.color = HasAccess(neighbour.civID) ? Color.blue : Color.red;
+            }
         }
         if (civID > -1)
         {
@@ -110,7 +147,10 @@ public class Army : MonoBehaviour
             foreach (var regiment in regiments)
             {
                 regiment.maxMorale = rebelArmyStats.morale;
-                regiment.meleeDamage = rebelArmyStats.meleeDamage;
+                regiment.meleeDamage = rebelArmyStats.units[regiment.type].meleeDamage.value;
+                regiment.flankingDamage = rebelArmyStats.units[regiment.type].flankingDamage.value;
+                regiment.rangedDamage = rebelArmyStats.units[regiment.type].rangedDamage.value;
+                regiment.flankingRange = rebelArmyStats.units[regiment.type].flankingRange;
             }
         }
         if (inBattle)
@@ -122,14 +162,32 @@ public class Army : MonoBehaviour
         }
         else 
         {
-            CheckBattle();          
+            CheckBattle();
+            if (Player.myPlayer.selectedArmies.Count == 1 && Player.myPlayer.selectedArmies[0] == this)
+            {
+                LineRenderer renderer = Player.myPlayer.armyMove;               
+                if (path.Count == 0)
+                {
+                    renderer.gameObject.SetActive(false);
+                    renderer.positionCount = 0;
+                }
+                else
+                {
+                    renderer.gameObject.SetActive(true);
+                    renderer.positionCount = path.Count + 1;
+                    List<Vector3> positions = new List<Vector3>() { Map.main.tileMapManager.tilemap.CellToWorld(pos) };
+                    positions.AddRange(path.ConvertAll(i => Map.main.tileMapManager.tilemap.CellToWorld(i)).ToArray());
+                    renderer.SetPositions(positions.ToArray());
+                }
+            }
             if (path.Count > 0)
             {
                 moveArrowRotatePoint.gameObject.SetActive(true);
-                Vector3 dir = Map.main.tileMapManager.tilemap.CellToWorld(path.Peek()) - Map.main.tileMapManager.tilemap.CellToWorld(pos);
+                Vector3 dir = Map.main.tileMapManager.tilemap.CellToWorld(path.First()) - Map.main.tileMapManager.tilemap.CellToWorld(pos);
                 float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
                 moveArrowRotatePoint.rotation = Quaternion.Euler(new Vector3(0, 0, angle));
                 MoveArrowFill.fillAmount = moveTimer / moveTime;
+
             }
             else
             {
@@ -219,6 +277,23 @@ public class Army : MonoBehaviour
             a.lastPos = lastPos;
         }
     }
+    public void SplitOff(int amount)
+    {
+        if(amount <= 0) { return; }
+        if (regiments.Count <= amount) { return; }
+        List<Regiment> newRegiments = new List<Regiment>();
+        List<Regiment> temp = regiments.ToList();
+        for (int i = 0; i < Mathf.Min(temp.Count,amount); i++)
+        {
+            newRegiments.Add(temp[i]);
+            regiments.Remove(temp[i]);
+        }
+        if (newRegiments.Count > 0)
+        {
+            Army a = NewArmy(tile, civID, newRegiments);
+            a.lastPos = lastPos;
+        }
+    }
     public void Consolidate(bool removeEmpty = true)
     {
         regiments.Sort((x,y)=> y.morale.CompareTo(x.morale));
@@ -227,21 +302,16 @@ public class Army : MonoBehaviour
             Regiment regiment = regiments[i];
             if(regiment.size < regiment.maxSize)
             {
-                bool found = false;
                 for(int j = i + 1; j < regiments.Count; j++)
                 {
                     Regiment regimentFrom = regiments[j];
-                    if(regimentFrom.size > 0)
+                    if(regimentFrom.size > 0 && regimentFrom.type == regiment.type && regimentFrom.mercenary == regiment.mercenary)
                     {
                         int amount = Mathf.Min(regiment.maxSize - regiment.size, regimentFrom.size);
                         regiment.size += amount;
                         regimentFrom.size -= amount;
-                        if(regiment.size == regiment.maxSize) { found = true; break; }
+                        if(regiment.size == regiment.maxSize) { break; }
                     }
-                }
-                if (!found)
-                {
-                    break;
                 }
             }
         }
@@ -326,23 +396,25 @@ public class Army : MonoBehaviour
         {
             if (path.Count > 0)
             {
-                if (!CanMoveHostileZOC(path.Peek(),pos)) { path.Clear(); return; }
+                if (!CanMoveHostileZOC(path.First(),pos)) { path.Clear(); return; }
                 if (moveTimer >= moveTime)
                 {                  
-                    if (Pathfinding.CanMoveToTile(path.Peek(), false))
+                    if (Pathfinding.CanMoveToTile(path.First(), false))
                     {                        
-                        Vector3Int target = path.Dequeue();
-                        TileData targetTile = Map.main.GetTile(target);
+                        Vector3Int target = path.First();
+                        path.RemoveAt(0);
+                        
                         OnExitTile();
                         transform.position = Map.main.tileMapManager.tilemap.CellToWorld(target);
                         OnEnterTile();
-                        moveTimer = 0;
-                        moveTime = 24f * (1f - targetTile.terrain.moveSpeedMod);
+                        moveTimer = 0;                       
                     }
                 }
                 else
                 {
                     moveTimer += movementSpeed * (retreating? 2f : 1f);
+                    TileData targetTile = Map.main.GetTile(path.First());
+                    moveTime = Mathf.Max(24f *(1f - (targetTile.terrain != null ? targetTile.terrain.moveSpeedMod : 0f)),1f);
                 }
             }
             if(path.Count == 0)
@@ -356,6 +428,8 @@ public class Army : MonoBehaviour
     void CheckBattle()
     {
         TileData tileData = Map.main.GetTile(pos);
+        if (civID == -1) { return; }
+        Civilisation civ = Game.main.civs[civID];
         if (tileData._battle != null)
         {
             if (tileData._battle.AttackerRebels)
@@ -366,23 +440,26 @@ public class Army : MonoBehaviour
             {
                 tileData._battle.AddToBattle(this, civID != -1);
             }
-            else if (tileData._battle.attackerCiv.CivID == civID)
+            else if (tileData._battle.attackerCiv.CivID == civID || civ.atWarWith.Contains(tileData._battle.defenderCiv.CivID))
             {
                 tileData._battle.AddToBattle(this, true);
             }
-            else if (tileData._battle.defenderCiv.CivID == civID)
+            else if (tileData._battle.defenderCiv.CivID == civID || civ.atWarWith.Contains(tileData._battle.attackerCiv.CivID))
             {
                 tileData._battle.AddToBattle(this, false);
             }
         }
-        if (civID == -1) { return; }
-        Civilisation civ = Game.main.civs[civID];
         if (tileData._battle == null && !retreating && !exiled)
         {
             List<Army> defenders = new List<Army>();
             List<Army> attackers = new List<Army>();
             bool isAttacker = true;
-            if(tileData.fortLevel > 0 && tileData.civID == civID)
+            if(tileData.fortLevel > 0 &&
+                (
+                (tileData.occupied == false && (tileData.civID == civID || civ.atWarTogether.Contains(tileData.civID)))||
+                (tileData.occupied == true && (tileData.occupiedByID == civID || civ.atWarTogether.Contains(tileData.occupiedByID)))
+                )
+                )
             {
                 isAttacker = false;
             }
@@ -466,12 +543,19 @@ public class Army : MonoBehaviour
     }
     public void TrySiege(TileData tile)
     {
+        if(tile.civID == -1 || exiled) { return; }
         if (civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            if (civ.atWarWith.Contains(tile.civID) || tile.civID == civID)
+            bool canrelease = tile.occupied && (tile.civID == civID || civ.atWarTogether.Contains(tile.civID) || civ.subjects.Contains(tile.civID));
+            bool canSiege = civID != tile.civID && 
+                (
+                (tile.civ.atWarWith.Contains(civID) && !tile.occupied) ||
+                (tile.occupied && tile.occupiedByID == -1)
+                );
+            if (canSiege || canrelease)
             {
-                if (!tile.underSiege && ((!tile.occupied && tile.civID != civID) || (tile.occupied && (tile.civID == civID || tile.occupiedByID == -1))))
+                if (!tile.underSiege)
                 {
                     tile.siege = new Siege(tile, civID);
                     tile.siege.armiesSieging.Add(this);
@@ -484,7 +568,7 @@ public class Army : MonoBehaviour
         }
         else
         {
-            if (!tile.underSiege && ((!tile.occupied && tile.civID != civID) || (tile.occupied && tile.civID == civID)))
+            if (!tile.underSiege && !(tile.occupied && tile.occupiedByID == -1))
             {
                 tile.siege = new Siege(tile, civID);
                 tile.siege.armiesSieging.Add(this);
@@ -581,10 +665,7 @@ public class Army : MonoBehaviour
         var newPath = Pathfinding.FindBestPath(pos, destination, this, false);
         if (newPath.Length > 0)
         {
-            foreach (var pathPos in newPath)
-            {
-                path.Enqueue(pathPos);
-            }
+            path.AddRange(newPath.ToList());
         }
     }
     public bool SetPath(Vector3Int destination)
@@ -598,17 +679,14 @@ public class Army : MonoBehaviour
         }
         else if (path.Count > 0)
         {
-            Vector3Int goal = path.Peek();
+            Vector3Int goal = path.First();
             path.Clear();
-            path.Enqueue(goal);
+            path.Add(goal);
             newPath = Pathfinding.FindBestPath(goal, destination, this, false);
         }
         if(newPath.Length > 0)
-        {          
-            foreach(var pathPos in newPath)
-            {
-                path.Enqueue(pathPos);
-            }
+        {
+            path.AddRange(newPath.ToList());
             return true;
         }
         else
@@ -618,12 +696,85 @@ public class Army : MonoBehaviour
     }
     public bool HasAccess(int CivID)
     {
-        if(civID == CivID) { return true; }
-        if(CivID == -1) { return true; }
-        Civilisation civ = Game.main.civs[civID];
-        if(civ.atWarWith.Contains(CivID)) { return true; }
+        if (civID == CivID) { return true; }
+        if (CivID == -1) { return true; }
+        return HasAccess(CivID, Game.main.civs[civID]);
+    }
+    public static bool HasAccess(int CivID,Civilisation civ)
+    {
+        if (civ.CivID == CivID) { return true; }
+        if (CivID == -1) { return true; }
+        Civilisation target = Game.main.civs[CivID];
+        if (civ.atWarWith.Contains(CivID)) { return true; }
+        if (civ.subjects.Contains(CivID)) { return true; }
+        if (civ.atWarWith.Contains(CivID)) { return true; }
         if (civ.militaryAccess.Contains(CivID)) { return true; }
+
+        if (civ.atWarTogether.Exists(i => Game.main.civs[i].militaryAccess.Contains(CivID))) { return true; }
+        if (civ.atWarTogether.Exists(i => Game.main.civs[i].atWarWith.Contains(CivID))) { return true; }
+        if (civ.atWarTogether.Exists(i => Game.main.civs[i].atWarTogether.Contains(CivID))) { return true; }
+        if (civ.atWarTogether.Exists(i => Game.main.civs[i].subjects.Contains(CivID))) { return true; }
+
+        if (civ.atWarWith.Exists(i => Game.main.civs[i].militaryAccess.Contains(CivID))) { return true; }
+        if (civ.atWarWith.Exists(i => Game.main.civs[i].atWarWith.Contains(CivID))) { return true; }
+        if (civ.atWarWith.Exists(i => Game.main.civs[i].atWarTogether.Contains(CivID))) { return true; }
+        if (civ.atWarWith.Exists(i => Game.main.civs[i].subjects.Contains(CivID))) { return true; }
+
         return false;
+    }
+    public void Disband()
+    {
+        regiments.RemoveAll(i => i.mercenary);
+        int space = Game.main.civs[civID].AddPopulation((int)ArmySize());
+        if (space >= (int)ArmySize())
+        {
+            OnExitTile();
+            Destroy(gameObject);
+        }
+        else
+        {
+            while (space > 0 && regiments.Count > 0)
+            {
+                if (space >= regiments[0].size)
+                {
+                    space -= regiments[0].size;
+                    regiments.RemoveAt(0);
+                }
+                else
+                {
+                    regiments[0].size -= space;
+                    space = 0;
+                }
+            }
+            if (regiments.Count == 0)
+            {
+                OnExitTile();
+                Destroy(gameObject);
+            }
+        }
+    }
+    public void DetatchMercs()
+    {
+        List<Regiment> newRegiments = new List<Regiment>();
+        List<Regiment> temp = regiments.ToList();
+        for (int i = 0; i < temp.Count; i++)
+        {
+            if (temp[i].mercenary)
+            {
+                newRegiments.Add(temp[i]);
+                regiments.Remove(temp[i]);
+            }
+        }
+        if (newRegiments.Count > 0)
+        {
+            Army a = NewArmy(tile, civID, newRegiments);
+            a.lastPos = lastPos;
+        }
+        if(regiments.Count <= 0)
+        {
+            OnExitTile();
+            Destroy(gameObject);
+        }
     }
     public bool CanMoveHostileZOC(Vector3Int moveTo,Vector3Int moveFrom)
     {

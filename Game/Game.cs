@@ -1,12 +1,8 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Security.Cryptography;
-using Unity.VisualScripting;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Tilemaps;
 using UnityEngine.UI;
-using UnityEngine.WSA;
 
 public class Game : MonoBehaviour
 {
@@ -33,11 +29,14 @@ public class Game : MonoBehaviour
     public bool Started = false;
     public Camera _cam;
     public int highestDevelopment;
+    public float highestIncome;
+    public bool refreshMap;
     private void Awake()
     {
         main = this;
         gameTime = new Age(0,0, 0, 0, 0,true);
         civs.Clear();
+        dayTick.AddListener(RefreshTradeRegions);
         foreach(var civData in civDatas)
         {
             Civilisation civ = new Civilisation();
@@ -49,6 +48,10 @@ public class Game : MonoBehaviour
             civ.adminTech = civData.techLevel;
             civ.diploTech = civData.techLevel;
             civ.milTech = civData.techLevel;
+            civ.religion = civData.religion;
+            civ.government = civData.government;
+            civ.overlordID = civData.overlordID;
+            civ.reforms.Add(civData.startReform);
             civs.Add(civ);
         }
         for (int i = 0; i < civs.Count;i++)
@@ -56,19 +59,24 @@ public class Game : MonoBehaviour
             civs[i].CivID = i;            
         }
         highestDevelopment = 1;
+        refreshMap = true;
+    }
+    public void StartGame()
+    {
+        if (!Started)
+        {
+            Started = true;
+            start.Invoke();
+            RefreshTradeRegions();
+        }
     }
     private void Update()
     {
-        float[] speedVals = new float[] { 1f, 0.5f, 0.25f, 0.1f, 0f };
+        float[] speedVals = new float[] { 1f/3f, 1f/6f, 1f/12f, 1f/30f, 0f };
         tenMinTickTime = speedVals[(int)gameSpeed.value];
-        ColorTiles();
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space) && Game.main.Started)
         { 
-            paused = !paused; if (!Started)
-            { 
-                Started = true;
-                start.Invoke();               
-            } 
+            paused = !paused; 
         }
         if (!paused) 
         {
@@ -80,6 +88,14 @@ public class Game : MonoBehaviour
                 tenMinTickTimer = 0f;
             }
         }
+        ColorTiles();
+    }
+    void RefreshTradeRegions()
+    {
+        foreach(var tradeRegion in Map.main.tradeRegions.Values)
+        {
+            tradeRegion.Refresh();
+        }
     }
     private void Start()
     {       
@@ -87,27 +103,49 @@ public class Game : MonoBehaviour
         {            
             civ.Init();
         }
-        ColorTiles();
+    }
+    public bool Equal(Color a, Color b)
+    {
+        if(a.r != b.r) { return false; }
+        if (a.g != b.g) { return false; }
+        if (a.b != b.b) { return false; }
+        if (a.a != b.a) { return false; }
+        return true;
+    }
+    void SetSelectorColor(TileData tile,Color color)
+    {
+        if (!Equal(tile.selectorCol, color))
+        {
+            tile.selectedTileObj.color = color;
+            tile.selectorCol = color;
+        }
     }
     public void ColorTiles()
     {
         foreach(var tile in Map.main.tiles) 
         {
             if (tile == null) { continue; }
+            if (refreshMap)
+            {
+                SetSelectorColor(tile, Color.clear);
+            }
             if (Player.myPlayer.mapMode == -1)
             {
                 if (DiplomacyUIPanel.main.diploCivID > -1 && UIManager.main.PeaceDealUI.activeSelf)
                 {
-                    if (tile.civID > -1)
+                    if (tile.civID > -1 && Player.myPlayer.myCivID > -1)
                     {
+                        Civilisation civ = Player.myPlayer.myCiv;
                         PeaceDealUI peaceDealUI = UIManager.main.PeaceDealUI.GetComponent<PeaceDealUI>();
                         if (peaceDealUI == null || peaceDealUI.peaceDeal == null) { return; }
                         List<Vector3Int> selected = peaceDealUI.peaceDeal.provinces;
+                        List<int> civIDs = peaceDealUI.peaceDeal.civTo;
                         List<Vector3Int> possible = peaceDealUI.peaceDeal.possible;
                         Color civC = Color.black;
                         if (selected.Contains(tile.pos))
                         {
-                            civC = Color.green;
+                            int index = selected.IndexOf(tile.pos);
+                            civC = Game.main.civs[civIDs[index]].c;
                         }
                         else if (possible.Contains(tile.pos))
                         {
@@ -121,8 +159,15 @@ public class Game : MonoBehaviour
                         {
                             civC = Color.gray;
                         }
-                        Map.main.tileMapManager.tilemap.SetTileFlags(tile.pos, TileFlags.None);
-                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        else if (civ.atWarWith.Contains(tile.civID) && (peaceDealUI.peaceDeal.war.attackerCiv.CivID == DiplomacyUIPanel.main.diploCivID || peaceDealUI.peaceDeal.war.defenderCiv.CivID == DiplomacyUIPanel.main.diploCivID))
+                        {
+                            civC = Color.gray;
+                        }
+                        if (!Equal(tile.currentCol,civC))
+                        {
+                            tile.currentCol = civC;
+                            Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        }
                     }
                 }
             }
@@ -131,11 +176,7 @@ public class Game : MonoBehaviour
                 if (tile.civID > -1)
                 {
                     if (tile.occupied)
-                    {
-                        if (tile.selectedTileObj == null)
-                        {
-                            tile.selectedTileObj = Instantiate(civTileSelected, tile.worldPos(), Quaternion.identity, Map.main.tileMapManager.transform);
-                        }
+                    {                       
                         Color civCO;
                         if (tile.occupiedByID > -1)
                         {
@@ -146,15 +187,24 @@ public class Game : MonoBehaviour
                             civCO = Color.black;
                         }
                         civCO.a *= 0.4f;
-                        tile.selectedTileObj.GetComponent<SpriteRenderer>().color = civCO;
+                        SetSelectorColor(tile, civCO);
                     }
-                    else if (tile.selectedTileObj != null)
+                    else
                     {
-                        Destroy(tile.selectedTileObj);
+                        SetSelectorColor(tile, Color.clear);
                     }
                     Color civC = tile.civ.c;
-                    Map.main.tileMapManager.tilemap.SetTileFlags(tile.pos, TileFlags.None);
-                    Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    if(tile.civ.overlordID > -1)
+                    {
+                        civC = Game.main.civs[tile.civ.overlordID].c;
+                        civC.a *= 0.6f;
+                    }
+
+                    if (!Equal(tile.currentCol,civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
                 }
                 else
                 {
@@ -162,8 +212,12 @@ public class Game : MonoBehaviour
                     if (terrain != null)
                     {
                         Color civC = terrain.c;
-                        Map.main.tileMapManager.tilemap.SetTileFlags(tile.pos, TileFlags.None);
-                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+
+                        if (!Equal(tile.currentCol,civC))
+                        {
+                            tile.currentCol = civC;
+                            Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        }
                     }
                 }
             }
@@ -173,8 +227,12 @@ public class Game : MonoBehaviour
                 if (terrain != null)
                 {
                     Color civC = terrain.c;
-                    Map.main.tileMapManager.tilemap.SetTileFlags(tile.pos, TileFlags.None);
-                    Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+
+                    if (!Equal(tile.currentCol,civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
                 }
             }
             else if (Player.myPlayer.mapMode == 2)
@@ -183,8 +241,12 @@ public class Game : MonoBehaviour
                 if (resource != null)
                 {
                     Color civC = resource.mapColor;
-                    Map.main.tileMapManager.tilemap.SetTileFlags(tile.pos, TileFlags.None);
-                    Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+
+                    if (!Equal(tile.currentCol, civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
                 }
             }
             else if (Player.myPlayer.mapMode == 3)
@@ -193,8 +255,12 @@ public class Game : MonoBehaviour
                 {
                     float development = (float)tile.totalDev / (float)highestDevelopment;
                     Color civC = Color.Lerp(Color.red, Color.green, development);
-                    Map.main.tileMapManager.tilemap.SetTileFlags(tile.pos, TileFlags.None);
-                    Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+
+                    if (!Equal(tile.currentCol, civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
                 }          
             }
             else if (Player.myPlayer.mapMode == 4)
@@ -210,11 +276,188 @@ public class Game : MonoBehaviour
                     {
                         civC = Color.red;
                     }
-                    Map.main.tileMapManager.tilemap.SetTileFlags(tile.pos, TileFlags.None);
-                    Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+
+                    if (!Equal(tile.currentCol, civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
                 }
             }
-        }       
+            else if (Player.myPlayer.mapMode == 5)
+            {
+                if (tile.civID > -1)
+                {
+                    Color civC = Color.gray;
+                    if (tile.religion > -1)
+                    {
+                        civC = Map.main.religions[tile.religion].c;
+                    }
+
+                    if (!Equal(tile.currentCol, civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
+                }
+            }
+            else if (Player.myPlayer.mapMode == 6)
+            {
+                if (tile.civID > -1)
+                {
+                    Color civC = Color.gray;
+                    if (tile.civ.government > -1)
+                    {
+                        civC = Map.main.governmentTypes[tile.civ.government].c;
+                    }
+
+                    if (!Equal(tile.currentCol, civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
+                }
+            }
+            else if (Player.myPlayer.mapMode == 7)
+            {
+                if (tile.civID > -1)
+                {                   
+                    Color civC = Color.gray;
+                    if (DiplomacyUIPanel.main != null && DiplomacyUIPanel.main.diploCivID > -1)
+                    {
+                        Civilisation civ = civs[DiplomacyUIPanel.main.diploCivID];
+                        if (civ.CivID == tile.civID)
+                        {
+                            civC = Color.magenta;
+                        }
+                        else if (civ.atWarTogether.Contains(tile.civID))
+                        {
+                            civC = Color.green;
+                        }
+                        else if (civ.militaryAccess.Contains(tile.civID))
+                        {
+                            civC = Color.blue;
+                        }
+                        else if (civ.atWarWith.Contains(tile.civID))
+                        {
+                            civC = Color.red;
+                        }
+                        else if (civ.subjects.Contains(tile.civID))
+                        {
+                            civC = Color.cyan;
+                        }
+                        else if (civ.allies.Contains(tile.civID))
+                        {
+                            civC = Color.yellow;
+                        }
+                    }
+
+                    if (!Equal(tile.currentCol, civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
+                }
+            }
+            else if (Player.myPlayer.mapMode == 8)
+            {
+                if (tile.civID > -1)
+                {
+                    float income = (float)(tile.GetDailyTax() + tile.GetDailyProductionValue()) / (float)highestIncome;
+                    Color civC = Color.Lerp(Color.red, Color.green, income);
+
+                    if (!Equal(tile.currentCol, civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
+                }
+            }
+            else if (Player.myPlayer.mapMode == 9)
+            {
+                if (tile.civID > -1)
+                {
+                    Color civC = Color.gray;
+                    if (DiplomacyUIPanel.main != null && DiplomacyUIPanel.main.diploCivID > -1)
+                    {
+                        Civilisation civ = civs[DiplomacyUIPanel.main.diploCivID];
+                        if (civ.updateBorders || refreshMap)
+                        {
+                            if (tile.civID == civ.CivID)
+                            {
+                                civC = Color.green;
+                            }                           
+                            else if (civ.CanCoreTile(tile))
+                            {
+                                civC = Color.red;
+                            }
+                            if (tile.cores.Contains(civ.CivID))
+                            {
+                                SetSelectorColor(tile, Color.green);
+                            }
+                            else if (civ.claims.Contains(tile.pos))
+                            {
+                                SetSelectorColor(tile, Color.yellow);
+                            }
+                            if (!Equal(tile.currentCol, civC))
+                            {
+                                tile.currentCol = civC;
+                                Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                            }
+                        }
+                    }
+                }
+            }
+            else if (Player.myPlayer.mapMode == 10)
+            {
+                if (tile.civID > -1)
+                {
+                    Color civC = Color.gray;
+                    if (tile.hasMarket)
+                    {
+                        if (tile.marketLevel == 1)
+                        {
+                            SetSelectorColor(tile, Color.green);
+                        }
+                        else if(tile.marketLevel == 2)
+                        {
+                            SetSelectorColor(tile, Color.blue);
+                        }
+                    }
+                    if(tile.tradeRegion != "")
+                    {
+                        float lerp = (float)Map.main.tradeRegions.Keys.ToList().IndexOf(tile.tradeRegion)/ (float)Map.main.tradeRegions.Keys.Count;
+                        civC = Color.Lerp(Color.yellow,Color.magenta,lerp);
+                    }
+                    if (!Equal(tile.currentCol, civC))
+                    {
+                        tile.currentCol = civC;
+                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                    }
+                }
+            }
+            else if (Player.myPlayer.mapMode == 11)
+            {
+                if (tile.civID > -1)
+                {
+                    Color civC = Color.gray;
+                    if (DiplomacyUIPanel.main != null && DiplomacyUIPanel.main.diploCivID > -1)
+                    {
+                        Civilisation civ = civs[DiplomacyUIPanel.main.diploCivID];
+                        if (Army.HasAccess(tile.civID, civ))
+                        {
+                            civC = Color.yellow;
+                        }
+                        if (!Equal(tile.currentCol, civC))
+                        {
+                            tile.currentCol = civC;
+                            Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        }
+                    }
+                }
+            }
+        }
+        refreshMap = false;
     }
 
 }

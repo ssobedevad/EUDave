@@ -4,13 +4,37 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
-    [SerializeField] Rigidbody rb;
+    [SerializeField] public Rigidbody rb;
     [SerializeField] Camera cam;
 
+    public static CameraController main;
+    private void Awake()
+    {
+        main = this;
+    }
     bool moving = false;
     private void Update()
     {
         moving = false;
+        if (!Player.myPlayer.isHoveringUI && Input.GetMouseButton(2))
+        {
+            if (Input.mousePosition.x > Screen.width - 100)
+            {
+                rb.velocity += new Vector3(1f, 0, 0);
+            }
+            if (Input.mousePosition.x < 100)
+            {
+                rb.velocity += new Vector3(-1f, 0, 0);
+            }
+            if (Input.mousePosition.y > Screen.height - 100)
+            {
+                rb.velocity += new Vector3(0, 1f, 0);
+            }
+            if (Input.mousePosition.y < 100)
+            {
+                rb.velocity += new Vector3(0, -1f, 0);
+            }
+        }
         if (Input.GetKey(KeyCode.A))
         {
             rb.velocity += new Vector3(-1, 0, 0);
@@ -48,12 +72,26 @@ public class CameraController : MonoBehaviour
                 {
                     cam.orthographicSize -= Input.mouseScrollDelta.y;
                 }
+
             }
             if (Input.mouseScrollDelta.y < 0)
             {
                 if (cam.orthographicSize < 1000)
                 {
                     cam.orthographicSize -= Input.mouseScrollDelta.y;
+                }
+            }
+            if (Input.mouseScrollDelta.y != 0)
+            {
+                foreach (var civ in Game.main.civs)
+                {
+                    if (civ.countryName != null)
+                    {
+                        Color c = civ.c;
+                        c.a = Mathf.Clamp(cam.orthographicSize / 20f - 0.5f, 0f, 1f);
+                        civ.countryName.color = c;
+                    }
+                     
                 }
             }
         }

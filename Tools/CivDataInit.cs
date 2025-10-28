@@ -11,6 +11,7 @@ public class CivDataInit
     [SerializeField] public Color c;
     [SerializeField] public NationalIdeas ideas;
     [SerializeField] public Ruler ruler,heir;
-    [SerializeField] public int techLevel;
-
+    [SerializeField] public int techLevel,startReform;
+    [SerializeField] public int religion,government;
+    [SerializeField] public int overlordID = -1;
 }

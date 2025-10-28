@@ -51,7 +51,7 @@ public class AIMoveArmiesPeace
             AddHomeProvinces(civ);
             MoveArmiesToProvinces(freeArmies);
         }
-        if(civ.TotalMaxArmySize()/1000f < civ.forceLimit.value && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f && Game.main.Started)
+        if(civ.TotalMaxArmySize()/1000f < (civ.forceLimit.value -1) && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f && Game.main.Started)
         {
             TileData capitalTile = Map.main.GetTile(civ.SafeProvince());
             if (capitalTile.recruitQueue.Count == 0)
@@ -82,6 +82,18 @@ public class AIMoveArmiesPeace
             int loops = 0;
             while (provs.Count > 0 && loops < 100)
             {
+                if (Game.main.rebelFactions.Exists(i=>i.pos == provs[0]))
+                {
+                    List<Army> rebelsOnTile = Game.main.rebelFactions.FindAll(i => i.pos == provs[0]);
+                    float rebelStrength = 0;
+                    rebelsOnTile.ForEach(i => rebelStrength += i.ArmyStrength());
+                    if (rebelStrength > army.ArmyStrength())
+                    {
+                        provs.RemoveAt(0);
+                        loops++;
+                        continue;
+                    }
+                }
                 if (!army.SetPath(provs[0]))
                 {
                     provs.RemoveAt(0);

@@ -12,9 +12,11 @@ public class Advisor
     public string effect;
     public float effectStrength;
     public int effectType;
+    public Effect effects;
     public int civID;
     public int type;
     public bool active;
+    public Sprite icon;
     public float HireCost(Civilisation civ) 
     {
         float baseCost = 10 * Mathf.Pow(skillLevel, 2);
@@ -50,7 +52,7 @@ public class Advisor
         effectStrength = clone.effectStrength;
         type = clone.type;
         effectType = clone.effectType;
-
+        icon = clone.icon;
     }
     void Activate()
     {
@@ -73,8 +75,8 @@ public class Advisor
         }
         advisor.age = new Age(0, 0, 0, UnityEngine.Random.Range(1, 11));
         advisor.skillLevel = 1;
-        int years = (int)(Game.main.gameTime.totalTicks() / 6 * 24 * 30 * 12);
-        if(Game.main.gameTime.totalTicks() > 6 * 24 * 30 * 12)
+        int years = Game.main.gameTime.years;
+        if(years > 0)
         {
             advisor.skillLevel += UnityEngine.Random.Range(0, Mathf.Min(years,5));
         }
@@ -89,7 +91,7 @@ public class Advisor
         active = false;
         if (Player.myPlayer.myCivID == civID)
         {
-            Debug.Log("Advisor Death");
+            //Debug.Log("Advisor Death");
         }
         Game.main.monthTick.RemoveListener(CheckDeath);
     }

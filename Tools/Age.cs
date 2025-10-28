@@ -38,6 +38,20 @@ public class Age
             Game.main.tenMinTick.RemoveListener(TenMinTick);
         }
     }
+    public Age(Age clone)
+    {        
+        tenMins = clone.tenMins;
+        hours = clone.hours;
+        days = clone.days;
+        months = clone.months;
+        years = clone.years;
+        MainTime = false;
+        if (clone.active)
+        {
+            Game.main.tenMinTick.AddListener(TenMinTick);
+        }
+        active = clone.active;
+    }
 
     public Age(int TenMins = 0,int Hours = 0,int Days = 0,int Months = 0, int Years = 0, bool mainTime = false)
     {

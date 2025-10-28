@@ -6,8 +6,6 @@ using UnityEngine;
 [Serializable]
 public class NationalIdeas
 {
-    public string traditionOne, traditonTwo;
-    public float traditonAmountOne, traditionAmountTwo;   
-    public int traditionTypeOne,traditonTypeTwo;
+    public Effect[] traditions;
     public Idea[] ideas;
 }

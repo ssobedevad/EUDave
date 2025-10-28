@@ -13,6 +13,6 @@ public class Loan
     }
     public float GetInterestValue(Civilisation civilisation)
     {
-        return value * civilisation.interestPerMonth.value/ 30f;
+        return value * (civilisation.interestPerMonth.value / 3000f);
     }
 }

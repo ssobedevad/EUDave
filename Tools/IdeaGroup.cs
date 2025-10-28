@@ -9,4 +9,10 @@ public class IdeaGroup
     public string name;
     public int type;
     public Idea[] ideas;
+    public IdeaGroup()
+    {
+        name = "";
+        type = 0;
+        ideas = new Idea[7];
+    }
 }

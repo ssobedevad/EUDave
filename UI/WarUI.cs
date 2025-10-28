@@ -27,6 +27,8 @@ public class WarUI : MonoBehaviour
             else
             {
                 GameObject item = Instantiate(warMiniPrefab, warMiniTransform);
+                int index = wars.Count;
+                item.GetComponent<Button>().onClick.AddListener(delegate { OpenWarUI(index); });
                 wars.Add(item);
                 UIManager.main.UI.Add(item);
             }
@@ -35,7 +37,15 @@ public class WarUI : MonoBehaviour
         {
             War civWar = civWars[i];
             wars[i].GetComponentInChildren<Image>().color = civWar.GetOpposingLeader(myCiv.CivID).c;
-            wars[i].GetComponentInChildren<TextMeshProUGUI>().text = Mathf.Round(civWar.warScore) * ((civWar.attackerCiv == myCiv) ? 1f : -1f) + "%";
+            wars[i].GetComponentInChildren<TextMeshProUGUI>().text = Mathf.Round(civWar.warScore) * ((civWar.attackerCiv == myCiv || civWar.attackerAllies.Contains(myCiv)) ? 1f : -1f) + "%";
         }
+    }
+    void OpenWarUI(int index)
+    {
+        if (Player.myPlayer.myCivID == -1) { return; }
+        Civilisation myCiv = Player.myPlayer.myCiv;
+        List<War> civWars = myCiv.GetWars();
+        UIManager.main.WarUI.GetComponent<WarInfoUI>().war = civWars[index];
+        UIManager.main.WarUI.SetActive(true);
     }
 }

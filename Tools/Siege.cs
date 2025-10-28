@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Siege
@@ -33,12 +34,41 @@ public class Siege
             diceRolls.Add(new WeightedChoice(i, 10));
         }
     }
-    
+
     void Timer()
     {
         armiesSieging.RemoveAll(i => i == null);
+        armiesSieging.RemoveAll(i => i.exiled);
         armiesSieging.RemoveAll(i => i.path.Count > 0);
         armiesSieging.RemoveAll(i => i.pos != target.pos);
+        if (leaderCivID == -1)
+        {
+            if(target.occupied && target.occupiedByID == -1)
+            {
+                target.siege = null;
+                Game.main.tenMinTick.RemoveListener(Timer);
+                inProgress = false;
+                progress = 0;
+                tickTimer = 0;
+            }
+        }
+        else
+        {
+            bool canrelease = target.occupied && (target.civID == leaderCivID || target.civ.atWarTogether.Contains(leaderCivID) || target.civ.subjects.Contains(leaderCivID) || target.civ.overlordID == leaderCivID);
+            bool canSiege = leaderCivID != target.civID &&
+            (
+                (target.civ.atWarWith.Contains(leaderCivID) && !target.occupied) ||
+                (target.occupied && target.occupiedByID == -1)
+                );
+            if (!canrelease && !canSiege)                
+            {
+                target.siege = null;
+                Game.main.tenMinTick.RemoveListener(Timer);
+                inProgress = false;
+                progress = 0;
+                tickTimer = 0;
+            }
+        }
         if (armiesSieging.FindAll(i => i.civID == leaderCivID).Count > 0)
         {           
             if (unitsSieging() >= Mathf.Max(fortLevel * 3000,1000) && !armiesSieging.Exists(i=>i.inBattle))
@@ -77,34 +107,61 @@ public class Siege
     }
     void Complete()
     {
-        List<TileData> neighbors = target.GetNeighbors().ConvertAll(i => Map.main.GetTile(i));
-        if (leaderCivID == target.civID)
+        List<TileData> neighbors = target.GetNeighborTiles();
+        if (leaderCivID == target.civID || target.civ.atWarTogether.Contains(leaderCivID)||(target.civ.overlordID == leaderCivID && leaderCivID > -1))
         {
             target.occupied = false;
-            target.occupiedByID = leaderCivID;
+            target.occupiedByID = target.civID;
             foreach (var n in neighbors)
             {
-                if(n.civID == leaderCivID && n.occupied && !n.HasNeighboringActiveOccupiedFort(leaderCivID) && n.fortLevel == 0)
+                if(n.civID == target.civID && n.occupied && !n.HasNeighboringActiveOccupiedFort(target.civID) && n.fortLevel == 0 && n.armiesOnTile.Count == 0)
                 {
                     n.occupied = false;
-                    n.occupiedByID = leaderCivID;
+                    n.occupiedByID = target.civID;
                 }
             }
         }
-        else
+        else if (leaderCivID != target.civID && (target.civ.atWarWith.Contains(leaderCivID)|| leaderCivID == -1) && (!target.occupied || target.occupiedByID == -1 || (leaderCivID == -1 && target.occupied && target.occupiedByID > -1)) )
         {
             if(leaderCivID == -1 && (!target.HasNeighboringActiveFort(-1)))
             {
                 target.control = Mathf.Clamp(target.control - 10f,0f,target.maxControl);
+                target.heldByID = RebelArmyStats.GetRebelStats(armiesSieging[0]).rebelDemandsID;
+                target.heldByType = RebelArmyStats.GetRebelStats(armiesSieging[0]).rebelType;
             }
             target.occupied = true;
-            target.occupiedByID = leaderCivID;
+            int occupyId = leaderCivID;
+            if (leaderCivID > -1)
+            {
+                Civilisation leaderCiv = Game.main.civs[leaderCivID];
+                if (!leaderCiv.CanCoreTile(target))
+                {
+                    War war = target.civ.GetWars().Find(i => i.Involving(leaderCivID));
+                    if (war != null && war.attackerCiv.CivID != leaderCivID && war.defenderCiv.CivID != leaderCivID)
+                    {
+                        if (war.attackerAllies.Exists(i => i.CivID == leaderCivID))
+                        {
+                            occupyId = war.attackerCiv.CivID;
+                        }
+                        else if (war.defenderAllies.Exists(i => i.CivID == leaderCivID))
+                        {
+                            occupyId = war.defenderCiv.CivID;
+                        }
+                    }
+                }
+            }
+            target.occupiedByID = occupyId;
             foreach (var n in neighbors)
             {
-                if (n.civID == target.civID && !n.occupied && !n.HasNeighboringActiveFort(leaderCivID) && n.fortLevel == 0)
+                if (n.civID == target.civID && !n.occupied && !n.HasNeighboringActiveFort(leaderCivID) && n.fortLevel == 0 && n.armiesOnTile.Count ==0)
                 {
                     n.occupied = true;
-                    n.occupiedByID = leaderCivID;
+                    n.occupiedByID = occupyId;
+                    if (leaderCivID == -1)
+                    {
+                        n.heldByID = RebelArmyStats.GetRebelStats(armiesSieging[0]).rebelDemandsID;
+                        n.heldByType = RebelArmyStats.GetRebelStats(armiesSieging[0]).rebelType;
+                    }
                 }
             }
         }

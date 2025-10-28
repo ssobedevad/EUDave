@@ -34,18 +34,21 @@ public class TechnologyUI : MonoBehaviour
             Tech nextAdminTech = Map.main.TechA[civ.adminTech + 1];
             adminTexts[0].text = nextAdminTech.Name + " (" + (civ.adminTech + 1) + ") " + GetTechCost(nextAdminTech,civ) + "<sprite index=1>";
             SetTechDescription(nextAdminTech, adminTexts[1]);
+            AdminTech.GetComponent<Image>().color = civ.adminPower >= GetTechCost(nextAdminTech,civ) ? Color.green : Color.red;
         }
         if (d)
         {
             Tech nextDiploTech = Map.main.TechD[civ.diploTech + 1];
             diploTexts[0].text = nextDiploTech.Name + " (" + (civ.diploTech + 1) + ") " + GetTechCost(nextDiploTech, civ) + "<sprite index=2>";
             SetTechDescription(nextDiploTech, diploTexts[1]);
+            DiploTech.GetComponent<Image>().color = civ.diploPower >= GetTechCost(nextDiploTech, civ) ? Color.green : Color.red;
         }
         if (m)
         {
             Tech nextMilTech = Map.main.TechM[civ.milTech + 1];
             milTexts[0].text = nextMilTech.Name + " (" + (civ.milTech + 1) + ") " + GetTechCost(nextMilTech, civ) + "<sprite index=3>";
             SetTechDescription(nextMilTech, milTexts[1]);
+            MilTech.GetComponent<Image>().color = civ.milPower >= GetTechCost(nextMilTech, civ) ? Color.green : Color.red;
         }       
         SetCategoryDescription(0, adminText);
         SetCategoryDescription(1, diploText);
@@ -53,6 +56,8 @@ public class TechnologyUI : MonoBehaviour
     }
     void SetTechDescription(Tech tech, TextMeshProUGUI text)
     {
+        if (Player.myPlayer.myCivID == -1) { return; }
+        Civilisation civ = Player.myPlayer.myCiv;
         text.text = "This Tech Gives:\n\n";
         foreach (var unlock in tech.unlock)
         {
@@ -60,7 +65,7 @@ public class TechnologyUI : MonoBehaviour
         }
         for (int i = 0; i < tech.effect.Length; i++)
         {
-            text.text += "Effect: " + tech.effect[i] + " +" + tech.effectStrength[i] + "\n";
+            text.text += "Effect: " + tech.effect[i] + Modifier.ToString(tech.effectStrength[i], civ.GetStat(tech.effect[i])) + "\n";
         }
     }
     void SetCategoryDescription(int category, TextMeshProUGUI text)
@@ -110,7 +115,7 @@ public class TechnologyUI : MonoBehaviour
         }
         for (int i = 0; i < modifiers.Count; i++)
         {
-            text.text += modifiers[i] + " +" + modifierValues[i] + "\n";
+            text.text += modifiers[i] + Modifier.ToString(modifierValues[i], civ.GetStat(modifiers[i])) + "\n";
         }
 
     }
@@ -137,6 +142,25 @@ public class TechnologyUI : MonoBehaviour
             cost += (int)(baseCost * (civ.techCostsM.value));
         }
         return Mathf.Max(1,cost);
+    }
+    public static int GetTechCostNoAhead(Tech tech, Civilisation civ)
+    {
+        int baseCost = 600;
+        int cost = baseCost;
+        cost += (int)(baseCost * (civ.techCosts.value));
+        if (tech.type == 0)
+        {
+            cost += (int)(baseCost * (civ.techCostsA.value));
+        }
+        if (tech.type == 1)
+        {
+            cost += (int)(baseCost * (civ.techCostsD.value));
+        }
+        if (tech.type == 2)
+        {
+            cost += (int)(baseCost * (civ.techCostsM.value));
+        }
+        return Mathf.Max(1, cost);
     }
     void TryTakeTech(int id)
     {

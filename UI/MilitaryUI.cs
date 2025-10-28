@@ -30,12 +30,11 @@ public class MilitaryUI : MonoBehaviour
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
         UnitType unit = civ.units[type];
-        float combatAbility = type == 0 ? civ.infantryCombatAbility.value : type == 1 ? civ.flankingCombatAbility.value : civ.siegeCombatAbility.value;
         TextMeshProUGUI[] texts = baseImg.GetComponentsInChildren<TextMeshProUGUI>();
         texts[0].text = Mathf.Round(unit.meleeDamage.value * 100f) / 100f + "";
         texts[1].text = Mathf.Round(unit.flankingDamage.value * 100f) / 100f + "";
         texts[2].text = Mathf.Round(unit.rangedDamage.value * 100f) / 100f + "";
-        texts[3].text = Mathf.Round(combatAbility * 100f) / 100f + "";
+        texts[3].text = Mathf.Round(unit.combatAbility.value * 100f) / 100f + "";
         texts[4].text = Mathf.Round(unit.baseCost * 100f) / 100f + "";
     }
     void SetupHoverText()

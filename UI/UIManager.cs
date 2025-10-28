@@ -9,13 +9,14 @@ public class UIManager : MonoBehaviour
 
     [SerializeField] public GameObject BattleUIPrefab,CombatTextPrefab,DebugCirclePrefab,ArmyUIPrefab;
     [SerializeField] GameObject TileUI,BattleUI,SiegeUI,ArmyUI,ArmyUIMulti;
-    [SerializeField] public GameObject CivUI,PeaceDealUI;
+    [SerializeField] public GameObject CivUI,PeaceDealUI,WarUI,countryChooser,toolbar,interestingCountries;
     [SerializeField] public List<GameObject> UI;
     [SerializeField] public List<GameObject> WorldSpaceUI;
     [SerializeField] public Transform worldCanvas,battleTransform,eventTransform;
     [SerializeField] RectTransform Selector;
     [SerializeField] public GameObject mouseText;
-    [SerializeField] public GameObject eventPrefab;
+    [SerializeField] public GameObject eventPrefab,battleResultPrefab,playerCTAPrefab;
+    [SerializeField] public Sprite[] icons;
 
     Vector2 selectStart;
     public Rect selectRect;
@@ -66,6 +67,9 @@ public class UIManager : MonoBehaviour
                 Player.myPlayer.isHoveringUI = true;
             }
         }
+        interestingCountries.SetActive(!Game.main.Started);
+        toolbar.SetActive(Game.main.Started);
+        countryChooser.SetActive(!Game.main.Started && Player.myPlayer.myCivID > -1);
         TileUI.SetActive(Player.myPlayer.selectedTile != null && Player.myPlayer.tileSelected && !Player.myPlayer.siegeSelected);
         BattleUI.SetActive(Player.myPlayer.selectedBattle != null && Player.myPlayer.selectedBattle.active);
         SiegeUI.SetActive(Player.myPlayer.selectedTile != null && Player.myPlayer.selectedTile.underSiege && Player.myPlayer.selectedTile.siege != null && Player.myPlayer.siegeSelected);
@@ -103,6 +107,8 @@ public class UIManager : MonoBehaviour
         {
             if(selectRect.size.magnitude > 1)
             {
+                UIManager.main.CivUI.SetActive(false);
+                Map.main.tileMapManager.DeselectTile();
                 Player.myPlayer.selectedArmies.Clear();
                 List<Army> possibleArmies = new List<Army>();
                 if (Player.myPlayer.myCivID == -1)
@@ -123,6 +129,7 @@ public class UIManager : MonoBehaviour
                     {
                         Player.myPlayer.selectedArmies.Add(army);
                     }
+
                 }
             }
 

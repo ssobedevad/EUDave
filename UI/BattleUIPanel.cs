@@ -1,15 +1,12 @@
-using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.Burst.Intrinsics;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class BattleUIPanel : MonoBehaviour
 {
-    [SerializeField] Transform attackers, defenders;
-    public List<GameObject> attackerList, defenderList = new List<GameObject>();
+    [SerializeField] Transform attackers, defenders,attackersBack,defendersBack;
+    public List<GameObject> attackerList, defenderList,attackerBackList,defenderBackList;
     [SerializeField] GameObject regimentPrefab;
     [SerializeField] TextMeshProUGUI reservesA, reservesD, diceRollA, diceRollD,disciplineTextA,moraleTextA,tacticsTextA, disciplineTextD, moraleTextD, tacticsTextD, moraleFillTextA,moraleFillTextD;
     [SerializeField] TextMeshProUGUI terrainRollA, terrainRollD, bonusRollA, bonusRollD;
@@ -19,6 +16,8 @@ public class BattleUIPanel : MonoBehaviour
     {
         attackerList = new List<GameObject>();
         defenderList = new List<GameObject>();
+        attackerBackList = new List<GameObject>();
+        defenderBackList = new List<GameObject>();
     }
     private void OnGUI()
     {
@@ -146,6 +145,46 @@ public class BattleUIPanel : MonoBehaviour
                     }
                 }
             }
+            if (battle.attackingBackLine != null && attackerBackList != null)
+            {
+                while (attackerBackList.Count != battle.attackingBackLine.width)
+                {
+                    if (attackerBackList.Count > battle.attackingBackLine.width)
+                    {
+                        Destroy(attackerBackList[0]);
+                        attackerBackList.RemoveAt(0);
+                    }
+                    else
+                    {
+                        attackerBackList.Add(Instantiate(regimentPrefab, attackersBack));
+                    }
+                }
+                for (int i = 0; i < battle.attackingBackLine.width; i++)
+                {
+                    Regiment regiment = battle.attackingBackLine.regiments[i];
+                    if (regiment != null && regiment.type > -1)
+                    {
+                        attackerBackList[i].GetComponentsInChildren<Image>()[2].enabled = true;
+                        attackerBackList[i].GetComponentsInChildren<Image>()[2].sprite = unitIcons[regiment.type];
+                        if (regiment.size > 0)
+                        {
+                            attackerBackList[i].GetComponent<Image>().color = Color.Lerp(Color.red, Color.green, regiment.morale / regiment.maxMorale);
+                            attackerBackList[i].GetComponent<Image>().fillAmount = (float)regiment.size / (float)regiment.maxSize;
+                        }
+                        else
+                        {
+                            attackerBackList[i].GetComponent<Image>().color = Color.red;
+                            attackerBackList[i].GetComponent<Image>().fillAmount = 1;
+                        }
+                    }
+                    else
+                    {
+                        attackerBackList[i].GetComponent<Image>().color = Color.gray;
+                        attackerBackList[i].GetComponent<Image>().fillAmount = 1;
+                        attackerBackList[i].GetComponentsInChildren<Image>()[2].enabled = false;
+                    }
+                }
+            }
             if (battle.defendingFrontLine != null && defenderList != null)
             {
                 while (defenderList.Count != battle.defendingFrontLine.width)
@@ -184,6 +223,47 @@ public class BattleUIPanel : MonoBehaviour
                         defenderList[i].GetComponent<Image>().color = Color.gray;
                         defenderList[i].GetComponent<Image>().fillAmount = 1;
                         defenderList[i].GetComponentsInChildren<Image>()[2].enabled = false;
+                    }
+                }
+            }
+            if (battle.defendingBackLine != null && defenderBackList != null)
+            {
+                while (defenderBackList.Count != battle.defendingBackLine.width)
+                {
+                    if (defenderBackList.Count > battle.defendingBackLine.width)
+                    {
+                        Destroy(defenderBackList[0]);
+                        defenderBackList.RemoveAt(0);
+                    }
+                    else
+                    {
+                        defenderBackList.Add(Instantiate(regimentPrefab, defendersBack));
+                    }
+                }
+                for (int i = 0; i < battle.defendingBackLine.width; i++)
+                {
+                    Regiment regiment = battle.defendingBackLine.regiments[i];
+                    if (regiment != null && regiment.type > -1)
+                    {
+                        defenderBackList[i].GetComponentsInChildren<Image>()[2].enabled = true;
+                        defenderBackList[i].GetComponentsInChildren<Image>()[2].sprite = unitIcons[regiment.type];
+                        if (regiment.size > 0)
+                        {
+                            defenderBackList[i].GetComponent<Image>().color = Color.Lerp(Color.red, Color.green, regiment.morale / regiment.maxMorale);
+                            defenderBackList[i].GetComponent<Image>().fillAmount = (float)regiment.size / (float)regiment.maxSize;
+
+                        }
+                        else
+                        {
+                            defenderBackList[i].GetComponent<Image>().color = Color.red;
+                            defenderBackList[i].GetComponent<Image>().fillAmount = 1;
+                        }
+                    }
+                    else
+                    {
+                        defenderBackList[i].GetComponent<Image>().color = Color.gray;
+                        defenderBackList[i].GetComponent<Image>().fillAmount = 1;
+                        defenderBackList[i].GetComponentsInChildren<Image>()[2].enabled = false;
                     }
                 }
             }

@@ -7,9 +7,7 @@ using UnityEngine;
 public class Building
 {
     public string Name;
-    public string effect;
-    public int effectType;
-    public float effectSrength;
+    public Effect effects;
     public float baseCost;
     public float baseTime;
     public int fortLevel;

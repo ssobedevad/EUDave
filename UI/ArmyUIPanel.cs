@@ -12,6 +12,7 @@ public class ArmyUIPanel : MonoBehaviour
     [SerializeField] GameObject regimentPrefab;
     [SerializeField] Button[] buttons;
     [SerializeField] Sprite[] unitSprites;
+    [SerializeField] TextMeshProUGUI[] unitQuantities;
 
     private void Start()
     {
@@ -19,12 +20,29 @@ public class ArmyUIPanel : MonoBehaviour
         buttons[1].onClick.AddListener(ConsolidateRegiments);
         buttons[2].onClick.AddListener(Split);
         buttons[3].onClick.AddListener(Disband);
+        buttons[4].onClick.AddListener(ToggleAttach);
+        buttons[5].onClick.AddListener(DetatchMercs);
+    }
+    void ToggleAttach()
+    {
+
+    }
+    void DetatchMercs()
+    {
+        if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
+        {
+            Army army = Player.myPlayer.selectedArmies[0];
+            army.DetatchMercs();
+        }
     }
     private void OnGUI()
     {
         if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
         {
-            Army army = Player.myPlayer.selectedArmies[0];           
+            Army army = Player.myPlayer.selectedArmies[0];
+            int infantry = 0;
+            int cavalry = 0;
+            int artillery = 0;
             if (army.regiments != null && regiments != null)
             {
                 while (regiments.Count != army.regiments.Count)
@@ -42,11 +60,24 @@ public class ArmyUIPanel : MonoBehaviour
                 for (int i = 0; i < army.regiments.Count; i++)
                 {
                     Regiment regiment = army.regiments[i];
+                    if(regiment.type == 0)
+                    {
+                        infantry++;
+                    }
+                    else if (regiment.type == 1)
+                    {
+                        cavalry++;
+                    }
+                    else if (regiment.type == 2)
+                    {
+                        artillery++;
+                    }
                     Image[] images = regiments[i].GetComponentsInChildren<Image>();
                     TextMeshProUGUI regSize = regiments[i].GetComponentInChildren<TextMeshProUGUI>();
                     if (regiment != null)
                     {
                         regSize.text = regiment.size + "";
+                        images[0].color = regiment.mercenary ? Color.green : Color.white;
                         images[1].sprite = unitSprites[regiment.type];
                         if (regiment.size > 0)
                         {
@@ -63,6 +94,9 @@ public class ArmyUIPanel : MonoBehaviour
                         images[4].fillAmount = 0;
                     }
                 }
+                unitQuantities[0].text = infantry + "";
+                unitQuantities[1].text = cavalry + "";
+                unitQuantities[2].text = artillery + "";
             }            
 
         }
@@ -76,33 +110,7 @@ public class ArmyUIPanel : MonoBehaviour
         if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
         {
             Army army = Player.myPlayer.selectedArmies[0];
-            int space = Game.main.civs[army.civID].AddPopulation((int)army.ArmySize());
-            if (space >= (int)army.ArmySize())
-            {
-                army.OnExitTile();
-                Destroy(army);
-            }
-            else
-            {
-                while (space > 0 && army.regiments.Count > 0)
-                {
-                    if (space >= army.regiments[0].size)
-                    {
-                        space -= army.regiments[0].size;
-                        army.regiments.RemoveAt(0);
-                    }
-                    else
-                    {
-                        army.regiments[0].size -= space;
-                        space = 0;
-                    }
-                }
-                if(army.regiments.Count == 0)
-                {
-                    army.OnExitTile();
-                    Destroy(army);
-                }
-            }
+            army.Disband();
         }
     }
     void OpenSiegeView()

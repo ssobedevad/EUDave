@@ -14,9 +14,11 @@ public class MapModesUI : MonoBehaviour
             int mode = i;
             buttons[i].onClick.AddListener(delegate { SelectMapmode(mode); });
         }
+        SelectMapmode(0);
     }
     void SelectMapmode(int mode)
     {
         Player.myPlayer.mapMode = mode;
+        Game.main.refreshMap = true;
     }
 }

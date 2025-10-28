@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public class HoverText : MonoBehaviour,IPointerExitHandler
 {
     public string text;
+    public bool worldSpace;
 
     public void OnPointerExit(PointerEventData eventData)
     {
@@ -17,21 +18,21 @@ public class HoverText : MonoBehaviour,IPointerExitHandler
     private void OnGUI()
     {
         RectTransform rectTransform = GetComponent<RectTransform>();
-        if (UIManager.IsMouseOverUI(rectTransform))
+        if (UIManager.IsMouseOverUI(rectTransform) || (worldSpace && UIManager.IsMouseOverUIWorld(rectTransform)))
         {
             RectTransform rect = UIManager.main.mouseText.GetComponent<RectTransform>();
             var MainCanvas = UIManager.main.gameObject;
+            float scale = MainCanvas.GetComponent<Canvas>().scaleFactor;
             var canvasS = MainCanvas.GetComponent<CanvasScaler>();
+            var halfWidth = (canvasS.referenceResolution.x);
+            var halfHeight = (canvasS.referenceResolution.y);
 
-            var halfWidth = canvasS.referenceResolution.x;
-            var halfHeight = canvasS.referenceResolution.y;
-
-            Vector2 apos = Input.mousePosition;
+            Vector2 apos = Input.mousePosition / scale;
             float xpos = apos.x;
-            xpos = Mathf.Clamp(xpos + 20, 0, halfWidth - rect.sizeDelta.x);
+            xpos = Mathf.Clamp(xpos + 20, 0, halfWidth - (rect.sizeDelta.x));
             apos.x = xpos;
             float ypos = apos.y;
-            ypos = Mathf.Clamp(ypos, 0 + (rect.sizeDelta.x / 2), halfHeight - (rect.sizeDelta.x / 2));
+            ypos = Mathf.Clamp(ypos, 0 + (rect.sizeDelta.y / 2), halfHeight - (rect.sizeDelta.y / 2));
             apos.y = ypos;
             rect.anchoredPosition = apos;
             UIManager.main.mouseText.SetActive(true);

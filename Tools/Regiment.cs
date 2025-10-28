@@ -15,26 +15,27 @@ public class Regiment
     public float flankingDamage;
     public float rangedDamage;
     public bool inBatle;
-    public Regiment(int CivID,int MaxSize = 1000,int Size = 1000, int Type = 0)
+    public bool mercenary;
+    public Regiment(int CivID, int MaxSize = 1000, int Size = 1000, int Type = 0, bool merc = false)
     {
         maxSize = MaxSize;
         size = Size;
         type = Type;
-        morale = 2.5f;
-        maxMorale = 2.5f;
+        morale = 2f;
+        maxMorale = 2f;
         meleeDamage = 0.25f;
         flankingDamage = 0.2f;
         rangedDamage = 0.1f;
         flankingRange = 1;
         civID = CivID;
+        mercenary = merc;
         if (civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
             maxMorale = civ.moraleMax.value;
-            morale = maxMorale;           
+            morale = 0.51f;           
         }
         inBatle = false;
-        Game.main.dayTick.AddListener(DayTick);
     }
     public Regiment(Regiment clone)
     {
@@ -44,11 +45,12 @@ public class Regiment
             maxSize = 0;
             size = 0;
             type = -1;
-            morale = 0f;
-            maxMorale = 0f;
+            morale = 2f;
+            maxMorale = 2f;
             meleeDamage = 0f;
             flankingRange = 0;
             inBatle = false;
+            mercenary = false;
         }
         else
         {
@@ -61,27 +63,19 @@ public class Regiment
             maxMorale = clone.maxMorale;
             meleeDamage = clone.meleeDamage;
             inBatle = clone.inBatle;
+            mercenary = clone.mercenary;
         }
     }
 
-    public void DayTick()
+    public void RecoverMorale()
     {
-        if (!inBatle && type > -1 && civID > -1)
-        {
-            RecoverMorale();
-            RefillRegiment();
-        }
-    }
-    void RecoverMorale()
-    {
-
         Civilisation civ = Game.main.civs[civID];
         float recovery = 0.15f + civ.moraleRecovery.value;
         Army army = civ.armies.Find(i=>i.regiments.Contains(this));
         if(army != null) { if (army.tile.civID == civID) { recovery += 0.05f; } }
         morale = Mathf.Min(maxMorale, morale + maxMorale * recovery);
     }
-    void RefillRegiment()
+    public void RefillRegiment()
     {
         Civilisation civ = Game.main.civs[civID];
         int reinforce = (int)(100 * (1f + civ.reinforceSpeed.value));
