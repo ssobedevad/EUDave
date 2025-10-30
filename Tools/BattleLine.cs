@@ -99,17 +99,18 @@ public class BattleLine
         {
             List<Regiment> newInfantry = newRegiments.FindAll(i => i.type == 0);
             List<Regiment> newCavalrly = newRegiments.FindAll(i => i.type == 1);
+            List<Regiment> newArtillery = newRegiments.FindAll(i => i.type == 2);
             int index = i;
             if (j % 2 == 0) { index *= -1; }
             else { i++; index = i; }
             index = centre + index - 1;
-            Regiment next = GetNext(newInfantry, newCavalrly);
+            Regiment next = GetNext(newInfantry, newCavalrly, newArtillery);
             if (index < indent + bonusIndentLeft || index >= width - indent)
             {
                 int distToBattle = index < indent + bonusIndentLeft ? (indent + bonusIndentLeft) - index : index - (width - indent) + 1;
                 if (next != null && next.flankingRange < distToBattle)
                 {
-                    next = GetNext(newCavalrly, newInfantry);
+                    next = GetNext(newCavalrly, newInfantry,newArtillery);
                     if (next != null && next.flankingRange < distToBattle) { next = null; }
                 }
             }
@@ -144,13 +145,13 @@ public class BattleLine
             bonusIndentLeft = targetWidth % 2 == 0 ? 1 : 0;
         }
         List<Regiment> used = new List<Regiment>();
-        newRegiments.Sort((x, y) => (y.size * y.morale).CompareTo(x.size * x.morale));
-        List<Regiment> newArtillery = newRegiments.FindAll(i => i.type == 2);
-        if(newArtillery.Count == 0) { return used; }
+        newRegiments.Sort((x, y) => (y.size * y.morale).CompareTo(x.size * x.morale));      
         int i = 0;
         int centre = (width + 1) / 2;
         for (int j = 0; j < width; j++)
-        {            
+        {
+            List<Regiment> newArtillery = newRegiments.FindAll(i => i.type == 2);
+            if (newArtillery.Count == 0) { return used; }
             int index = i;
             if (j % 2 == 0) { index *= -1; }
             else { i++; index = i; }
@@ -180,9 +181,9 @@ public class BattleLine
         }
         return used;
     }
-    Regiment GetNext(List<Regiment> firstPrio, List<Regiment> secondPrio) 
+    Regiment GetNext(List<Regiment> firstPrio, List<Regiment> secondPrio, List<Regiment> thirdPrio) 
     {
-        return firstPrio.Count > 0 ? firstPrio.First() : secondPrio.Count > 0 ? secondPrio.First() : null;
+        return firstPrio.Count > 0 ? firstPrio[0] : secondPrio.Count > 0 ? secondPrio[0] : thirdPrio.Count > 0? thirdPrio[0] : null;
     }
     public void RecentreRegiments()
     {

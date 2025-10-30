@@ -438,6 +438,13 @@ public class AIMoveArmiesWar
                             {
                                 Army army = moveArmies[i];
                                 army.SetPath(eArmy.pos);
+                                if (army.general == null || !army.general.active)
+                                {
+                                    if (civ.generals.Count > 0)
+                                    {
+                                        army.AssignGeneral(civ.generals[0]);
+                                    }
+                                }
                             }
                         }
                         moveArmies.Clear();

@@ -252,7 +252,7 @@ public class SubjectsUI : MonoBehaviour
         ld += "From Relative Economic Strength: " + Mathf.Round((subject.GetTotalIncome() + 1) / (overlord.GetTotalIncome() + 1) * 75f) + "%\n";
         ld += "From Overlord Diplomatic Reputation: " + Mathf.Round(-3f * overlord.diploRep.value) + "%\n";
         ld += "From Opinion of Overlord: " +Mathf.Round(-0.1f * subject.opinionOfThem[subject.overlordID].value) + "%\n";
-        ld += (subject.diploTech - overlord.diploTech > 0)? "From Better Diplomatic Technology Than Overlord: " + Mathf.Max(0, subject.diploTech - overlord.diploTech) * -5f + "%\n" : "";
+        ld += (subject.diploTech - overlord.diploTech > 0)? "From Better Diplomatic Technology Than Overlord: " + Mathf.Max(0, subject.diploTech - overlord.diploTech) * 5f + "%\n" : "";
         ld += "From Total Development: " + Mathf.Round(subject.GetTotalDev() * 0.25f * (1f + overlord.libDesireFromDev.value)) + "%\n";
         ld += "Overlord Bonuses: " +overlord.libDesire.ToString() + "\n\n";
         ld += "Temporary Bonuses: " + Mathf.Round(subject.libertyDesireTemp.value*100f)/100f;

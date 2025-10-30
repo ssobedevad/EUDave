@@ -24,7 +24,7 @@ public class Map : MonoBehaviour
     [SerializeField] public GovernmentType[] governmentTypes;
     [SerializeField] public MercenaryGroup[] mercenaries;
     [SerializeField] public CasusBelli[] casusBellis;
-    [SerializeField] public GameObject capitalIndicatorPrefab,resourceIndicatorPrefab,armyPrefab,fortPrefab;
+    [SerializeField] public GameObject capitalIndicatorPrefab,resourceIndicatorPrefab,armyPrefab,fortPrefab,boatPrefab;
     public Dictionary<string, TradeRegion> tradeRegions = new Dictionary<string, TradeRegion>();
     public Dictionary<string, Terrain> terrainDict = new Dictionary<string, Terrain>();
     public Dictionary<string,ResourceType> resourceDict = new Dictionary<string,ResourceType>();

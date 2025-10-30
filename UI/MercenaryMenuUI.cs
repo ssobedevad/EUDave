@@ -43,7 +43,9 @@ public class MercenaryMenuUI : MonoBehaviour
             Image[] images = mercList[i].GetComponentsInChildren<Image>();
             texts[0].text = merc.Name;
             texts[1].text = regimentCount + "k (" + cavCount + "k cavalry)";
-            mercList[i].GetComponentInChildren<HoverText>().text = "Recruit Cost: " + recruitCost + "<sprite index=0>";
+            string hoverText = "Recruit Cost: " + recruitCost + "<sprite index=0>\n";
+            hoverText += "Maintenaince Cost Increase: +" + Mathf.Round(ArmyMaintainanceIncrease(myCiv, regimentCount - cavCount, cavCount) * 100f)/100f + "<sprite index=0>"; 
+            mercList[i].GetComponentInChildren<HoverText>().text = hoverText;
         }
     }
     void BuyMerc(int id)
@@ -55,5 +57,29 @@ public class MercenaryMenuUI : MonoBehaviour
         List<MercenaryGroup> possiblemercs = myCiv.GetPossibleMercs();
         MercenaryGroup merc = possiblemercs[id];
         tile.StartRecruitingMercenary(Map.main.mercenaries.ToList().IndexOf(merc));
+    }
+
+    public float ArmyMaintainanceIncrease(Civilisation civ, int infantry, int cavalry)
+    {
+        float original = civ.ArmyMaintainance();
+        float armyCosts = 0f;
+        foreach (var army in civ.armies)
+        {
+            foreach (var regiment in army.regiments)
+            {
+                float mult = regiment.mercenary ? (0.5f + Game.main.gameTime.years * 0.25f) : 1f;
+                armyCosts += mult * civ.units[regiment.type].baseCost * (float)regiment.size / (float)regiment.maxSize * 0.25f / 12f;
+            }
+        }
+        armyCosts += infantry * (0.5f + Game.main.gameTime.years * 0.25f) * civ.units[0].baseCost * 0.25f / 12f;
+        armyCosts += cavalry * (0.5f + Game.main.gameTime.years * 0.25f) * civ.units[0].baseCost * 0.25f / 12f;
+        if (civ.TotalMaxArmySize() / 1000f  + infantry + cavalry > civ.forceLimit.value)
+        {
+            float increase = (civ.forceLimit.value + (civ.TotalMaxArmySize() / 1000f+ infantry + cavalry - civ.forceLimit.value) * 2) / civ.forceLimit.value;
+            armyCosts *= increase;
+        }
+        armyCosts *= (1f + civ.regimentCost.value);
+        armyCosts *= (1f + civ.regimentMaintenanceCost.value);
+        return armyCosts - original;
     }
 }

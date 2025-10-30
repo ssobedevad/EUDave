@@ -15,13 +15,25 @@ public class Army : MonoBehaviour
     public float moveTimer,moveTime;
     public bool exiled;
     public bool isMercenary;
+    public General general;
     public Vector3Int pos => Map.main.tileMapManager.tilemap.WorldToCell(transform.position);
     public Vector3Int lastPos;
+    public Vector3Int lastPosNoZOC;
 
     public TileData tile => Map.main.GetTile(pos);
 
     [SerializeField] Transform moveArrowRotatePoint;
     [SerializeField] Image MoveArrowFill;
+
+    public void AssignGeneral(General General)
+    {
+        if(general != null && general.army != null)
+        {            
+            general.army = null;
+        }
+        General.army = this;
+        general = General;
+    }
     public void EnterBattle()
     {
         inBattle = true;
@@ -33,17 +45,32 @@ public class Army : MonoBehaviour
     public float GetAttrition()
     {
         float percent = 0f;
-        if (ArmySize() / 1000f > tile.supplyLimit)
-        {
-            percent += Mathf.Clamp((ArmySize() / 1000f - tile.supplyLimit) / ((float)tile.supplyLimit * 10f), 0f, 5f);
-        }
+        float armysize = ArmySize();
         if (civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
+            foreach (var army in tile.armiesOnTile)
+            {
+                if (civ.atWarTogether.Contains(army.civID) && army != this)
+                {
+                    armysize += army.ArmySize();
+                }
+            }
             if (civ.atWarWith.Contains(tile.civID))
             {
                 percent += 1f + tile.fortLevel;
-            }
+                percent += tile.localAttritionForEnemies.value;
+                percent += tile.civ.attritionForEnemies.value;
+            }           
+        }
+        if (armysize / 1000f > tile.supplyLimit)
+        {
+            percent += Mathf.Clamp((armysize / 1000f - tile.supplyLimit) * (10f / ((float)tile.supplyLimit)), 0f, 5f);
+        }
+        if(civID > -1)
+        {
+            Civilisation civ = Game.main.civs[civID];
+            percent *= (1f + civ.landAttrition.value);
         }
         return percent;
     }
@@ -390,18 +417,22 @@ public class Army : MonoBehaviour
         if(civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            movementSpeed *= (1f + civ.movementSpeed.value);
+            movementSpeed += civ.movementSpeed.value;
+        }
+        if(general != null && general.active)
+        {
+            movementSpeed += general.maneuverSkill * 0.05f;
         }
         if (!inBattle)
         {
             if (path.Count > 0)
             {
-                if (!CanMoveHostileZOC(path.First(),pos)) { path.Clear(); return; }
+                if (!CanMoveHostileZOC(path[0],pos)) { path.Clear(); return; }
                 if (moveTimer >= moveTime)
                 {                  
-                    if (Pathfinding.CanMoveToTile(path.First(), false))
+                    if (Pathfinding.CanMoveToTile(path[0], false))
                     {                        
-                        Vector3Int target = path.First();
+                        Vector3Int target = path[0];
                         path.RemoveAt(0);
                         
                         OnExitTile();
@@ -428,7 +459,7 @@ public class Army : MonoBehaviour
     void CheckBattle()
     {
         TileData tileData = Map.main.GetTile(pos);
-        if (civID == -1) { return; }
+        if (civID == -1 || tileData.armiesOnTile.Count == 0) { return; }
         Civilisation civ = Game.main.civs[civID];
         if (tileData._battle != null)
         {
@@ -540,6 +571,10 @@ public class Army : MonoBehaviour
         TileData tileData = Map.main.GetTile(pos);
         tileData.armiesOnTile.Remove(this);
         lastPos = pos;
+        if(!tileData.hasZOC || (tileData.hasZOC && !tileData.HasNeighboringActiveFort(civID)))
+        {
+            lastPosNoZOC = pos;
+        }
     }
     public void TrySiege(TileData tile)
     {
@@ -792,7 +827,7 @@ public class Army : MonoBehaviour
             {
                 return true;
             }
-            if (moveTo == lastPos)
+            if (moveTo == lastPos || moveTo == lastPosNoZOC)
             {
                 return true;
             }

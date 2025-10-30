@@ -19,10 +19,10 @@ public class Modifier
         this.isPercentage = isPercentage;
         this.decay = decay;
     }
-    public static string ToString(float effect,Stat stat,bool forcePercentage = false)
+    public static string ToString(float effect,Stat stat,bool forcePercentage = false,bool forceFlat = false)
     {
         string val = "";
-        string effectString = (stat != null && stat.isFlat && !forcePercentage) ? Mathf.Round(effect * 100f)/100f + "" : Mathf.Round(effect * 100f) + "%";
+        string effectString = ((forceFlat && !forcePercentage) || (forceFlat == false && forcePercentage == false && stat != null && stat.isFlat)) ? Mathf.Round(effect * 100f)/100f + "" : Mathf.Round(effect * 100f) + "%";
         if (effect > 0)
         {     
             val += " +" + effectString;

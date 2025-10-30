@@ -32,7 +32,7 @@ public class SiegeUIPanel : MonoBehaviour
             string tickSpeedText = "A siege tick happens every "+ Mathf.Round(tickTime * 100f/6f)/100f +" hours \n";
             tickProgressFill.fillAmount = (float)siege.tickTimer/(float)siege.tickTime;
             tickProgressFill.GetComponent<HoverText>().text = tickSpeedText;
-            diceRoll.text = siege.progressRoll + "";
+            diceRoll.text = siege.progressRoll + (siege.artillery>0 ? "+" + siege.artillery/(1+siege.fortLevel) : "") + ((siege.siegeGeneral!=null &&siege.siegeGeneral.active)? "+" + siege.siegeGeneral.siegeSkill : "");
             if (siege.leaderCivID > -1)
             {
                 ownerCivCol.color = Game.main.civs[siege.leaderCivID].c;

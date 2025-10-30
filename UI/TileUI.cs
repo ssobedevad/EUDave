@@ -14,7 +14,9 @@ public class TileUI : MonoBehaviour
     [SerializeField] Sprite unknown;
     [SerializeField] TextMeshProUGUI forceLimit, unrest,rebelHeldTime;
     [SerializeField] TextMeshProUGUI population;
-    [SerializeField] TextMeshProUGUI productionIncome, taxIncome, control;
+    [SerializeField] TextMeshProUGUI productionIncome, taxIncome, control,govCap;
+    [SerializeField] Button increaseControl,decreaseControl;
+    [SerializeField] Button expandInf, reduceInf;
     [SerializeField] Transform coreBack;
     [SerializeField] GameObject corePrefab;
     [SerializeField] List<GameObject> cores = new List<GameObject>();
@@ -26,6 +28,10 @@ public class TileUI : MonoBehaviour
         devAButton.onClick.AddListener(delegate { AddDev(0); });
         devBButton.onClick.AddListener(delegate { AddDev(1); });
         devCButton.onClick.AddListener(delegate { AddDev(2); });
+        increaseControl.onClick.AddListener(delegate { ChangeControl(true); });
+        decreaseControl.onClick.AddListener(delegate { ChangeControl(false); });
+        expandInf.onClick.AddListener(delegate { ChangeInfrastructure(true); });
+        reduceInf.onClick.AddListener(delegate { ChangeInfrastructure(false); });
         openMercMenu.onClick.AddListener(ToggleMercMenu);
         startCore.onClick.AddListener(StartCore);
         toggleBuildingMenu.onClick.AddListener(ToggleBuildingMenu);
@@ -86,15 +92,20 @@ public class TileUI : MonoBehaviour
                     }
                 }
             }
-            if (!civ.atWarWith.Contains(tileCiv.CivID))
+            if (!civ.atWarWith.Contains(tileCiv.CivID) && tileCiv != civ)
             {
                 if (!civ.claims.Contains(tile.pos) && civ.CanCoreTile(tile))
                 {
-                    civ.claims.Add(tile.pos);
+                    if (civ.diploPower >= tile.totalDev)
+                    {
+                        civ.diploPower -= tile.totalDev;
+                        civ.claims.Add(tile.pos);
+                    }
                 }
             }
         }
     }
+
     void ToggleGPMenu()
     {
         greatProjectMenu.SetActive(!greatProjectMenu.activeSelf);
@@ -137,6 +148,14 @@ public class TileUI : MonoBehaviour
         devB.text = tile.developmentB + "";
         devC.text = tile.developmentC + "";
         devT.text = tile.totalDev + "";
+        if (owned)
+        {
+            govCap.text = "Gov Cap: "+ tile.GetGoverningCost();
+        }
+        else
+        {
+            govCap.text = "Unowned";
+        }
         if (tile.civID > -1 && Player.myPlayer.myCivID > -1)
         {
             string text = "Cannot Request Occupation";
@@ -350,11 +369,63 @@ public class TileUI : MonoBehaviour
             }
         }
     }
+    void ChangeControl(bool up)
+    {
+        TileData data = Player.myPlayer.selectedTile;
+        if (Player.myPlayer.myCivID == -1) { return; }
+        Civilisation civ = Player.myPlayer.myCiv;
+        if (civ.CivID != data.civID && civ.CivID != data.civ.overlordID) { return; }
+        if (up)
+        {
+            data.control += 25f;
+            data.localUnrest.AddModifier(new Modifier(10f, ModifierType.Flat, "Control Increased", 25920));
+        }
+        else
+        {
+            data.control -= 25f;
+            data.localUnrest.AddModifier(new Modifier(-10f, ModifierType.Flat, "Control Decreased", 25920));
+        }
+    }
+    void ChangeInfrastructure(bool up)
+    {
+        TileData data = Player.myPlayer.selectedTile;
+        if (Player.myPlayer.myCivID == -1) { return; }
+        Civilisation civ = Player.myPlayer.myCiv;
+        if (civ.CivID != data.civID && civ.CivID != data.civ.overlordID) { return; }
+        if (up)
+        {
+            if(data.infrastructureLevel < data.totalDev / 15 && civ.adminPower >= 50)
+            {
+                civ.adminPower -= 50;
+                data.infrastructureLevel++;
+            }
+        }
+        else
+        {
+            if (data.infrastructureLevel > 0)
+            {
+                data.infrastructureLevel--;
+            }
+        }
+        data.localTaxEfficiency.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.1f, 1);
+        data.localDevCost.UpdateModifier("Infrastructure", data.infrastructureLevel * -0.15f, 1);
+        data.localProductionQuantity.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.05f, 1);
+        data.localProductionValue.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.05f, 1);
+        data.localPopulationGrowth.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.05f, 1);
+        data.localMaxPopulation.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.1f, 1);
+        data.localConstructionCost.UpdateModifier("Infrastructure", data.infrastructureLevel * -0.05f, 1);
+        data.localConstructionTime.UpdateModifier("Infrastructure", data.infrastructureLevel * -0.05f, 1);
+        data.localDefensiveness.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.05f, 1);
+        data.localRecruitmentTime.UpdateModifier("Infrastructure", data.infrastructureLevel * -0.15f, 1);
+        data.localGoverningCost.UpdateModifier("Infrastructure", data.infrastructureLevel * 15f, 1);
+        data.localGoverningCostMod.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.1f, 1);
+    }
     void StartConvertReligion()
     {
         TileData data = Player.myPlayer.selectedTile;
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
+        if (civ.CivID != data.civID && civ.CivID != data.civ.overlordID) { return; }
         data.StartConvert();
     }
     void StartCore()
@@ -362,6 +433,7 @@ public class TileUI : MonoBehaviour
         TileData data = Player.myPlayer.selectedTile;
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
+        if (civ.CivID != data.civID && civ.CivID != data.civ.overlordID) { return; }
         data.StartCore(); 
     }
     void AddDev(int index)

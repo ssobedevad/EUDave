@@ -13,7 +13,20 @@ public class EventData
     public bool affectsCapital;
     public TileData province;
     public EventOption[] optionEffects;
-    
+    public Condition[] conditions;
+
+    public bool CanFire(Civilisation civ)
+    {
+        if (conditions.Length > 0)
+        {
+            foreach (var condition in conditions)
+            {
+                bool met = condition.isMet(civ);
+                if (!met) { return false; }
+            }
+        }
+        return true;
+    }
     public string optionDescription(int option)
     {
         Civilisation civilisation = Player.myPlayer.myCiv;
@@ -71,6 +84,10 @@ public class EventData
         if (opt.prestige != 0)
         {
             desc += (opt.prestige > 0 ? "+" : "") + opt.prestige + " Prestige<sprite index=5>\n";
+        }
+        if (opt.govReformProgress != 0)
+        {
+            desc += (opt.govReformProgress > 0 ? "+" : "") + opt.govReformProgress + " Government Reform Progress<sprite index=4>\n";
         }
         if (opt.stability != 0)
         {

@@ -32,7 +32,25 @@ public class ReligionUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         icon.sprite = Map.main.religions[civ.religion].sprite;
         unity.text = "Religious Unity: "+Mathf.Round(civ.religiousUnity * 1000f) / 10f + "%";
+        unity.GetComponent<HoverText>().text = RUText();
         effects.text = Map.main.religions[civ.religion].GetHoverText(civ);
         tolerance.text = "Tolerance of the True Faith: "+civ.trueFaithTolerance.value +"\n" + "Intolerance of Infidels: " + civ.infidelIntolerance.value;
+    }
+
+    string RUText()
+    {
+        if (Player.myPlayer.myCivID == -1) { return ""; }
+        Civilisation civ = Player.myPlayer.myCiv;
+        string text = "Religious Unity: " + Mathf.Round(civ.religiousUnity * 100f) + "%\n\n";
+        if (civ.religiousUnity < 1) 
+        {
+            text += "Stability Cost: +" + Mathf.Round((1f - civ.religiousUnity) * 10000f)/100f + "%\n";
+            text += "Global Unrest: +" + Mathf.Round((1f - civ.religiousUnity) * 30000f)/100f;
+        }
+        else
+        {
+            text += "Monthly Prestige: +1\n";
+        }
+        return text;
     }
 }

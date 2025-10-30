@@ -13,6 +13,7 @@ public class TileData
     public Color selectorCol = Color.white;
     public bool hasMarket = false;
     public int marketLevel = 0;
+    public int infrastructureLevel = 0;
     public Civilisation civ => Game.main.civs[civID];
     public bool underSiege => siege != null && siege.inProgress;
     public int fortLevel;
@@ -56,6 +57,9 @@ public class TileData
     public Stat localTaxEfficiency = new Stat(0f, "Local Tax Efficiency");
     public float control;
     public float maxControl;
+    public Stat localGoverningCost = new Stat(0f, "Local Governing Cost",true);
+    public Stat localGoverningCostMod = new Stat(0f, "Local Governing Cost Modifier", false);
+    public Stat localAttritionForEnemies = new Stat(0f, "Local Attrition for Enemies");
     public Stat localMinimumControl = new Stat(0f, "Local Minimum Control");
     public Stat localConstructionCost = new Stat(0f, "Local Construction Cost");
     public Stat localConstructionTime = new Stat(0f, "Local Construction Time");
@@ -80,6 +84,11 @@ public class TileData
 
     public int supplyLimit => 6 + (terrain != null ? terrain.supplyLimitBonus : 0);
 
+    public float GetGoverningCost()
+    {
+        float cost = totalDev + localGoverningCost.value;
+        return cost * (1f + localGoverningCostMod.value);
+    }
     public void BreakToRebels()
     {
         if(heldByType > -1)
@@ -760,6 +769,12 @@ public class TileData
                 return localAttackerDiceRoll;
             case "Minimum Control":
                 return localMinimumControl;
+            case "Attrition for Enemies":
+                return localAttritionForEnemies;
+            case "Governing Cost":
+                return localGoverningCost;
+            case "Governing Cost Modifier":
+                return localGoverningCostMod;
             default:
                 return null;
         }

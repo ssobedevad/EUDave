@@ -159,23 +159,7 @@ public class AIManager : MonoBehaviour
     {       
         float balance = civ.GetBalance();
         if (balance < 0)
-        {
-            if(civ.FortMaintenance() > 0 && civ.atWarWith.Count == 0 && civ.overlordID == -1)
-            {
-                List<Vector3Int> forts = civ.GetAllCivTiles().FindAll(i => Map.main.GetTile(i).hasFort);
-                for(int i = 0; i < forts.Count; i++)
-                {
-                    if(civ.GetBalance() < 0)
-                    {
-                        TileData data = Map.main.GetTile(forts[i]);
-                        data.RemoveBuilding(0);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
+        {           
             if(civ.TotalMaxArmySize()/1000f > civ.forceLimit.value && civ.atWarWith.Count == 0)
             {
                 int armiesToRemove = (int)(civ.TotalMaxArmySize() / 1000f - civ.forceLimit.value);
@@ -194,6 +178,23 @@ public class AIManager : MonoBehaviour
                         army.Disband();
                     }
                     if(armiesToRemove <= 0)
+                    {
+                        break;
+                    }
+                }
+            }
+            if (civ.FortMaintenance() >= 1 && civ.atWarWith.Count == 0 && civ.overlordID == -1)
+            {
+                List<Vector3Int> forts = civ.GetAllCivTiles().FindAll(i => Map.main.GetTile(i).hasFort);
+                for (int i = 0; i < forts.Count; i++)
+                {
+                    if (balance <= -1)
+                    {
+                        TileData data = Map.main.GetTile(forts[i]);
+                        data.RemoveBuilding(0);
+                        balance += 1;
+                    }
+                    else
                     {
                         break;
                     }
@@ -284,7 +285,7 @@ public class AIManager : MonoBehaviour
                     {
                         possible.Sort((x, y) => y.GetDailyTax().CompareTo(x.GetDailyTax()));
                     }
-                    else if (building.Name == "Workshop")
+                    else if (building.Name == "Workshop" || building.Name == "Market")
                     {
                         possible.Sort((x, y) => y.GetDailyProductionValue().CompareTo(x.GetDailyProductionValue()));                    
                     }
@@ -323,6 +324,7 @@ public class AIManager : MonoBehaviour
                 {
                     if (taken.Exists(i => i.id == a && i.type == 2)) { continue; }
                     int weight = 100;
+                    if (Map.main.IdeasM[a].name == "Steppes Ideas") { weight = (civ.government == 3 ? weight * 2 : 0); }
                     if (civ.ruler.milSkill + civ.advisorM.skillLevel + 3 < 7) { weight = weight / 2; }
                     ideaGroups.Add(new WeightedChoice(a, weight, "2"));
                 }
@@ -342,7 +344,7 @@ public class AIManager : MonoBehaviour
     public void SpendAdminMana(Civilisation civ)
     {
         int i = civ.CivID;
-        List<TileData> tiles = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
+        List<TileData> tiles = civ.GetAllCivTileDatas();
         tiles.Sort((x,y)=> x.GetDevCost(i).CompareTo(y.GetDevCost(i)));
         bool needCores = false;
         foreach(var tile in tiles)
@@ -357,6 +359,14 @@ public class AIManager : MonoBehaviour
                 {
                     needCores = true;
                 }
+            }
+        }
+        if (civ.stability < 0 && !needCores && civ.overextension <= 10f)
+        {
+            if (civ.adminPower >= civ.GetStabilityCost() && civ.stability < 3)
+            {
+                civ.adminPower -= civ.GetStabilityCost();
+                civ.AddStability(1);
             }
         }
         tiles.RemoveAll(i => !i.canDev(0));
@@ -382,37 +392,37 @@ public class AIManager : MonoBehaviour
         {
             monthDiff = 100;
         }
-        if (monthDiff > 4)
+        for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
         {
-            for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
+            if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
             {
-                if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
+                if (civ.ideaGroups[j].type == 0 && civ.ideaGroups[j].unlockedLevel < 7)
                 {
-                    if (civ.ideaGroups[j].type == 0 && civ.ideaGroups[j].unlockedLevel < 7)
+                    if (civ.adminPower >= IdeasUI.GetIdeaCost(civ))
                     {
-                        if (civ.adminPower >= IdeasUI.GetIdeaCost(civ))
-                        {
-                            IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
-                        }
+                        IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
                     }
                 }
             }
         }
-        if (!needCores && civ.GetWars().Count == 0 && civ.adminPower > cost)
+        if (monthDiff > 4 || civ.adminPower > 900)
         {
-            if(civ.stability < 1)
+            if (!needCores && civ.GetWars().Count == 0 && civ.adminPower > cost)
             {
-                if (civ.adminPower >= civ.GetStabilityCost() && civ.stability < 3)
+                if (civ.stability < 1)
                 {
-                    civ.adminPower -= civ.GetStabilityCost();
-                    civ.AddStability(1);
+                    if (civ.adminPower >= civ.GetStabilityCost() && civ.stability < 3)
+                    {
+                        civ.adminPower -= civ.GetStabilityCost();
+                        civ.AddStability(1);
+                    }
+                }
+                else if (tiles.Count > 0 && civ.adminPower >= tiles[0].GetDevCost(i))
+                {
+                    tiles[0].AddDevelopment(0, i);
                 }
             }
-            else if (tiles.Count > 0 && civ.adminPower >= tiles[0].GetDevCost(i))
-            {
-                tiles[0].AddDevelopment(0, i);
-            }
-        }                                
+        }                              
     }
     public void SpendDiploMana(Civilisation civ)
     {
@@ -439,23 +449,20 @@ public class AIManager : MonoBehaviour
         {
             monthDiff = 100;
         }
-        if (monthDiff > 4)
+        for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
         {
-            for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
+            if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
             {
-                if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
+                if (civ.ideaGroups[j].type == 1 && civ.ideaGroups[j].unlockedLevel < 7)
                 {
-                    if (civ.ideaGroups[j].type == 1 && civ.ideaGroups[j].unlockedLevel < 7)
+                    if (civ.diploPower >= IdeasUI.GetIdeaCost(civ))
                     {
-                        if (civ.diploPower >= IdeasUI.GetIdeaCost(civ))
-                        {
-                            IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
-                        }
+                        IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
                     }
                 }
             }
         }
-        List<TileData> tiles = civ.civTileDatas;
+        List<TileData> tiles = civ.GetAllCivTileDatas();
         tiles.RemoveAll(i => i.religion == civ.religion && i.control <= i.GetConvertControl() && i.religionTimer > -1);
         foreach (var tile in tiles)
         {
@@ -464,20 +471,23 @@ public class AIManager : MonoBehaviour
                 tile.StartConvert();
             }
         }
-        tiles = civ.civTileDatas;
-        tiles.Sort((x, y) => x.GetDevCost(i).CompareTo(y.GetDevCost(i)));
-        tiles.RemoveAll(i => !i.canDev(1));
-        if(tiles.Count == 0) { return; }
-        if (civ.diploPower >= tiles[0].GetDevCost(i) && civ.diploPower > cost + tiles[0].GetDevCost(i))
+        if (monthDiff > 4 || civ.diploPower > 900)
         {
-            tiles[0].AddDevelopment(1,i);                    
+            tiles = civ.GetAllCivTileDatas();
+            tiles.Sort((x, y) => x.GetDevCost(i).CompareTo(y.GetDevCost(i)));
+            tiles.RemoveAll(i => !i.canDev(1));
+            if (tiles.Count == 0) { return; }
+            if (civ.diploPower >= tiles[0].GetDevCost(i) && civ.diploPower > cost + tiles[0].GetDevCost(i))
+            {
+                tiles[0].AddDevelopment(1, i);
+            }
         }
 
     }
     public void SpendMilMana(Civilisation civ)
     {
         int i = civ.CivID;
-        List<TileData> tiles = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
+        List<TileData> tiles = civ.GetAllCivTileDatas();
         tiles.Sort((x, y) => x.GetDevCost(i).CompareTo(y.GetDevCost(i)));
         int cost = 600;
         float monthDiff = 0;
@@ -501,27 +511,32 @@ public class AIManager : MonoBehaviour
         {
             monthDiff = 100;
         }
-        if (monthDiff > 4)
+        for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
         {
-            for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
+            if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
             {
-                if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
+                if (civ.ideaGroups[j].type == 2 && civ.ideaGroups[j].unlockedLevel < 7)
                 {
-                    if (civ.ideaGroups[j].type == 2 && civ.ideaGroups[j].unlockedLevel < 7)
+                    if (civ.milPower >= IdeasUI.GetIdeaCost(civ))
                     {
-                        if (civ.milPower >= IdeasUI.GetIdeaCost(civ))
-                        {
-                            IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
-                        }
+                        IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
                     }
                 }
             }
         }
-        tiles.RemoveAll(i => !i.canDev(2));
-        if (tiles.Count == 0) { return; }
-        if (civ.milPower >= tiles[0].GetDevCost(i) && civ.milPower > cost + tiles[0].GetDevCost(i))
+        if(civ.generals.Count < 1 + (civ.TotalMaxArmySize()/(1000f * civ.combatWidth.value)) && civ.milPower >= 50)
         {
-            tiles[0].AddDevelopment(2, i);
+            civ.milPower -= 50;
+            civ.BuyGeneral();
+        }
+        if (monthDiff > 4 || civ.milPower > 900)
+        {
+            tiles.RemoveAll(i => !i.canDev(2));
+            if (tiles.Count == 0) { return; }
+            if (civ.milPower >= tiles[0].GetDevCost(i) && civ.milPower > cost + tiles[0].GetDevCost(i))
+            {
+                tiles[0].AddDevelopment(2, i);
+            }
         }
     }
     public void DeclareCivWars()
@@ -752,6 +767,7 @@ public class AIManager : MonoBehaviour
                 civ.civCoastalTiles.Clear();
                 civ.cores.Clear();
                 civ.totalIdeas = 0;
+                civ.governingCapacity = 0;
                 civ.avaliablePopulation = 0;
                 foreach (var civIdea in civ.ideaGroups)
                 {
@@ -785,6 +801,7 @@ public class AIManager : MonoBehaviour
                             civ.tradeRegions.Add(td.tradeRegion);
                         }
                         civ.civTiles.Add(td.pos);
+                        civ.governingCapacity += td.GetGoverningCost();
                         civ.civTileDatas.Add(td);
                         if (td.isCoastal) { civ.civCoastalTiles.Add(td); }
                         if (!td.occupied && !td.underSiege)
@@ -797,9 +814,14 @@ public class AIManager : MonoBehaviour
                             TileData ntd = Map.main.GetTile(n);
                             if(ntd.civID != -1 && ntd.civID != td.civID)
                             {
-                                if (!civ.isPlayer && !civ.subjects.Contains(ntd.civID) &&!civ.claims.Contains(ntd.pos))
+                                if (Game.main.Started && !civ.isPlayer && !civ.subjects.Contains(ntd.civID) &&!civ.claims.Contains(ntd.pos) && !civ.allies.Contains(ntd.civID))
                                 {
-                                    civ.claims.Add(ntd.pos);
+                                    int dev = ntd.totalDev;
+                                    if (civ.diploPower >= dev)
+                                    {
+                                        civ.diploPower -= dev;
+                                        civ.claims.Add(ntd.pos);
+                                    }
                                 }
                                 if (!civ.civNeighbours.Contains(ntd.civID))
                                 { 
@@ -827,6 +849,16 @@ public class AIManager : MonoBehaviour
                         civ.NewCapital(new List<Vector3Int>());
                     }
                 }
+                float overGovCap = 0f;
+                if(civ.governingCapacity > civ.governingCapacityMax.value)
+                {
+                    overGovCap = (civ.governingCapacity - civ.governingCapacityMax.value)/ civ.governingCapacityMax.value;
+                }
+                civ.stabilityCost.UpdateModifier("Over Governing Capacity",overGovCap,1);
+                civ.advisorCosts.UpdateModifier("Over Governing Capacity", overGovCap, 1);
+                civ.improveRelations.UpdateModifier("Over Governing Capacity", -overGovCap/2f, 1);
+                civ.aggressiveExpansionImpact.UpdateModifier("Over Governing Capacity", overGovCap / 2f, 1);
+                civ.warScoreCost.UpdateModifier("Over Governing Capacity", overGovCap / 2f, 1);
             }
         }
 

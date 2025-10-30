@@ -9,10 +9,12 @@ public class ArmyUIPanel : MonoBehaviour
 {
     [SerializeField] Transform regimentTransform;
     public List<GameObject> regiments = new List<GameObject>();
-    [SerializeField] GameObject regimentPrefab;
+    [SerializeField] TextMeshProUGUI armyName;
+    [SerializeField] GameObject regimentPrefab,armyPanel,generalPanel;
     [SerializeField] Button[] buttons;
     [SerializeField] Sprite[] unitSprites;
     [SerializeField] TextMeshProUGUI[] unitQuantities;
+    [SerializeField] TextMeshProUGUI[] generalStats;
 
     private void Start()
     {
@@ -22,6 +24,14 @@ public class ArmyUIPanel : MonoBehaviour
         buttons[3].onClick.AddListener(Disband);
         buttons[4].onClick.AddListener(ToggleAttach);
         buttons[5].onClick.AddListener(DetatchMercs);
+        buttons[6].onClick.AddListener(ChooseGeneral);
+        generalPanel.SetActive(false);
+        armyPanel.SetActive(true);
+    }
+    void ChooseGeneral()
+    {
+        generalPanel.SetActive(true);
+        armyPanel.SetActive(false);
     }
     void ToggleAttach()
     {
@@ -97,6 +107,19 @@ public class ArmyUIPanel : MonoBehaviour
                 unitQuantities[0].text = infantry + "";
                 unitQuantities[1].text = cavalry + "";
                 unitQuantities[2].text = artillery + "";
+                for (int i = 0; i < generalStats.Length; i++)
+                {
+                    TextMeshProUGUI text = generalStats[i];
+                    if (army.general != null && army.general.active)
+                    {
+                        int skill = i == 0 ? army.general.meleeSkill : i == 1 ? army.general.flankingSkill : i == 2 ? army.general.rangedSkill : i == 3 ? army.general.siegeSkill : army.general.maneuverSkill;                  
+                        text.text = skill + "";
+                    }
+                    else
+                    {
+                        text.text = "0";
+                    }
+                }
             }            
 
         }

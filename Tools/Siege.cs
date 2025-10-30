@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Burst.Intrinsics;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -11,10 +12,12 @@ public class Siege
     public int fortLevel;
     public TileData target;
     public int leaderCivID;
+    public General siegeGeneral;
     public int tickTime = 12;
     public int tickTimer = 0;
     public int progressRoll;
     public List<Army> armiesSieging = new List<Army>();
+    public int artillery = 0;
     public int unitsSieging()
     {
         int count = 0;       
@@ -92,7 +95,38 @@ public class Siege
     }
     void Tick()
     {
-        progressRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+        artillery = 0;
+        if (armiesSieging.Count > 0)
+        {
+            for (int i = 0; i < armiesSieging.Count; i++)
+            {
+                Army army = armiesSieging[i];
+                for (int j = 0; j < army.regiments.Count; j++)
+                {
+                    Regiment regiment = army.regiments[j];
+                    if (regiment.type == 2)
+                    {
+                        artillery++;
+                    }
+                }
+                if(army.general != null && army.general.active)
+                {
+                    if(siegeGeneral != null && siegeGeneral.active)
+                    {
+                        if(siegeGeneral.siegeSkill < army.general.siegeSkill)
+                        {
+                            siegeGeneral = army.general;
+                        }
+                    }
+                    else
+                    {
+                        siegeGeneral = army.general;
+                    }
+                }
+            }
+        }
+        int generalSiege = (siegeGeneral != null && siegeGeneral.active) ? siegeGeneral.siegeSkill : 0;
+        progressRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID + artillery/(1 + fortLevel) + generalSiege;
         progress += (float)progressRoll / (100f * (2 * fortLevel + 0.5f));
         if(Mathf.Round(progress * 100f)/100f >= 1f)
         {

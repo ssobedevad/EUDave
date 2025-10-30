@@ -92,6 +92,10 @@ public class EventManager : MonoBehaviour
         {
             civilisation.AddPrestige(option.prestige);
         }
+        if (option.govReformProgress != 0)
+        {
+            civilisation.reformProgress += option.govReformProgress;
+        }
         if (option.coins != 0)
         {
             civilisation.coins += option.coins;

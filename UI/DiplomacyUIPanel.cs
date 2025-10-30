@@ -19,6 +19,11 @@ public class DiplomacyUIPanel : MonoBehaviour
     public int diploCivID;
     int rivalSlot = 0;
 
+    private void OnDisable()
+    {
+        CancelWarDec();
+        CloseRivalsList();
+    }
     private void Awake()
     {
         main = this;

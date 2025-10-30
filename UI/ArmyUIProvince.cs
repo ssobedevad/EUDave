@@ -1,18 +1,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class ArmyUIProvince : MonoBehaviour
 {
-    [SerializeField] GameObject siegeCanvas,armyCanvas,tabPrefab;
+    [SerializeField] GameObject siegeCanvas,armyCanvas,tabPrefab,starPrefab;
     [SerializeField] RectTransform panel;
     [SerializeField] TextMeshProUGUI armyNum, siegePercent;
     [SerializeField] Image civColor, moraleFill, siegeFill, armyPanel,attrition,exiled;
     [SerializeField] Button armySelect, siegeSelect;
-    [SerializeField] Transform tabsBack;
-    public List<GameObject> tabsList = new List<GameObject>();
+    [SerializeField] Transform tabsBack,starsBack;
+    List<GameObject> tabsList = new List<GameObject>();
+    List<GameObject> starsList = new List<GameObject>();
 
     public Army army;
     private void Start()
@@ -48,6 +50,14 @@ public class ArmyUIProvince : MonoBehaviour
         {
             armyCanvas.SetActive(true);            
             SetupTabs(0);
+            if (army.general != null && army.general.active)
+            {
+                SetupStars(army.general.Stars());
+            }
+            else
+            {
+                SetupStars(0);
+            }
             armyNum.text = armySizeText((int)army.ArmySize());
             MoraleFill();
             if (tile.underSiege && army.path.Count == 0 && tile.siege.armiesSieging.Contains(army))
@@ -62,7 +72,9 @@ public class ArmyUIProvince : MonoBehaviour
             }
             ColorArmyPanel(army);
             attrition.gameObject.SetActive(army.GetAttrition() > 0);
-            attrition.GetComponent<HoverText>().text = "Attrition: " + Mathf.Round(army.GetAttrition() * 10f) / 10f + "%";
+            string hoverText = "Attrition: " + Mathf.Round(army.GetAttrition() * 100f) / 100f + "%\n\n";
+            hoverText += AttritionText();
+            attrition.GetComponent<HoverText>().text = hoverText;
             exiled.gameObject.SetActive(army.exiled);
         }
         else
@@ -76,7 +88,8 @@ public class ArmyUIProvince : MonoBehaviour
                 panel.sizeDelta = new Vector2(0, 0);
                 attrition.gameObject.SetActive(false);
                 exiled.gameObject.SetActive(false);
-                SetupTabs(0); 
+                SetupTabs(0);
+                SetupStars(0);
                 return; 
             }
             armies.Sort((x, y) => PriorityScore(x).CompareTo(PriorityScore(y)));
@@ -85,6 +98,14 @@ public class ArmyUIProvince : MonoBehaviour
             {
                 armyCanvas.SetActive(true);
                 SetupTabs(armies.Count);
+                if(priority.general != null && priority.general.active)
+                {
+                    SetupStars(priority.general.Stars());
+                }
+                else
+                {
+                    SetupStars(0);
+                }
                 int size = 0;
                 int index = 0;
                 foreach(var armyOnTile in armies)
@@ -110,7 +131,9 @@ public class ArmyUIProvince : MonoBehaviour
                 }
                 ColorArmyPanel(priority);
                 attrition.gameObject.SetActive(army.GetAttrition() > 0);
-                attrition.GetComponent<HoverText>().text = "Attrition: " + Mathf.Round(army.GetAttrition()*10f)/10f + "%";
+                string hoverText = "Attrition: " + Mathf.Round(army.GetAttrition() * 100f) / 100f + "%\n\n";
+                hoverText += AttritionText();
+                attrition.GetComponent<HoverText>().text = hoverText;
                 exiled.gameObject.SetActive(army.exiled);
             }
             else
@@ -121,9 +144,40 @@ public class ArmyUIProvince : MonoBehaviour
                 attrition.gameObject.SetActive(false);
                 exiled.gameObject.SetActive(false);
                 SetupTabs(0);
+                SetupStars(0);
                 return;
             }
         }
+    }
+    string AttritionText()
+    {
+        string percent = "";       
+        float armysize = army.ArmySize();
+        if (army.civID > -1)
+        {
+            Civilisation civ = Game.main.civs[army.civID];
+            foreach (var aot in army.tile.armiesOnTile)
+            {
+                if (civ.atWarTogether.Contains(aot.civID) && aot != army)
+                {
+                    armysize += aot.ArmySize();
+                }
+            }
+            if (civ.atWarWith.Contains(army.tile.civID))
+            {
+                percent += "Base: 1%\n";
+                percent += army.tile.fortLevel > 0 ? "From Fort Level: " + army.tile.fortLevel + "%\n" : "";
+                percent += army.tile.localAttritionForEnemies.value > 0? "From Local Bonuses: " + army.tile.localAttritionForEnemies.value + "%\n" : "";
+                percent += army.tile.civ.attritionForEnemies.value > 0 ? "From Global Bonuses: " + army.tile.civ.attritionForEnemies.value + "%\n" : "";
+            }            
+        }
+        if (armysize / 1000f > army.tile.supplyLimit)
+        {
+            percent += "From Supply: " + Mathf.Round(100f * Mathf.Clamp((armysize / 1000f - army.tile.supplyLimit) * (10f / ((float)army.tile.supplyLimit)), 0f, 5f)) / 100f + "%\n";
+        }
+        if(army.civID > -1) 
+        { Civilisation civ = Game.main.civs[army.civID]; percent += "Multiplied By: " + Mathf.Round(100f * (1f + civ.landAttrition.value)) + "%"; }
+        return percent;
     }
     void SetupTabs(int amount)
     {
@@ -139,6 +193,23 @@ public class ArmyUIProvince : MonoBehaviour
             {
                 GameObject item = Instantiate(tabPrefab, tabsBack);
                 tabsList.Add(item);
+            }
+        }
+    }
+    void SetupStars(int amount)
+    {
+        while (starsList.Count != amount)
+        {
+            if (starsList.Count > amount)
+            {
+                int lastIndex = starsList.Count - 1;
+                Destroy(starsList[lastIndex]);
+                starsList.RemoveAt(lastIndex);
+            }
+            else
+            {
+                GameObject item = Instantiate(starPrefab, starsBack);
+                starsList.Add(item);
             }
         }
     }

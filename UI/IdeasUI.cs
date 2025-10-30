@@ -11,10 +11,16 @@ public class IdeasUI : MonoBehaviour
     [SerializeField] TextMeshProUGUI trad1V,trad2V;
     [SerializeField] Image[] nationalIdeas,ideaGroups;
     [SerializeField] Image nationalIdeasFill;
+    [SerializeField] Button closeIdeaShop;
     [SerializeField] GameObject ideaShop,ideaBack,ideasPrefab;
     [SerializeField] Transform adminT, diploT, milT;
     [SerializeField] List<GameObject> adminTList = new List<GameObject>(), diploTList = new List<GameObject>(), milTList = new List<GameObject>();
     int SelectedIndex;
+
+    private void OnDisable()
+    {
+        CloseIdeaShop();
+    }
     private void Start()
     {
         for (int i = 0; i < ideaGroups.Length; i++)
@@ -24,10 +30,18 @@ public class IdeasUI : MonoBehaviour
             Button[] buttons =  ideaGroups[i].GetComponentsInChildren<Button>();
             for (int j = 1; j < buttons.Length; j++)
             {
-                int level = j - 1;
-                buttons[j].onClick.AddListener(delegate { BuyIdeaLocal(index, level); });
+                if (j == buttons.Length - 1) 
+                {
+                    buttons[j].onClick.AddListener(delegate { AbandonIdeaGroup(index); });
+                }
+                else
+                {
+                    int level = j - 1;
+                    buttons[j].onClick.AddListener(delegate { BuyIdeaLocal(index, level); });
+                }
             }
         }
+        closeIdeaShop.onClick.AddListener(CloseIdeaShop);
     }
     public static int GetIdeaCost(Civilisation civ)
     {
@@ -83,8 +97,8 @@ public class IdeasUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         trad1.text = civ.nationalIdeas.traditions[0].name;
         trad2.text = civ.nationalIdeas.traditions[1].name;
-        trad1V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditions[0].amount, civ.GetStat(civ.nationalIdeas.traditions[0].name));
-        trad2V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditions[1].amount, civ.GetStat(civ.nationalIdeas.traditions[1].name));
+        trad1V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditions[0].amount, civ.GetStat(civ.nationalIdeas.traditions[0].name), civ.nationalIdeas.traditions[1].type == 2 || civ.nationalIdeas.traditions[1].type == 0, civ.nationalIdeas.traditions[1].type == 3);
+        trad2V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditions[1].amount, civ.GetStat(civ.nationalIdeas.traditions[1].name), civ.nationalIdeas.traditions[1].type == 2 || civ.nationalIdeas.traditions[1].type == 0, civ.nationalIdeas.traditions[1].type == 3);
         int unlocked = 0;
         foreach(var civIdea in civ.ideaGroups)
         {
@@ -150,6 +164,20 @@ public class IdeasUI : MonoBehaviour
             image.color = ideaGroup.unlockedLevel < i ? Color.gray : ideaGroup.unlockedLevel == i? (canAfford ?Color.green:Color.red) : Color.white;            
         }
         ideaGO.GetComponentInChildren<TextMeshProUGUI>().text = group.name + (group.type == 0 ? "<sprite index=1>" : group.type == 1 ? "<sprite index=2>" : "<sprite index=3>");
+    }
+    void AbandonIdeaGroup(int index)
+    {
+        if (Player.myPlayer.myCivID == -1) { return; }
+        Civilisation civ = Player.myPlayer.myCiv;
+        IdeaGroupData ideaGroup = civ.ideaGroups[index];
+        if (ideaGroup.active)
+        {
+            ideaGroup.active = false;
+            int points = ideaGroup.unlockedLevel * 40;
+            if (ideaGroup.type == 0) { civ.adminPower += points; } 
+            else if (ideaGroup.type == 1) { civ.diploPower += points; } 
+            else { civ.milPower += points; }
+        }
     }
     void OpenIdeaShop(int selectedIndex)
     {
@@ -217,6 +245,11 @@ public class IdeasUI : MonoBehaviour
             SetupIdeaGroupShop(milTList[i], idea);
         }
     }
+    void CloseIdeaShop()
+    {
+        ideaShop.SetActive(false);
+        ideaBack.SetActive(true);
+    }
     void SelectIdeaGroup(IdeaGroup ideaGroup)
     {
         if (Player.myPlayer.myCivID == -1) { return; }
@@ -243,7 +276,7 @@ public class IdeasUI : MonoBehaviour
             Idea idea = ideaGroup.ideas[i];
             ideas[i].text = idea.GetHoverText(civ);
             image.sprite = idea.icon;
-        }
+        }       
         ideaGO.GetComponentInChildren<TextMeshProUGUI>().text = ideaGroup.name + (ideaGroup.type == 0 ? "<sprite index=1>" : ideaGroup.type == 1 ? "<sprite index=2>" :"<sprite index=3>");
         ideaGO.GetComponent<Button>().onClick.RemoveAllListeners();
         ideaGO.GetComponent<Button>().onClick.AddListener(delegate { SelectIdeaGroup(ideaGroup); });

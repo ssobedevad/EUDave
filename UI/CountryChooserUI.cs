@@ -27,8 +27,8 @@ public class CountryChooserUI : MonoBehaviour
         admin.text = civ.ruler.active ? civ.ruler.adminSkill + "" : "-1";
         diplo.text = civ.ruler.active ? civ.ruler.diploSkill + "" : "-1";
         mil.text = civ.ruler.active ? civ.ruler.milSkill + "" : "-1";
-        string ideasText = civ.nationalIdeas.traditions[0].name + ": "+Modifier.ToString(civ.nationalIdeas.traditions[0].amount, civ.GetStat(civ.nationalIdeas.traditions[0].name)) + "\n";
-        ideasText += civ.nationalIdeas.traditions[1].name + ": " + Modifier.ToString(civ.nationalIdeas.traditions[1].amount, civ.GetStat(civ.nationalIdeas.traditions[1].name));
+        string ideasText = civ.nationalIdeas.traditions[0].name + ": "+Modifier.ToString(civ.nationalIdeas.traditions[0].amount, civ.GetStat(civ.nationalIdeas.traditions[0].name), civ.nationalIdeas.traditions[0].type == 2 || civ.nationalIdeas.traditions[0].type == 0, civ.nationalIdeas.traditions[0].type == 3) + "\n";
+        ideasText += civ.nationalIdeas.traditions[1].name + ": " + Modifier.ToString(civ.nationalIdeas.traditions[1].amount, civ.GetStat(civ.nationalIdeas.traditions[1].name), civ.nationalIdeas.traditions[1].type == 2 || civ.nationalIdeas.traditions[1].type == 0, civ.nationalIdeas.traditions[1].type == 3);
         nationalIdeas.GetComponent<HoverText>().text = ideasText;
         for(int i = 0; i < civ.nationalIdeas.ideas.Length; i++)
         {

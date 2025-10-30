@@ -22,6 +22,10 @@ public class NotificationsUI : MonoBehaviour
     public Notification bankruptcy;
     public Notification greatProj;
     public Notification fullMonarchPoints;
+    public Notification aquatismDropping;
+    public Notification djinnFavor;
+    public Notification pickDeity;
+    public Notification highHunger;
     private void Awake()
     {
         main = this;      

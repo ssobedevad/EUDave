@@ -363,8 +363,8 @@ public class Game : MonoBehaviour
             {
                 if (tile.civID > -1)
                 {
-                    float income = (float)(tile.GetDailyTax() + tile.GetDailyProductionValue()) / (float)highestIncome;
-                    Color civC = Color.Lerp(Color.red, Color.green, income);
+                    float control = tile.control/100f;
+                    Color civC = Color.Lerp(Color.red, Color.green, control);
 
                     if (!Equal(tile.currentCol, civC))
                     {

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,7 +9,15 @@ public class MilitaryUI : MonoBehaviour
 {
     [SerializeField] TextMeshProUGUI forceLimit,morale,discipline,tactics,tradition,fortDefence,combatWidth;
     [SerializeField] Image infantry, cavalry, artillery;
+    [SerializeField] Button buyGeneral;
+    [SerializeField] Transform generalBack;
+    [SerializeField] GameObject generalPrefab;
+    List<GameObject> generalList = new List<GameObject>();
 
+    private void Start()
+    {
+        buyGeneral.onClick.AddListener(BuyGeneral);
+    }
     private void OnGUI()
     {
         if(Player.myPlayer.myCivID == -1) { return; }
@@ -24,6 +33,49 @@ public class MilitaryUI : MonoBehaviour
         SetupUnit(1, cavalry);
         SetupUnit(2, artillery);
         SetupHoverText();
+        List<General> generals = civ.generals.ToList();
+        generals.RemoveAll(i => !i.active);
+        while (generalList.Count != generals.Count)
+        {
+            if (generalList.Count > generals.Count)
+            {
+                int lastIndex = generalList.Count - 1;
+                Destroy(generalList[lastIndex]);
+                generalList.RemoveAt(lastIndex);
+            }
+            else
+            {
+                GameObject item = Instantiate(generalPrefab, generalBack);
+                generalList.Add(item);
+            }
+        }
+        for (int i = 0; i < generals.Count; i++)
+        {
+            General general = generals[i];
+            Image[] images = generalList[i].GetComponentsInChildren<Image>();
+            TextMeshProUGUI[] texts = generalList[i].GetComponentsInChildren<TextMeshProUGUI>();
+
+            texts[0].text = general.name + " - " + general.meleeSkill + " " + general.flankingSkill + " " + general.rangedSkill + " " + general.siegeSkill + " " + general.maneuverSkill;            
+        }
+        string hoverText = "Buy a General for 50<sprite index=3>\n\n";
+        int genPips = (1 + (int)(civ.armyTradition / 10) + (civ.ruler.active ? civ.ruler.milSkill / 3 : 0));
+        hoverText += "They will have between " + genPips + " and " + (genPips + 5) + " at base\n\n";
+        hoverText += "Melee Bonus: " + civ.generalMeleeSkill.ToString() + "\n";
+        hoverText += "Flanking Bonus: " + civ.generalFlankingSkill.ToString() + "\n";
+        hoverText += "Ranged Bonus: " + civ.generalRangedSkill.ToString() + "\n";
+        hoverText += "Siege Bonus: " + civ.generalSiegeSkill.ToString() + "\n";
+        hoverText += "Maneuver Bonus: " + civ.generalManeuverSkill.ToString() + "\n";
+        buyGeneral.GetComponent<HoverText>().text = hoverText;
+    }
+    void BuyGeneral()
+    {
+        if (Player.myPlayer.myCivID == -1) { return; }
+        Civilisation civ = Player.myPlayer.myCiv;
+        if (civ.milPower >= 50)
+        {
+            civ.milPower -= 50;
+            civ.BuyGeneral();
+        }
     }
     void SetupUnit(int type, Image baseImg)
     {

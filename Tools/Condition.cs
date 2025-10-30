@@ -9,6 +9,7 @@ public class Condition
     public string conditionName;
     public int conditionID;
     public float conditionAmount;
+    public bool opposite;
     public bool province;
     public Vector3Int provincePos;
 
@@ -24,25 +25,56 @@ public class Condition
             {
                 if(civ.GetStat(conditionName).value >= conditionAmount)
                 {
-                    return true;
+                    return opposite ? false : true;
                 }
             }
             else if (conditionID == ConditionID.Government)
             {
                 if (civ.government == (int)conditionAmount)
                 {
-                    return true;
+                    return opposite ? false : true;
                 }
             }
             else if (conditionID == ConditionID.Religion)
             {
                 if (civ.religion == (int)conditionAmount)
                 {
-                    return true;
+                    return opposite ? false : true;
+                }
+            }
+            else if (conditionID == ConditionID.Resource)
+            {
+                switch (conditionName)
+                {
+                    case "Stability":
+                        return opposite ? civ.stability < conditionAmount : civ.stability >= conditionAmount;
+                    case "Prestige":
+                        return opposite ? civ.prestige < conditionAmount : civ.prestige >= conditionAmount;
+                    case "Coins":
+                        return opposite ? civ.coins < conditionAmount : civ.coins >= conditionAmount;
+                    case "Religious Unity":
+                        return opposite ? civ.religiousUnity < conditionAmount : civ.religiousUnity >= conditionAmount;
+                    case "Admin Power":
+                        return opposite ? civ.adminPower < conditionAmount : civ.adminPower >= conditionAmount;
+                    case "Diplo Power":
+                        return opposite ? civ.diploPower < conditionAmount : civ.diploPower >= conditionAmount;
+                    case "Mil Power":
+                        return opposite? civ.milPower < conditionAmount : civ.milPower >= conditionAmount;
+                    case "Religious Power":
+                        return opposite ? civ.religiousPoints < conditionAmount : civ.religiousPoints >= conditionAmount;
+                    default:
+                        return false;
+                }
+            }
+            else if (conditionID == ConditionID.HadEvent)
+            {
+                if (civ.eventHistory.Contains((int)conditionAmount))
+                {
+                    return opposite ? false : true;
                 }
             }
         }
-        return false;
+        return opposite ? true : false;
     }    
     public string ToString(Civilisation civ)
     {
@@ -65,6 +97,14 @@ public class Condition
             {
                 text = "Requires Religion: " + Map.main.religions[(int)conditionAmount].name;
             }
+            else if (conditionID == ConditionID.Resource)
+            {
+                text = "Requires Resource: " + conditionName + " (" + Mathf.Round(conditionAmount * 100f)/100f + ")";
+            }
+            else if (conditionID == ConditionID.HadEvent)
+            {
+                text = "Requires Event: " + Map.main.pulseEvents[(int)conditionAmount].Name;
+            }
         }
         return text;
     }
@@ -74,4 +114,6 @@ public class ConditionID
     public static int Stat = 0;
     public static int Government = 1;
     public static int Religion = 2;
+    public static int Resource = 3;
+    public static int HadEvent = 4;
 }

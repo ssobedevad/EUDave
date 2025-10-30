@@ -35,6 +35,20 @@ public class TechnologyUI : MonoBehaviour
             adminTexts[0].text = nextAdminTech.Name + " (" + (civ.adminTech + 1) + ") " + GetTechCost(nextAdminTech,civ) + "<sprite index=1>";
             SetTechDescription(nextAdminTech, adminTexts[1]);
             AdminTech.GetComponent<Image>().color = civ.adminPower >= GetTechCost(nextAdminTech,civ) ? Color.green : Color.red;
+            string hoverText = "It Will Cost " + GetTechCost(nextAdminTech, civ) + "<sprite index=1>\n\n";
+            hoverText += "Admin Tech Cost: " + civ.techCostsA.ToString() + "\n\n";
+            hoverText += "Tech Cost: " + civ.techCosts.ToString() + "\n\n";
+            int monthDiff = GetAheadMonths(civ, 0);
+            if (monthDiff > 0)
+            {
+                hoverText += "Ahead of Time: " + (monthDiff * 30) + "<sprite index=12>\n";
+                hoverText += "Tech Cost: +" + (monthDiff * 0.1f) + "%\n";
+            }
+            if (GetAheadTime(civ,0) > 0) 
+            { 
+                hoverText += "Ahead of Time Bonus: Tax Efficiency +20%\n";
+            }
+            AdminTech.GetComponent<HoverText>().text = hoverText;
         }
         if (d)
         {
@@ -42,6 +56,20 @@ public class TechnologyUI : MonoBehaviour
             diploTexts[0].text = nextDiploTech.Name + " (" + (civ.diploTech + 1) + ") " + GetTechCost(nextDiploTech, civ) + "<sprite index=2>";
             SetTechDescription(nextDiploTech, diploTexts[1]);
             DiploTech.GetComponent<Image>().color = civ.diploPower >= GetTechCost(nextDiploTech, civ) ? Color.green : Color.red;
+            string hoverText = "It Will Cost " + GetTechCost(nextDiploTech, civ) + "<sprite index=2>\n\n";
+            hoverText += "Diplo Tech Cost: " + civ.techCostsD.ToString() + "\n\n";
+            hoverText += "Tech Cost: " + civ.techCosts.ToString() + "\n\n";
+            int monthDiff = GetAheadMonths(civ, 1);
+            if (monthDiff > 0)
+            {
+                hoverText += "Ahead of Time: " + (monthDiff * 30) + "<sprite index=12>\n";
+                hoverText += "Tech Cost: +" + (monthDiff * 0.1f) + "%\n";
+            }
+            if (GetAheadTime(civ, 1) > 0)
+            {
+                hoverText += "Ahead of Time Bonus: Production Value +20%\n";
+            }
+            DiploTech.GetComponent<HoverText>().text = hoverText;
         }
         if (m)
         {
@@ -49,6 +77,20 @@ public class TechnologyUI : MonoBehaviour
             milTexts[0].text = nextMilTech.Name + " (" + (civ.milTech + 1) + ") " + GetTechCost(nextMilTech, civ) + "<sprite index=3>";
             SetTechDescription(nextMilTech, milTexts[1]);
             MilTech.GetComponent<Image>().color = civ.milPower >= GetTechCost(nextMilTech, civ) ? Color.green : Color.red;
+            string hoverText = "It Will Cost " + GetTechCost(nextMilTech, civ) + "<sprite index=2>\n\n";
+            hoverText += "Mil Tech Cost: " + civ.techCostsM.ToString() + "\n\n";
+            hoverText += "Tech Cost: " + civ.techCosts.ToString() + "\n\n";
+            int monthDiff = GetAheadMonths(civ, 2);
+            if (monthDiff > 0)
+            {
+                hoverText += "Ahead of Time: " + (monthDiff * 30) + "<sprite index=12>\n";
+                hoverText += "Tech Cost: +" + (monthDiff * 0.1f) + "%\n";
+            }
+            if (GetAheadTime(civ, 2) > 0)
+            {
+                hoverText += "Ahead of Time Bonus: Population Growth +20%\n";
+            }
+            MilTech.GetComponent<HoverText>().text = hoverText;
         }       
         SetCategoryDescription(0, adminText);
         SetCategoryDescription(1, diploText);
@@ -116,6 +158,59 @@ public class TechnologyUI : MonoBehaviour
         for (int i = 0; i < modifiers.Count; i++)
         {
             text.text += modifiers[i] + Modifier.ToString(modifierValues[i], civ.GetStat(modifiers[i])) + "\n";
+        }
+
+    }
+    public static int GetAheadTime(Civilisation civ, int category)
+    {
+        Tech current;
+        if (category == 0)
+        {
+            if(civ.adminTech <= 3) { return 0; }
+            current = Map.main.TechA[Mathf.Min(civ.adminTech+1, Map.main.TechA.Length -1)];
+        }
+        else if (category == 1)
+        {
+            if (civ.diploTech <= 3) { return 0; }
+            current = Map.main.TechD[Mathf.Min(civ.diploTech + 1, Map.main.TechD.Length - 1)];
+        }
+        else
+        {
+            if (civ.milTech <= 3) { return 0; }
+            current = Map.main.TechM[Mathf.Min(civ.milTech + 1, Map.main.TechM.Length - 1)];
+        }
+        if (Game.main.gameTime.totalTicks() < current.expectedDate.totalTicks())
+        {
+            return current.expectedDate.totalTicks() - Game.main.gameTime.totalTicks();
+        }
+        else
+        {
+            return 0;
+        }
+
+    }
+    public static int GetAheadMonths(Civilisation civ, int category)
+    {
+        Tech current;
+        if(category == 0)
+        {
+            current = Map.main.TechA[civ.adminTech];
+        }
+        else if(category == 1)
+        {
+            current = Map.main.TechD[civ.diploTech];
+        }
+        else
+        {
+            current = Map.main.TechM[civ.milTech];
+        }
+        if (Game.main.gameTime.totalTicks() < current.expectedDate.totalTicks())
+        {
+            return (current.expectedDate.totalTicks() - Game.main.gameTime.totalTicks()) / (6 * 24 * 30);           
+        }
+        else
+        {
+            return 0;
         }
 
     }

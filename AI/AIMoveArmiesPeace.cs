@@ -48,6 +48,13 @@ public class AIMoveArmiesPeace
         }
         if(freeArmies.Count > 0)
         {
+            if (freeArmies[0].general == null || !freeArmies[0].general.active)
+            {
+                if (civ.generals.Count > 0) 
+                {
+                    freeArmies[0].AssignGeneral(civ.generals[0]);
+                }
+            }
             AddHomeProvinces(civ);
             MoveArmiesToProvinces(freeArmies);
         }

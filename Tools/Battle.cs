@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class Battle
@@ -11,6 +12,8 @@ public class Battle
     public bool DefenderRebels;
     public RebelArmyStats defenderRebelStats;
     public Civilisation defenderCiv;
+    public General attackerGeneral;
+    public General defenderGeneral;
     public List<Army> attackingArmies = new List<Army>();
     public List<Army> defendingArmies = new List<Army>();
     public List<Regiment> attackingReserves = new List<Regiment>();
@@ -114,6 +117,35 @@ public class Battle
         defenderCount += (int)defender.ArmySize();
         battleLength = 0;
         attackPhases = 0;
+        CheckGeneral(true, attacker);
+        CheckGeneral(false, defender);
+
+    }
+    void CheckGeneral(bool attacker, Army army)
+    {
+        General current = attacker ? attackerGeneral : defenderGeneral;
+        if (army.general != null && army.general.active)
+        {
+            if (current != null && current.active)
+            {
+                if (current.siegeSkill < army.general.siegeSkill)
+                {
+                    current = army.general;
+                }
+            }
+            else
+            {
+                current = army.general;
+            }
+        }
+        if (attacker)
+        {
+            attackerGeneral = current;
+        }
+        else
+        {
+            defenderGeneral = current;
+        }
     }
     public void AddToBattle(Army army, bool isAttacker)
     {
@@ -123,6 +155,7 @@ public class Battle
             attackerCount += (int)army.ArmySize();
             attackingReserves.AddRange(army.regiments);
             army.EnterBattle();
+            CheckGeneral(true, army);
         }
         else
         {
@@ -130,6 +163,7 @@ public class Battle
             defenderCount += (int)army.ArmySize();
             defendingReserves.AddRange(army.regiments);
             army.EnterBattle();
+            CheckGeneral(false, army);
         }
     }
     void BattleEnd(bool attackerWin = true, bool wipe = false)
@@ -413,12 +447,14 @@ public class Battle
                 int target = FindTarget(defendingFrontLine, i, flankingRange, attacker.type == 1);
                 if (target > -1)
                 {
-                    if(target != i) { baseDamage = flankDamage; }
+                    int generalBonus = 0;
+                    if (attackerGeneral != null &&attackerGeneral.active) { generalBonus = (target != i) ? attackerGeneral.flankingSkill : attackerGeneral.meleeSkill; }
+                    if (target != i) { baseDamage = flankDamage; }
                     Regiment defender = defendingFrontLine.regiments[target];
                     if (defender.size > 0 && defender.type > -1)
                     {
                         float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline, combatAbility: combatAbility);
-                        float damage = BaseCasualties(attackerDiceRoll, AttackerDiceRollBonus()) * modifiers;
+                        float damage = BaseCasualties(attackerDiceRoll + generalBonus, AttackerDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(true));
                         casualties += (int)damage;
                     }
@@ -443,12 +479,14 @@ public class Battle
                 int target = FindTarget(defendingFrontLine, i, flankingRange,false);
                 if (target > -1)
                 {
+                    int generalBonus = 0;
+                    if (attackerGeneral != null && attackerGeneral.active) { generalBonus = (target != i)? attackerGeneral.flankingSkill: attackerGeneral.rangedSkill; }
                     if (target != i) { baseDamage = flankDamage; }
                     Regiment defender = defendingFrontLine.regiments[target];
                     if (defender.size > 0 && defender.type > -1)
                     {
                         float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline, combatAbility: combatAbility);
-                        float damage = BaseCasualties(attackerDiceRoll, AttackerDiceRollBonus()) * modifiers;
+                        float damage = BaseCasualties(attackerDiceRoll+ generalBonus, AttackerDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(true));
                         casualties += (int)damage;
                     }
@@ -510,16 +548,18 @@ public class Battle
                 float combatAbility = DefenderRebels ? defenderRebelStats.units[attacker.type].combatAbility.value : defenderCiv.units[attacker.type].combatAbility.value;
                 float baseDamage = DefenderRebels ? defenderRebelStats.units[attacker.type].meleeDamage.value : defenderCiv.units[attacker.type].meleeDamage.value;
                 float flankDamage = DefenderRebels ? defenderRebelStats.units[attacker.type].flankingDamage.value : defenderCiv.units[attacker.type].flankingDamage.value;
-                int flankingRange = DefenderRebels ? defenderRebelStats.flankingRange : defenderCiv.units[attacker.type].flankingRange;
+                int flankingRange = DefenderRebels ? defenderRebelStats.flankingRange : defenderCiv.units[attacker.type].flankingRange;               
                 int target = FindTarget(attackingFrontLine, i, flankingRange, attacker.type == 1);
                 if (target > -1)
                 {
+                    int generalBonus = 0;
+                    if (defenderGeneral != null && defenderGeneral.active) { generalBonus = (target != i) ? defenderGeneral.flankingSkill : defenderGeneral.meleeSkill; }
                     if (target != i) { baseDamage = flankDamage; }
                     Regiment defender = attackingFrontLine.regiments[target];
                     if (defender.size > 0 && defender.type > -1)
                     {
                         float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline, combatAbility: combatAbility);
-                        float damage = BaseCasualties(defenderDiceRoll, DefenderDiceRollBonus()) * modifiers;
+                        float damage = BaseCasualties(defenderDiceRoll + generalBonus, DefenderDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(false));
                         casualties += (int)damage;
                         //if (target != i) { Debug.Log("flanking damage "+ flankDamage+" modifiers "+ modifiers + " damage " + damage); }
@@ -545,12 +585,14 @@ public class Battle
                 int target = FindTarget(attackingFrontLine, i, flankingRange, false);
                 if (target > -1)
                 {
-                    if (target != i) { baseDamage = flankDamage; }
+                    int generalBonus = 0;
+                    if (defenderGeneral != null && defenderGeneral.active) { generalBonus = (target != i) ? defenderGeneral.flankingSkill : defenderGeneral.rangedSkill; }
+                    if (target != i) { baseDamage = flankDamage;}
                     Regiment defender = attackingFrontLine.regiments[target];
                     if (defender.size > 0 && defender.type > -1)
                     {
                         float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline, combatAbility: combatAbility);
-                        float damage = BaseCasualties(defenderDiceRoll, DefenderDiceRollBonus()) * modifiers;
+                        float damage = BaseCasualties(defenderDiceRoll + generalBonus, DefenderDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(false));
                         casualties += (int)damage;
                         //if (target != i) { Debug.Log("flanking damage "+ flankDamage+" modifiers "+ modifiers + " damage " + damage); }

@@ -19,7 +19,7 @@ public class Tech
 
     public void TakeTech(int civID)
     {
-        Civilisation civilisation = Game.main.civs[civID];
+        Civilisation civilisation = Game.main.civs[civID];        
         for (int i = 0; i < effect.Length; i++)
         {
             civilisation.ApplyCivModifier(effect[i], effectStrength[i], Name, effectType[i]);
@@ -39,6 +39,12 @@ public class Tech
                 civilisation.unlockedIdeaGroupSlots++;
             }
             civilisation.techUnlocks.Add(unlocked);
+        }
+        int ahead = TechnologyUI.GetAheadTime(civilisation, type);
+        if (ahead > 0)
+        {
+            string aeffect = type == 0 ? "Tax Efficiency" : type == 1 ? "Production Value" : "Population Growth";
+            civilisation.ApplyCivModifier(aeffect, 0.2f, "Ahead of Time",1, ahead);
         }
     }
 }

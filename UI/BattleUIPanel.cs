@@ -24,18 +24,43 @@ public class BattleUIPanel : MonoBehaviour
         if(Player.myPlayer.selectedBattle != null && Player.myPlayer.selectedBattle.active)
         {
             Battle battle = Player.myPlayer.selectedBattle;
-            if (battle.tile.terrain.attackerDiceRoll != 0)
+            if (battle.AttackerDiceRollBonus() != 0)
             {
-                terrainRollA.text = battle.tile.terrain.attackerDiceRoll + "";
+                terrainRollA.text = battle.AttackerDiceRollBonus()+"";
                 terrainRollA.GetComponentInParent<Transform>().gameObject.SetActive(true);
             }
             else 
             { 
                 terrainRollA.transform.parent.gameObject.SetActive(false);
             }
-            terrainRollD.transform.parent.gameObject.SetActive(false);
-            bonusRollA.transform.parent.gameObject.SetActive(false);
-            bonusRollD.transform.parent.gameObject.SetActive(false);
+            if (battle.DefenderDiceRollBonus() != 0)
+            {
+                terrainRollD.text = battle.DefenderDiceRollBonus() + "";
+                terrainRollD.GetComponentInParent<Transform>().gameObject.SetActive(true);
+            }
+            else
+            {
+                terrainRollD.transform.parent.gameObject.SetActive(false);
+            }
+            if (battle.attackerGeneral != null && battle.attackerGeneral.active)
+            {
+                bonusRollA.text =battle.attackerGeneral.meleeSkill + " " + battle.attackerGeneral.flankingSkill + " " + battle.attackerGeneral.rangedSkill;
+                bonusRollA.transform.parent.gameObject.SetActive(true);
+            }
+            else
+            {
+                bonusRollA.transform.parent.gameObject.SetActive(false);
+            }
+            if (battle.defenderGeneral != null && battle.defenderGeneral.active)
+            {
+                bonusRollD.text = battle.defenderGeneral.meleeSkill + " " + battle.defenderGeneral.flankingSkill + " " + battle.defenderGeneral.rangedSkill;
+                bonusRollD.transform.parent.gameObject.SetActive(true);
+            }
+            else
+            {
+                bonusRollD.transform.parent.gameObject.SetActive(false);
+            }
+            
             if (battle.AttackerRebels)
             {
                 civColA.color = Color.black;

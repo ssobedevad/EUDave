@@ -17,14 +17,14 @@ public class Advisor
     public int type;
     public bool active;
     public Sprite icon;
-    public float HireCost(Civilisation civ) 
+    public float HireCost(Civilisation civ, int increaseLevel = 0) 
     {
-        float baseCost = 10 * Mathf.Pow(skillLevel, 2);
+        float baseCost = 10 * Mathf.Pow(skillLevel + increaseLevel, 2);
         return baseCost * (1f + civ.advisorCosts.value + (type == 0? civ.advisorCostsA.value : type == 1? civ.advisorCostsD.value : civ.advisorCostsM.value));
     }
-    public float Salary(Civilisation civ)
+    public float Salary(Civilisation civ,int increaseLevel = 0)
     {
-        float baseCost = 1 * Mathf.Pow(skillLevel, 2);
+        float baseCost = 1 * Mathf.Pow(skillLevel + increaseLevel, 2);
         return baseCost * (1f + civ.advisorCosts.value + (type == 0 ? civ.advisorCostsA.value : type == 1 ? civ.advisorCostsD.value : civ.advisorCostsM.value));
     } 
     public Advisor(int skill,Age Age, int CivID, int Type, string Effect = "", float EffectStrength = 0f, int effetType = 0)

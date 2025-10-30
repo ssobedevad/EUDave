@@ -6,9 +6,9 @@ using UnityEngine.UI;
 
 public class CourtUI : MonoBehaviour
 {
-    [SerializeField] TextMeshProUGUI rulerName, heirName, advisorA, advisorD, advisorM,admin,diplo,mil;
+    [SerializeField] TextMeshProUGUI rulerName, heirName, advisorA, advisorD, advisorM,admin,diplo,mil,salaryA,salaryD,salaryM;
     [SerializeField] Button advisorAB, advisorDB, advisorMB,disinherit,focusA,focusD,focusM,advisorAUpgrade,advisorAFire, advisorDUpgrade, advisorDFire, advisorMUpgrade, advisorMFire;
-    [SerializeField] GameObject advisorShopPanel;
+    [SerializeField] GameObject advisorShopPanel,courtPanel;
     [SerializeField] Transform advisorShopBack;
     [SerializeField] GameObject advisorPrefab;
     [SerializeField] Sprite blank;
@@ -26,6 +26,7 @@ public class CourtUI : MonoBehaviour
     private void OnDisable()
     {
         advisorShopPanel.SetActive(false);
+        courtPanel.SetActive(true);
     }
     private void Start()
     {
@@ -62,6 +63,7 @@ public class CourtUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         Advisor advisor = id == 0? civ.advisorA : id == 1? civ.advisorD : civ.advisorM;
         if (!advisor.active) { return; }
+        advisor.active = false;
         civ.RemoveAdvisor(advisor);
     }
     void DisInherit()
@@ -77,6 +79,7 @@ public class CourtUI : MonoBehaviour
     void OpenShop(int id)
     {
         advisorShopPanel.SetActive(true);
+        courtPanel.SetActive(false);
         advisorShopType = id;
     }
     private void OnGUI()
@@ -115,31 +118,49 @@ public class CourtUI : MonoBehaviour
         {
             advisorA.text = civ.advisorA.Name + " " + civ.advisorA.age.ToString(true,true) + civ.advisorA.skillLevel + "<sprite index=1> "  + civ.advisorA.effect + " " + Modifier.ToString(civ.advisorA.effectStrength, civ.GetStat(civ.advisorA.effect)) ;
             advisorAB.GetComponentsInChildren<Image>()[0].sprite = civ.advisorA.icon;
+            string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorA.HireCost(civ) * 1000f)/100f + "<sprite index=0>\n";
+            hoverText += "Salary Will Increase To: " + Mathf.Round(civ.advisorA.Salary(civ, 1) * 100f) / 100f + "<sprite index=0>\n";
+            advisorAUpgrade.GetComponent<HoverText>().text = hoverText;
+            salaryA.text ="Salary: " + Mathf.Round(civ.advisorA.Salary(civ, 0) * 100f) / 100f + "<sprite index=0>";
         }
         else
         {
             advisorA.text = "No <sprite index=1> Advisor";
             advisorAB.GetComponentsInChildren<Image>()[0].sprite = blank;
+            advisorAUpgrade.GetComponent<HoverText>().text = "No Advisor";
+            salaryA.text = "";
         }
         if (civ.advisorD.active)
         {
             advisorD.text = civ.advisorD.Name + " " + civ.advisorD.age.ToString(true, true) + civ.advisorD.skillLevel + "<sprite index=2> "  + civ.advisorD.effect + " " + Modifier.ToString(civ.advisorD.effectStrength, civ.GetStat(civ.advisorD.effect));
             advisorDB.GetComponentsInChildren<Image>()[0].sprite = civ.advisorD.icon;
+            string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorD.HireCost(civ) * 1000f) / 100f + "<sprite index=0>\n";
+            hoverText += "Salary Will Increase To: " + Mathf.Round(civ.advisorD.Salary(civ, 1) * 100f) / 100f + "<sprite index=0>\n";
+            advisorDUpgrade.GetComponent<HoverText>().text = hoverText;
+            salaryD.text = "Salary: " + Mathf.Round(civ.advisorD.Salary(civ, 0) * 100f) / 100f + "<sprite index=0>";
         }
         else
         {
             advisorD.text = "No <sprite index=2> Advisor";
             advisorDB.GetComponentsInChildren<Image>()[0].sprite = blank;
+            advisorDUpgrade.GetComponent<HoverText>().text = "No Advisor";
+            salaryD.text = "";
         }
         if (civ.advisorM.active)
         {
             advisorM.text = civ.advisorM.Name + " " + civ.advisorM.age.ToString(true, true) + civ.advisorM.skillLevel + "<sprite index=3> " + civ.advisorM.effect + " " + Modifier.ToString(civ.advisorM.effectStrength, civ.GetStat(civ.advisorM.effect));
             advisorMB.GetComponentsInChildren<Image>()[0].sprite = civ.advisorM.icon;
+            string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorM.HireCost(civ) * 1000f) / 100f + "<sprite index=0>\n";
+            hoverText += "Salary Will Increase To: " + Mathf.Round(civ.advisorM.Salary(civ, 1) * 100f) / 100f + "<sprite index=0>\n";
+            advisorMUpgrade.GetComponent<HoverText>().text = hoverText;
+            salaryM.text = "Salary: " + Mathf.Round(civ.advisorM.Salary(civ, 0) * 100f) / 100f + "<sprite index=0>";
         }
         else
         {
             advisorM.text = "No <sprite index=3> Advisor";
             advisorMB.GetComponentsInChildren<Image>()[0].sprite = blank;
+            advisorMUpgrade.GetComponent<HoverText>().text = "No Advisor";
+            salaryM.text = "";
         }
         if (advisorShopType > -1 && advisorShopPanel.activeSelf)
         {
@@ -182,6 +203,7 @@ public class CourtUI : MonoBehaviour
         {
             civ.AssignAdvisor(advisors[advisorID]);
             advisorShopPanel.SetActive(false);
+            courtPanel.SetActive(true);
         }
     }
 }
