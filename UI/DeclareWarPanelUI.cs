@@ -56,11 +56,19 @@ public class DeclareWarPanelUI : MonoBehaviour
         {
             goals.Add(new WarGoal(Map.main.casusBellis[2], defender.capitalPos, attacker.CivID));
         }
-        foreach(var prov in defender.GetAllCivTiles())
+        foreach (var prov in defender.GetAllCivTiles())
         {
+            if (attacker.government == 4 && attacker.religion != defender.religion && attacker.civNeighbours.Contains(defender.CivID) && Map.main.GetTile(prov).religion == attacker.religion)
+            {
+                goals.Add(new WarGoal(Map.main.casusBellis[2], prov, attacker.CivID));
+            }
             if (attacker.claims.Contains(prov))
             {                
                 goals.Add(new WarGoal(Map.main.casusBellis[0], prov, attacker.CivID));
+            }
+            if (attacker.government == 3 && attacker.civNeighbours.Contains(defender.CivID) && attacker.CanCoreTile(Map.main.GetTile(prov)))
+            {
+                goals.Add(new WarGoal(Map.main.casusBellis[4], prov, attacker.CivID));
             }
             if (attacker.cores.Contains(prov))
             {

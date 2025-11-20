@@ -7,12 +7,12 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager main;
 
-    [SerializeField] public GameObject BattleUIPrefab,CombatTextPrefab,DebugCirclePrefab,ArmyUIPrefab;
-    [SerializeField] GameObject TileUI,BattleUI,SiegeUI,ArmyUI,ArmyUIMulti;
+    [SerializeField] public GameObject BattleUIPrefab,CombatTextPrefab,DebugCirclePrefab,ArmyUIPrefab,FleetUIPrefab;
+    [SerializeField] GameObject TileUI,BattleUI,NavalBattleUI,SiegeUI,ArmyUI,ArmyUIMulti,FleetUI;
     [SerializeField] public GameObject CivUI,PeaceDealUI,WarUI,countryChooser,toolbar,interestingCountries;
     [SerializeField] public List<GameObject> UI;
     [SerializeField] public List<GameObject> WorldSpaceUI;
-    [SerializeField] public Transform worldCanvas,battleTransform,eventTransform;
+    [SerializeField] public Transform worldCanvas,worldCanvasText,unitCanvas,battleTransform,eventTransform;
     [SerializeField] RectTransform Selector;
     [SerializeField] public GameObject mouseText;
     [SerializeField] public GameObject eventPrefab,battleResultPrefab,playerCTAPrefab;
@@ -72,14 +72,21 @@ public class UIManager : MonoBehaviour
         countryChooser.SetActive(!Game.main.Started && Player.myPlayer.myCivID > -1);
         TileUI.SetActive(Player.myPlayer.selectedTile != null && Player.myPlayer.tileSelected && !Player.myPlayer.siegeSelected);
         BattleUI.SetActive(Player.myPlayer.selectedBattle != null && Player.myPlayer.selectedBattle.active);
+        NavalBattleUI.SetActive(Player.myPlayer.selectedNavalBattle != null && Player.myPlayer.selectedNavalBattle.active);
         SiegeUI.SetActive(Player.myPlayer.selectedTile != null && Player.myPlayer.selectedTile.underSiege && Player.myPlayer.selectedTile.siege != null && Player.myPlayer.siegeSelected);
-        ArmyUI.SetActive(Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle && !Player.myPlayer.siegeSelected);
-        ArmyUIMulti.SetActive(Player.myPlayer.selectedArmies.Count > 1);
+        ArmyUI.SetActive((Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle) && !Player.myPlayer.siegeSelected);
+        FleetUI.SetActive((Player.myPlayer.selectedFleets.Count == 1 && !Player.myPlayer.selectedFleets[0].inBattle) && !Player.myPlayer.siegeSelected);
+        ArmyUIMulti.SetActive(Player.myPlayer.selectedArmies.Count > 1|| Player.myPlayer.selectedFleets.Count > 1);
 
         Player.myPlayer.selectedArmies.RemoveAll(i => i == null);
+        Player.myPlayer.selectedFleets.RemoveAll(i => i == null);
         if (Player.myPlayer.selectedArmies.Count > 0 && Input.GetKeyDown(KeyCode.Escape))
         {
             Player.myPlayer.selectedArmies.RemoveAt(0);
+        }
+        if (Player.myPlayer.selectedFleets.Count > 0 && Input.GetKeyDown(KeyCode.Escape))
+        {
+            Player.myPlayer.selectedFleets.RemoveAt(0);
         }
         if (Input.GetKeyDown(KeyCode.O))
         {
@@ -110,26 +117,44 @@ public class UIManager : MonoBehaviour
                 UIManager.main.CivUI.SetActive(false);
                 Map.main.tileMapManager.DeselectTile();
                 Player.myPlayer.selectedArmies.Clear();
+                Player.myPlayer.selectedFleets.Clear();
                 List<Army> possibleArmies = new List<Army>();
+                List<Fleet> possibleFleets = new List<Fleet>();
                 if (Player.myPlayer.myCivID == -1)
                 {
                     foreach (var civ in Game.main.civs)
                     {
                         possibleArmies.AddRange(civ.armies);
+                        possibleFleets.AddRange(civ.fleets);
                     }
                 }
                 else
                 {
                     possibleArmies.AddRange(Player.myPlayer.myCiv.armies);
+                    possibleFleets.AddRange(Player.myPlayer.myCiv.fleets);
                 }
-                foreach (var army in possibleArmies)
+                if (!Input.GetKey(KeyCode.LeftShift))
                 {
-                    Vector2 pos = Map.main.tileMapManager.tilemap.CellToWorld(army.pos);
-                    if (selectRect.Contains(pos))
+                    foreach (var army in possibleArmies)
                     {
-                        Player.myPlayer.selectedArmies.Add(army);
-                    }
+                        Vector2 pos = Map.main.tileMapManager.tilemap.CellToWorld(army.pos);
+                        if (selectRect.Contains(pos))
+                        {
+                            Player.myPlayer.selectedArmies.Add(army);
+                        }
 
+                    }
+                }
+                if (Player.myPlayer.selectedArmies.Count == 0)
+                {
+                    foreach (var fleet in possibleFleets)
+                    {
+                        Vector2 pos = Map.main.tileMapManager.tilemap.CellToWorld(fleet.pos);
+                        if (selectRect.Contains(pos))
+                        {
+                            Player.myPlayer.selectedFleets.Add(fleet);
+                        }
+                    }
                 }
             }
 

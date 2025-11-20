@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -11,7 +12,7 @@ public class Ruler
     public Age age;
     public int civID;
     public bool active;
-    public Effect[] traits;
+    public List<Trait> traits = new List<Trait>();
     bool isActive;
     public Ruler(int AdminSkill,int DiploSkill,int MilSkill,Age Age,int CivID,string name)
     {
@@ -23,7 +24,7 @@ public class Ruler
         active = true;
         isActive = true;
         Name = name;
-        Game.main.monthTick.AddListener(CheckDeath);
+        Game.main.dayTick.AddListener(CheckDeath);
     }
     public Ruler(Ruler clone)
     {
@@ -35,9 +36,10 @@ public class Ruler
         active = clone.active;
         isActive = clone.isActive;
         Name = clone.Name;
+        traits = clone.traits;
         if (!active)
         {
-            Game.main.monthTick.AddListener(CheckDeath);
+            Game.main.dayTick.AddListener(CheckDeath);
             active = true;
             isActive = true;
         }
@@ -47,7 +49,7 @@ public class Ruler
         if (!isActive)
         {
             isActive = true;
-            Game.main.monthTick.AddListener(CheckDeath);
+            Game.main.dayTick.AddListener(CheckDeath);
         }
     }
     public static Ruler NewHeir(int BonusAdminSkill, int BonusDiploSkill, int BonusMilSkill,int CivID)
@@ -61,7 +63,14 @@ public class Ruler
         int admin = WeightedChoiceManager.getChoice(skillWeights).choiceID + WeightedChoiceManager.getChoice(skillWeights).choiceID;
         int diplo = WeightedChoiceManager.getChoice(skillWeights).choiceID + WeightedChoiceManager.getChoice(skillWeights).choiceID;
         int mil = WeightedChoiceManager.getChoice(skillWeights).choiceID + WeightedChoiceManager.getChoice(skillWeights).choiceID;
-        return new Ruler(admin + BonusAdminSkill,diplo+BonusDiploSkill,mil+BonusMilSkill,Age.zero, CivID,civ.ruler.Name + "I");
+        return new Ruler(admin + BonusAdminSkill,diplo+BonusDiploSkill,mil+BonusMilSkill,Age.zero, CivID, GenerateName(civ));
+    }
+    static string GenerateName(Civilisation civ)
+    {
+        string name = "";
+        name += civ.government == 0 ? "King " : civ.government == 1 ? "Baron " : civ.government == 2 ? "Grand General " : civ.government == 3 ? "Tribal Leader " : "Holy Leader ";
+        name += civ.civName;
+        return name;
     }
     public void Kill()
     {
@@ -76,12 +85,28 @@ public class Ruler
     }
     void CheckDeath()
     {
-        if (age.months > 0 || age.years > 0)
+        if (age.years > 0)
         {
-            if (UnityEngine.Random.Range(0f, 1000f) < age.months + age.years * 12)
+            if (UnityEngine.Random.Range(0f, 1000f) < (float)age.months/12f + age.years)
             {
                 Kill();
             }
         }
+        if(traits.Count < Mathf.Min(3, age.years + 1))
+        {
+            AddTrait();
+        }
+    }
+    void AddTrait()
+    {
+        List<WeightedChoice> traitList = new List<WeightedChoice>();
+        for (int i = 0; i < Map.main.rulerTraits.Length; i++)
+        {
+            Trait rulerTrait = Map.main.rulerTraits[i];
+            traitList.Add(new WeightedChoice(i, traits.Exists(i=>i.name == rulerTrait.name) ? 0 : 10));
+        }
+        Trait chosen = Map.main.rulerTraits[WeightedChoiceManager.getChoice(traitList).choiceID];
+        traits.Add(chosen);
+        //Debug.Log("ADD Trait:" + chosen.name);
     }
 }

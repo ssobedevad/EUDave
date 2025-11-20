@@ -21,7 +21,7 @@ public class Effect
         }
         else
         {
-            text += name + " " + Modifier.ToString(amount, civ.GetStat(name)) + "\n";
+            text += name + " " + Modifier.ToString(amount, civ.GetStat(name),type == 2 || type == 0, type == 3) + "\n";
         }        
         return text;
     }

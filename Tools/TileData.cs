@@ -1,10 +1,18 @@
 ﻿using System.Collections.Generic;
+using System.IO;
+using TMPro;
+using TreeEditor;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Tilemaps;
+using UnityEngine.WSA;
+using static UnityEngine.RuleTile.TilingRuleOutput;
 
 public class TileData
 {
     public string Name;
     public Vector3Int pos;
+    public Vector3Int portTile;
     List<TileData> NeighborTiles;
     List<Vector3Int> NeighborPos;
     public int civID;
@@ -14,6 +22,7 @@ public class TileData
     public bool hasMarket = false;
     public int marketLevel = 0;
     public int infrastructureLevel = 0;
+    public int status = 0;
     public Civilisation civ => Game.main.civs[civID];
     public bool underSiege => siege != null && siege.inProgress;
     public int fortLevel;
@@ -22,19 +31,24 @@ public class TileData
     public Siege siege;
     public bool occupied;
     public int occupiedByID;
-    public ResourceType tileResource,tileSecondaryResource = null;   
+    public ResourceType tileResource, tileSecondaryResource = null;
     public Terrain terrain;
     public List<Army> armiesOnTile = new List<Army>();
-    public SpriteRenderer selectedTileObj;
+    public List<Fleet> fleetsOnTile = new List<Fleet>();
+    public SpriteRenderer selectedTileObj,settlementSprite;
     public Battle _battle = null;
+    public NavalBattle _navalBattle = null;
     public int recruitTimer = -1;
+    public int boatTimer = -1;
     public int mercenaryTimer = -1;
     public List<int> recruitQueue = new List<int>();
+    public List<int> boatQueue = new List<int>();
     public List<int> mercenaryQueue = new List<int>();
     public int buildTimer = -1;
     public List<int> buildQueue = new List<int>();
     public string region;
     public string tradeRegion;
+    public int tradeRegionID;
     public string continent;
     public int religionTimer = -1;
     public int religion;
@@ -45,10 +59,11 @@ public class TileData
     public int coreTimer = -1;
     public GameObject fort;
     public GreatProject greatProject = null;
+    public TextMeshProUGUI tileText = null;
     public bool hasCore => cores.Contains(civID);
-    public int avaliableMaxPopulation => Mathf.Max(0, (int)(maxPopulation * control/100f));
-    public int populationGrowth => Mathf.Max(0,(int)((1 + developmentC * 6) * (1f + localPopulationGrowth.value) * (civID > -1 ? 1f + civ.populationGrowth.value : 1f)));
-    public int maxPopulation => Mathf.Max(0,(int)((totalDev + developmentA * 0.5) * 200 * (1f + localMaxPopulation.value ) * (civID > -1 ?1f +civ.maximumPopulation.value : 1f)));
+    public int avaliableMaxPopulation => Mathf.Max(0, (int)(maxPopulation * control / 100f));
+    public int populationGrowth => Mathf.Max(0, (int)((1 + developmentC * 6) * (1f + localPopulationGrowth.value) * (civID > -1 ? 1f + civ.populationGrowth.value : 1f)));
+    public int maxPopulation => Mathf.Max(0, (int)((totalDev + developmentA * 0.5) * 200 * (1f + localMaxPopulation.value) * (civID > -1 ? 1f + civ.maximumPopulation.value : 1f)));
     public int developmentA, developmentB, developmentC;
     public Stat localDevCostMod = new Stat(0f, "Local Development Cost Modifier");
     public Stat localDevCost = new Stat(0f, "Local Development Cost");
@@ -57,7 +72,7 @@ public class TileData
     public Stat localTaxEfficiency = new Stat(0f, "Local Tax Efficiency");
     public float control;
     public float maxControl;
-    public Stat localGoverningCost = new Stat(0f, "Local Governing Cost",true);
+    public Stat localGoverningCost = new Stat(0f, "Local Governing Cost", true);
     public Stat localGoverningCostMod = new Stat(0f, "Local Governing Cost Modifier", false);
     public Stat localAttritionForEnemies = new Stat(0f, "Local Attrition for Enemies");
     public Stat localMinimumControl = new Stat(0f, "Local Minimum Control");
@@ -72,7 +87,7 @@ public class TileData
     public Stat localPopulationGrowth = new Stat(0f, "Local Population Growth");
     public Stat localMaxPopulation = new Stat(0f, "Local Max Population");
     public Stat localForceLimit = new Stat(0f, "Local Force Limit");
-    public Stat localAttackerDiceRoll = new Stat(0f, "Local Attacker Dice Roll",true);
+    public Stat localAttackerDiceRoll = new Stat(0f, "Local Attacker Dice Roll", true);
     public Stat localUnrest = new Stat(0f, "Local Unrest", true);
     public int seperatism = 0;
     public int rebelHeldTime = 0;
@@ -87,13 +102,14 @@ public class TileData
     public float GetGoverningCost()
     {
         float cost = totalDev + localGoverningCost.value;
-        return cost * (1f + localGoverningCostMod.value);
+        cost = Mathf.Max(0, cost * (1f + (status == 0 ? -0.5f : status == 1 ? 0f : status == 2 ? 1f : 2f)) - (civ.capitalPos == pos ? 1f:0));
+        return cost * Mathf.Max(0, (1f + localGoverningCostMod.value + civ.governingCostModifier.value));
     }
     public void BreakToRebels()
     {
-        if(heldByType > -1)
+        if (heldByType > -1)
         {
-            if(heldByType == 0)
+            if (heldByType == 0)
             {
                 control -= 50;
                 localUnrest.AddModifier(new Modifier(-2, 1, "Rebel Demands", 720));
@@ -105,7 +121,7 @@ public class TileData
                 int newCiv = heldByID;
                 civID = newCiv;
                 Game.main.civs[oldCiv].updateBorders = true;
-                if(pos == Game.main.civs[oldCiv].capitalPos)
+                if (pos == Game.main.civs[oldCiv].capitalPos)
                 {
                     Game.main.civs[oldCiv].NewCapital(new List<Vector3Int>() { pos });
                 }
@@ -116,12 +132,12 @@ public class TileData
                 }
                 SetMaxControl();
                 if (cores.Contains(newCiv))
-                {                    
+                {
                     control = 100;
                     localUnrest.AddModifier(new Modifier(-100, 1, "Rebel Demands", 720));
                 }
                 else
-                {                   
+                {
                     control = 25;
                 }
                 occupied = false;
@@ -134,7 +150,7 @@ public class TileData
             }
         }
     }
-    public TileData(Vector3Int Pos,int CivID)
+    public TileData(Vector3Int Pos, int CivID)
     {
         pos = Pos;
         civID = CivID;
@@ -149,9 +165,9 @@ public class TileData
     }
     public bool needsConverting()
     {
-        if(civID == -1) { return false; }
-        if (religion == civ.religion || religionTimer != -1) 
-        { 
+        if (civID == -1) { return false; }
+        if (religion == civ.religion || religionTimer != -1)
+        {
             return false;
         }
         return true;
@@ -167,7 +183,7 @@ public class TileData
         }
         else { return; }
         if (buildQueue.Count == 0)
-        {           
+        {
             buildTimer = (int)building.GetTime(this, civ);
         }
         buildQueue.Add(id);
@@ -191,6 +207,20 @@ public class TileData
         }
         recruitQueue.Add(type);
     }
+    public void StartRecruitingBoat(int type)
+    {
+        float cost = GetRecruitCost(type);
+        if (civ.coins >= cost)
+        {
+            civ.coins -= cost;
+        }
+        else { return; }
+        if (boatQueue.Count == 0)
+        {
+            boatTimer = GetRecruitTime();
+        }
+        boatQueue.Add(type);
+    }
     public void StartRecruitingMercenary(int mercID)
     {
         MercenaryGroup merc = Map.main.mercenaries[mercID];
@@ -209,7 +239,7 @@ public class TileData
     }
     public int GetRecruitTime()
     {
-        return (int)Mathf.Max(144 * (1f + localRecruitmentTime.value + civ.recruitmentTime.value),1);
+        return (int)Mathf.Max(144 * (1f + localRecruitmentTime.value + civ.recruitmentTime.value), 1);
     }
     public void Build(int id)
     {
@@ -221,12 +251,12 @@ public class TileData
             {
                 ApplyTileLocalModifier(building.effects.name, building.effects.amount, building.effects.type, building.Name);
             }
-            if(building.fortLevel > 0)
+            if (building.fortLevel > 0)
             {
                 fortLevel += building.fortLevel;
                 if (!hasFort)
                 {
-                    fort = GameObject.Instantiate(Map.main.fortPrefab, worldPos(), Quaternion.identity);
+                    fort = GameObject.Instantiate(Map.main.fortPrefab, worldPos(), Quaternion.identity, Map.main.fortTransform);
                     hasFort = true;
                     ApplyZOC();
                 }
@@ -284,11 +314,40 @@ public class TileData
     {
         if (civID == -1) { return; }
         if (hasCore || coreTimer != -1) { return; }
-        if(civ.adminPower >= GetCoreCost())
+        if (civ.adminPower >= GetCoreCost())
         {
             coreTimer = GetCoreTime();
             civ.adminPower -= GetCoreCost();
         }
+    }
+    public void TransferOccupation(int civTo, bool integrated = false)
+    {
+        civID = civTo;
+        if (integrated)
+        {
+            if (!cores.Contains(civTo))
+            {
+                cores.Add(civTo);
+            }            
+        }
+        if (status > 0 && civID > -1)
+        {
+            civ.controlCentres.Remove(pos);
+            status = 0;
+            UpdateStatusModifiers();
+        }
+        SetMaxControl();
+        buildQueue.Clear();
+        recruitQueue.Clear();
+        mercenaryQueue.Clear();
+        boatQueue.Clear();
+        coreTimer = -1;
+        religionTimer = -1;
+        buildTimer = -1;
+        recruitTimer = -1;
+        mercenaryTimer = -1;
+        boatTimer = -1;
+        control = Mathf.Min(75f, control, maxControl);
     }
     public int GetCoreTime()
     {
@@ -302,11 +361,74 @@ public class TileData
         baseCost = (int)(baseCost * (1f + civ.coreCost.value + (civ.claims.Contains(pos) ? -0.25f : 0f)));
         return Mathf.Max(baseCost,1);
     }
+    public bool CanPromoteStatus()
+    {
+        if (civID == -1) { return false; }
+        if(civ.maxSettlements.value <= civ.controlCentres.Count) { return false; }
+        if (status >= 3) { return false; }
+        if(totalDev < status * 10f + 5f) { return false; }
+        return civ.adminPower >= PromoteStatusCost();
+    }
+    public int PromoteStatusCost()
+    {
+        return (int)Mathf.Round((status * 50 + 50) * (1f + civ.promoteSettlementCost.value));
+    }
+    public void UpdateInfrastructureModifiers()
+    {
+        localTaxEfficiency.UpdateModifier("Infrastructure", infrastructureLevel * 0.1f, 1);
+        localDevCost.UpdateModifier("Infrastructure", infrastructureLevel * -0.15f, 1);
+        localProductionQuantity.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, 1);
+        localProductionValue.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, 1);
+        localPopulationGrowth.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, 1);
+        localMaxPopulation.UpdateModifier("Infrastructure", infrastructureLevel * 0.1f, 1);
+        localConstructionCost.UpdateModifier("Infrastructure", infrastructureLevel * -0.05f, 1);
+        localConstructionTime.UpdateModifier("Infrastructure", infrastructureLevel * -0.05f, 1);
+        localDefensiveness.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, 1);
+        localRecruitmentTime.UpdateModifier("Infrastructure", infrastructureLevel * -0.15f, 1);
+        localGoverningCost.UpdateModifier("Infrastructure", infrastructureLevel * 5f, 1);
+        localGoverningCostMod.UpdateModifier("Infrastructure", infrastructureLevel * 0.1f, 1);
+    }
+    public void UpdateStatusModifiers()
+    {
+        if (status > 1)
+        {
+            int level = status - 1;
+            localDevCostMod.UpdateModifier("Status", -0.05f * level, 1);
+            localConstructionTime.UpdateModifier("Status", -0.1f * level, 1);
+            localConstructionCost.UpdateModifier("Status", -0.05f * level, 1);
+            localUnrest.UpdateModifier("Status", -1f * level, 1);
+        }
+        settlementSprite.sprite = Map.main.statusSprites[status];
+    }
+    public void PromoteStatus()
+    {
+        if (!CanPromoteStatus())
+        {
+            return;
+        }
+        civ.adminPower -= PromoteStatusCost();
+        status += 1;
+        if (!civ.controlCentres.ContainsKey(pos))
+        {
+            civ.controlCentres.Add(pos, status);
+        }
+        else
+        {
+            civ.controlCentres[pos] = status;
+        }
+        SetMaxControl();
+        control = Mathf.Clamp(control + 25, 0, maxControl);
+        UpdateStatusModifiers();
+    }
     public void SetMaxControl()
     {
-        float maximumControl = 100f;
-        maximumControl -= Mathf.Pow(evenr_distance(pos, civ.capitalPos),2) * (1f + civ.controlDecay.value);
-        maximumControl += totalDev;
+        float maximumControl = 10f;
+        foreach (var contolCentre in civ.controlCentres)
+        {
+            float controlDecay = (contolCentre.Value == 0 ? 100f : contolCentre.Value == 1 ? 50f : contolCentre.Value == 2 ? 25f : 10f) * (1f + civ.controlDecay.value);
+            float possibleMaximumControl = 100f - controlDecay * evenr_distance(pos,contolCentre.Key) + totalDev;
+            maximumControl = Mathf.Max(possibleMaximumControl, maximumControl);
+        }
         float minimumControl = pos == civ.capitalPos ? 100f : localMinimumControl.value + civ.minControl.value;
         maxControl = Mathf.Clamp(maximumControl, minimumControl, hasCore ? 100f : 25f);
         control = Mathf.Max(minimumControl, Mathf.Min(control, maxControl));
@@ -394,6 +516,20 @@ public class TileData
                 Army.NewArmy(this, civID, regiments);
             }
             
+        }
+    }
+    public void CreateNewBoat(int type)
+    {
+        if (civID == -1) { return; }
+        if (civ.avaliablePopulation >= 200)
+        {
+            int size = civ.RemovePopulation(200);
+            if (size >= 100)
+            {
+                List<Boat> boats = new List<Boat> { new Boat( CivID: civID, Type: type) };
+                Fleet.NewFleet(this, civID, boats);
+            }
+
         }
     }
     public void CreateMercenaryGroup(int mercID)
@@ -615,11 +751,24 @@ public class TileData
             if (tile != null)
             {
                 NeighborTiles.Add(tile);         
-                if(tile.terrain != null)
+                if(tile.terrain != null && terrain != null)
                 {
-                    if (tile.terrain.isSea)
+                    if (tile.terrain.isSea && !terrain.isSea)
                     {
+                        if (!isCoastal)
+                        {
+                            portTile = n;
+                            
+                        }
                         isCoastal = true;
+                        Vector3 worldpos  = worldPos();
+                        Vector3 portPos = Map.main.GetTile(portTile).worldPos();
+                        Vector3 pos = (worldpos + portPos)/2;
+                        Vector3 dir = portPos - worldpos;
+                        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                        Quaternion rotation = Quaternion.Euler(new Vector3(0, 0, angle + 90f));
+                        GameObject.Instantiate(Map.main.settlementPrefab, pos, rotation, Map.main.buildingTransform).GetComponent<SpriteRenderer>().sprite = Map.main.portSprite;
+
                     }
                 }
             }

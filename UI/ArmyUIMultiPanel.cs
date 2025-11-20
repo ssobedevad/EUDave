@@ -46,6 +46,32 @@ public class ArmyUIMultiPanel : MonoBehaviour
             }
 
         }
+        else if(Player.myPlayer.selectedFleets.Count > 1)
+        {
+            while (armies.Count != Player.myPlayer.selectedFleets.Count)
+            {
+                if (armies.Count > Player.myPlayer.selectedFleets.Count)
+                {
+                    int lastIndex = armies.Count - 1;
+                    Destroy(armies[lastIndex]);
+                    armies.RemoveAt(lastIndex);
+                }
+                else
+                {
+                    GameObject army = Instantiate(armyPrefab, armyTransform);
+                    armies.Add(army);
+                    army.GetComponentInChildren<Button>().onClick.AddListener(delegate { DeselectArmy(armies.IndexOf(army)); });
+
+                }
+            }
+            for (int i = 0; i < Player.myPlayer.selectedFleets.Count; i++)
+            {
+                Fleet army = Player.myPlayer.selectedFleets[i];
+                TextMeshProUGUI armyName = armies[i].GetComponentInChildren<TextMeshProUGUI>();
+                armyName.text = "Army Name - " + Mathf.Round(army.boats.Count);
+            }
+
+        }
         else
         {
             gameObject.SetActive(false);
@@ -58,6 +84,7 @@ public class ArmyUIMultiPanel : MonoBehaviour
     void CloseMenu()
     {
         Player.myPlayer.selectedArmies.Clear();
+        Player.myPlayer.selectedFleets.Clear();
     }
     void MergeAll()
     {
@@ -69,6 +96,16 @@ public class ArmyUIMultiPanel : MonoBehaviour
             {
                 Player.myPlayer.selectedArmies.Remove(army);
                 army.CombineInto(temp[0]);
+            }
+        }
+        List<Fleet> tempF = Player.myPlayer.selectedFleets.ToList();
+        for (int i = 1; i < tempF.Count; i++)
+        {
+            Fleet fleet = tempF[i];
+            if (fleet.pos == tempF[0].pos)
+            {
+                Player.myPlayer.selectedFleets.Remove(fleet);
+                fleet.CombineInto(tempF[0]);
             }
         }
     }

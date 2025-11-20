@@ -14,8 +14,9 @@ public class Player : MonoBehaviour
     public TileData selectedTile = null;
     public bool siegeSelected = false;
     public List<Army> selectedArmies = new List<Army>();
-    public List<Boat> selectedBoats = new List<Boat>();
+    public List<Fleet> selectedFleets = new List<Fleet>();
     public Battle selectedBattle = null;
+    public NavalBattle selectedNavalBattle = null;
     [SerializeField] private GameObject hexSpriteMaskPrefab;
     [SerializeField] public LineRenderer armyMove;
     [SerializeField] public GameObject resoureIndicatorPrefab;

@@ -10,6 +10,7 @@ public class TradeRegion
     public Dictionary<string,float> resources = new Dictionary<string,float>();
     public float ValuePerDay = 0f;
     public List<int> civs = new List<int>();
+    public int id;
 
     public void AddTile(TileData tile)
     {

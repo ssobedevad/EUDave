@@ -127,7 +127,7 @@ public class GreatSwampUI : MonoBehaviour
         text += "This Increases by " + Mathf.Round(civ.HungerDaily() * 100f) / 100f + " every day\n";
         text += "Base: 0.1\n";
         text += "Provinces: " + Mathf.Round(civ.civTiles.Count) / 100f + "\n";
-        text += civ.remainingDiploRelations < 0 ? "Over Diplo relations: " + Mathf.Round(civ.remainingDiploRelations * -100f) / 100f + "\n" : "";
+        text += civ.diplomaticCapacity > civ.diplomaticCapacityMax.value ? "Over Diplomatic Capacity: " + Mathf.Round((civ.diplomaticCapacity - civ.diplomaticCapacityMax.value)/civ.diplomaticCapacityMax.value * 100f) / 100f + "\n" : "";
         return text;
     }
 }

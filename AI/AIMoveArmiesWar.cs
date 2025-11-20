@@ -104,7 +104,20 @@ public class AIMoveArmiesWar
         allyProvinces.Clear();
         BuildEnemyArmy(civ);
         ProcessArmyPositions(civ);
-
+        if (civ.generals.Exists(i => i.army == null))
+        {
+            foreach (var army in civ.armies)
+            {
+                if (civ.generals.Exists(i => i.army == null))
+                {
+                    army.AssignGeneral(civ.generals.Find(i => i.army == null));
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
         if (armiesToMerge.Count <= 1)
         {
             armies.AddRange(armiesToMerge);
@@ -127,16 +140,7 @@ public class AIMoveArmiesWar
         }
         if (armiesToMerge.Count > 1)
         {
-            Army central = armiesToMerge[0];
-            central.isMerging = true;
-            for (int i = 1; i < armiesToMerge.Count; i++)
-            {
-                Army army = armiesToMerge[i];
-                army.mergeTargets.Add(central);
-                central.mergeTargets.Add(army);
-                army.isMerging = true;
-                army.SetPath(central.pos);
-            }
+            MergeArmies(civID);
         }
         if (armies.Count > 0)
         {
@@ -153,17 +157,17 @@ public class AIMoveArmiesWar
         TileData tile = Map.main.GetTile(army.pos);
         if (tile.siege.armiesSieging.Count < 2)
         {
-            stay += (1f + tile.siege.progress + tile.siege.fortLevel) * 100f;
+            stay = tile.siege.progress * 100f;
         }
-        else if (tile.siege.unitsSieging() - army.ArmySize() <= tile.fortLevel * 3000 + 1000)
+        else if (tile.siege.unitsSieging() - army.ArmySize() > tile.fortLevel * 3000 + 1000)
         {
-            stay += (1f + tile.siege.progress + tile.siege.fortLevel) * 100f;
+            stay = tile.siege.progress * 80f;
         }
         else
         {
-            stay += (1f + tile.siege.progress + tile.siege.fortLevel) * 10f;
+            stay = tile.siege.progress * 60f;
         }
-        return Mathf.Pow(stay,2);
+        return stay;
     }
     public static void CheckRunAway(int civID)
     {
@@ -171,10 +175,10 @@ public class AIMoveArmiesWar
         foreach (var army in GetOwnArmies())
         {
             bool siege = army.tile.underSiege;
-            List<Army> oarmytemp = GetOwnArmies().ToList();
-            oarmytemp.Remove(army);
+            List<Army> oArmyTemp = GetOwnArmies().ToList();
+            oArmyTemp.Remove(army);
             float effectiveStrength = army.ArmyStrength();
-            foreach (var oArmy in oarmytemp)
+            foreach (var oArmy in oArmyTemp)
             {
                 if (TileData.evenr_distance(oArmy.pos, army.pos) < 2)
                 {
@@ -187,7 +191,7 @@ public class AIMoveArmiesWar
                 {
                     if (eArmy.effectiveSize > effectiveStrength * 1.1f)
                     {
-                        if (siege && GetSiegeStayDesire(army) < (eArmy.effectiveSize - effectiveStrength)/25f)
+                        if (siege && GetSiegeStayDesire(army) < 50)
                         {                           
                             if (eArmy.moving)
                             {
@@ -267,11 +271,11 @@ public class AIMoveArmiesWar
     }
     public static bool ShouldMergeArmy(Civilisation civ, Army army)
     {
-        return (civ.armies.Count > 1 && army.regiments.Count < civ.combatWidth.value);
+        return (civ.armies.Count > 1 && army.regiments.Count < army.tile.supplyLimit);
     }
     public static bool ShouldSplitArmy(Civilisation civ, Army army)
     {
-        return (army.regiments.Count > civ.combatWidth.value * 2);
+        return (army.regiments.Count > army.tile.supplyLimit);
     }
     public static void BuildEnemyArmy(Civilisation civ)
     {
@@ -288,7 +292,7 @@ public class AIMoveArmiesWar
                 }
                 else
                 {
-                    enemyArmies.Add(new EnemyArmy(army.pos, army.ArmyStrength(),army.path.Count > 0,army.tile.underSiege && army.path.Count == 0));
+                    enemyArmies.Add(new EnemyArmy(army.pos, army.ArmyStrength(),army.path.Count > 0,army.tile.underSiege && army.path.Count == 0, army.path.Count > 0 && army.moveTimer >= army.moveTime * 0.5f));
                 }                
             }
         }
@@ -320,7 +324,7 @@ public class AIMoveArmiesWar
             List<int> dists = GetMoveDists(battle.pos, civArmies);
             List<Army> moveArmies = new List<Army>();
             List<int> moveDists = new List<int>();
-            float moveArmies_effectiveSize = 0;
+            float moveArmies_effectiveSize = attacker ? battle.attackerCount : battle.defenderCount;
             int loops = 0;
             while (civArmiesTemp.Count > 0 && loops < 100)
             {
@@ -341,7 +345,7 @@ public class AIMoveArmiesWar
                     {
                         moveArmies.Add(civArmiesTemp[bestID]);
                         moveDists.Add(dists[bestID]);
-                        moveArmies_effectiveSize += civArmiesTemp[bestID].ArmyStrength();
+                        moveArmies_effectiveSize += civArmiesTemp[bestID].regiments.Count;
                         civArmies.Remove(civArmiesTemp[bestID]);
                     }
                 }
@@ -438,13 +442,6 @@ public class AIMoveArmiesWar
                             {
                                 Army army = moveArmies[i];
                                 army.SetPath(eArmy.pos);
-                                if (army.general == null || !army.general.active)
-                                {
-                                    if (civ.generals.Count > 0)
-                                    {
-                                        army.AssignGeneral(civ.generals[0]);
-                                    }
-                                }
                             }
                         }
                         moveArmies.Clear();
@@ -496,7 +493,25 @@ public class AIMoveArmiesWar
     }
     public static void MergeArmies(int civID)
     {
-        Debug.Log("Merge Armies");
+        Army central = armiesToMerge[0];
+        int total = central.regiments.Count;
+        if (total + armiesToMerge[1].regiments.Count < central.tile.supplyLimit)
+        {
+            central.isMerging = true;
+            for (int i = 1; i < armiesToMerge.Count; i++)
+            {
+                Army army = armiesToMerge[i];
+                if (total + army.regiments.Count > central.tile.supplyLimit)
+                {
+                    break;
+                }
+                army.mergeTargets.Add(central);
+                central.mergeTargets.Add(army);
+                army.isMerging = true;
+                army.SetPath(central.pos);
+                total += army.regiments.Count;
+            }
+        }
     }
     public static void DeterminePossibleProvinces(Civilisation civ)
     {
@@ -599,14 +614,16 @@ public class AIMoveArmiesWar
         public float effectiveSize;
         public float distance;
         public bool moving;
+        public bool committed;
         public bool sieging;
 
-        public EnemyArmy(Vector3Int pos, float effectiveSize, bool moving,bool sieging)
+        public EnemyArmy(Vector3Int pos, float effectiveSize, bool moving,bool sieging, bool committed)
         {
             this.pos = pos;
             this.effectiveSize = effectiveSize;
             this.moving = moving;
             this.sieging = sieging;
+            this.committed = committed;
         }
     }
 }

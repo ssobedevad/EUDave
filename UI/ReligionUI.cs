@@ -45,7 +45,7 @@ public class ReligionUI : MonoBehaviour
         if (civ.religiousUnity < 1) 
         {
             text += "Stability Cost: +" + Mathf.Round((1f - civ.religiousUnity) * 10000f)/100f + "%\n";
-            text += "Global Unrest: +" + Mathf.Round((1f - civ.religiousUnity) * 30000f)/100f;
+            text += "Global Unrest: +" + Mathf.Round((1f - civ.religiousUnity) * 300f)/100f;
         }
         else
         {

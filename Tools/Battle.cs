@@ -275,6 +275,7 @@ public class Battle
                     defenderCasualties += (int)loser.ArmySize();
                 }
                 GameObject.Destroy(loser.gameObject);
+                Debug.Log("KILL REBELS");
             }
             BattleEnd(!attacker, true);
             return true;

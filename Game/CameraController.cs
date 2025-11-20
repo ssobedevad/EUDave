@@ -1,13 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class CameraController : MonoBehaviour
 {
     [SerializeField] public Rigidbody rb;
-    [SerializeField] Camera cam;
+    [SerializeField] public Camera cam;
 
     public static CameraController main;
+    public UnityEvent camChange = new UnityEvent();
     private void Awake()
     {
         main = this;
@@ -83,13 +85,14 @@ public class CameraController : MonoBehaviour
             }
             if (Input.mouseScrollDelta.y != 0)
             {
+                camChange.Invoke();
                 foreach (var civ in Game.main.civs)
                 {
-                    if (civ.countryName != null)
+                    if (civ.countryNames[0] != null)
                     {
                         Color c = civ.c;
                         c.a = Mathf.Clamp(cam.orthographicSize / 20f - 0.5f, 0f, 1f);
-                        civ.countryName.color = c;
+                        civ.countryNames.ForEach(i=>i.color = c);
                     }
                      
                 }

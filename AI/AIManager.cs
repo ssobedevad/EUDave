@@ -37,6 +37,7 @@ public class AIManager : MonoBehaviour
                 SpendMilMana(civ);
                 ManageCoins(civ);
                 TakeGovernmentReform(civ);
+                PromoteStatus(civ);
             }
         }       
     }
@@ -74,12 +75,49 @@ public class AIManager : MonoBehaviour
             }
         }
     }    
+    public void PromoteStatus(Civilisation civ)
+    {
+        if(civ.adminPower < 50)
+        {
+            return;
+        }
+
+        if (civ.maxSettlements.value > civ.controlCentres.Count)
+        {
+            List<TileData> tiles = civ.GetAllCivTileDatas().ToList();
+            if (tiles.Count == 0) { return; }
+            tiles.Sort((x, y) => ((1f - y.maxControl) * y.totalDev).CompareTo((1f - x.maxControl) * x.totalDev));
+            if (tiles[0].maxControl < 50)
+            {
+                TileData tile = tiles[0];
+                if (tile.CanPromoteStatus())
+                {
+                    tile.PromoteStatus();
+                }
+            }
+        }
+        else
+        {
+            foreach(var centre in civ.controlCentres)
+            {
+                if(centre.Value < 3)
+                {
+                    TileData tile = Map.main.GetTile(centre.Key);
+                    if (tile.CanPromoteStatus())
+                    {
+                        tile.PromoteStatus();
+                    }
+                }
+            }
+        }
+        
+    }
     public void TakeGovernmentReform(Civilisation civ)
     {
         if (civ.reformProgress >= civ.reforms.Count * 40 + 40)
         {
             GovernmentType governmentType = Map.main.governmentTypes[civ.government];
-            if (governmentType.BaseReforms.Length == 0) { return; }
+            if (governmentType.BaseReforms.Length == 0 || governmentType.BaseReforms.Length <= civ.reforms.Count) { return; }
             GovernmentReformTier tier = governmentType.BaseReforms[civ.reforms.Count];
             int id = UnityEngine.Random.Range(0, tier.Reforms.Length);
             GovernmentReform reform = tier.Reforms[id];
@@ -653,16 +691,15 @@ public class AIManager : MonoBehaviour
             {
                 Civilisation civ = Game.main.civs[i];
                 if (civ.isPlayer || !civ.isActive() || (civ.overlordID > -1 && civ.libertyDesire < 50f)) { continue; }
-                if (civ.remainingDiploRelations > 0)
+                if (civ.diplomaticCapacity < civ.diplomaticCapacityMax.value)
                 {
                     for (int j = UnityEngine.Random.Range(0,10); j < Game.main.civs.Count; j+= 10)
                     {
                         if (j == i || j == Player.myPlayer.myCivID) { continue; }
                         Civilisation target = Game.main.civs[j];
-                        if (civ.opinionOfThem[j].value > 20 && target.opinionOfThem[i].value > 20 && civ.religion == target.religion)
+                        if (civ.diplomaticCapacity + target.governingCapacity * 1.5f <= civ.diplomaticCapacityMax.value && civ.opinionOfThem[j].value > 0 && target.opinionOfThem[i].value > 0 && civ.religion == target.religion)
                         {
                             civ.OfferAlliance(j);
-                            break;
                         }
                     }
                 }
@@ -760,7 +797,7 @@ public class AIManager : MonoBehaviour
             Game.main.highestDevelopment = 0;
             foreach (var civ in Game.main.civs)
             {
-                civ.tradeRegions.Clear();
+                civ.tradeRegions = new bool[Map.main.tradeRegions.Count];           
                 civ.civTiles.Clear();
                 civ.civTileDatas.Clear();
                 civ.civNeighbours.Clear();
@@ -794,39 +831,33 @@ public class AIManager : MonoBehaviour
                     {
                         Game.main.civs[core].cores.Add(td.pos);
                     }
-                    if (!civ.civTiles.Contains(td.pos))
+                    civ.tradeRegions[td.tradeRegionID] = true;
+                    civ.civTiles.Add(td.pos);
+                    civ.governingCapacity += td.GetGoverningCost();
+                    civ.civTileDatas.Add(td);
+                    if (td.isCoastal) { civ.civCoastalTiles.Add(td); }
+                    if (!td.occupied && !td.underSiege)
                     {
-                        if (!civ.tradeRegions.Contains(td.tradeRegion))
+                        civ.avaliablePopulation += td.avaliablePopulation;
+                    }
+                    List<Vector3Int> nbs = td.GetNeighbors();
+                    foreach (var n in nbs)
+                    {
+                        TileData ntd = Map.main.GetTile(n);
+                        if (ntd.civID != -1 && ntd.civID != td.civID)
                         {
-                            civ.tradeRegions.Add(td.tradeRegion);
-                        }
-                        civ.civTiles.Add(td.pos);
-                        civ.governingCapacity += td.GetGoverningCost();
-                        civ.civTileDatas.Add(td);
-                        if (td.isCoastal) { civ.civCoastalTiles.Add(td); }
-                        if (!td.occupied && !td.underSiege)
-                        {
-                            civ.avaliablePopulation += td.avaliablePopulation;
-                        }
-                        List<Vector3Int> nbs = td.GetNeighbors();
-                        foreach(var n in nbs)
-                        {
-                            TileData ntd = Map.main.GetTile(n);
-                            if(ntd.civID != -1 && ntd.civID != td.civID)
+                            if (Game.main.Started && !civ.isPlayer && !civ.subjects.Contains(ntd.civID) && !civ.claims.Contains(ntd.pos) && !civ.allies.Contains(ntd.civID))
                             {
-                                if (Game.main.Started && !civ.isPlayer && !civ.subjects.Contains(ntd.civID) &&!civ.claims.Contains(ntd.pos) && !civ.allies.Contains(ntd.civID))
+                                int dev = ntd.totalDev;
+                                if (civ.diploPower >= dev)
                                 {
-                                    int dev = ntd.totalDev;
-                                    if (civ.diploPower >= dev)
-                                    {
-                                        civ.diploPower -= dev;
-                                        civ.claims.Add(ntd.pos);
-                                    }
+                                    civ.diploPower -= dev;
+                                    civ.claims.Add(ntd.pos);
                                 }
-                                if (!civ.civNeighbours.Contains(ntd.civID))
-                                { 
-                                    civ.civNeighbours.Add(ntd.civID);
-                                }
+                            }
+                            if (!civ.civNeighbours.Contains(ntd.civID))
+                            {
+                                civ.civNeighbours.Add(ntd.civID);
                             }
                         }
                     }
@@ -840,9 +871,8 @@ public class AIManager : MonoBehaviour
                     civ.hasUpdatedStartingResources = true;
                 }
                 if (civ.updateBorders)
-                {
+                {                   
                     civ.SetupBorderLine();
-                    civ.SetupCountryName();
                     civ.updateBorders = false;
                     if(civ.capitalIndicator == null)
                     {
@@ -881,10 +911,12 @@ public class AIManager : MonoBehaviour
         Civilisation civ = Game.main.civs[civID];
         if(civ.atWarWith.Count > 0 && (civ.overlordID == -1 || civ.libertyDesire < 50f))
         {
+            AIMoveFleetsWar.MoveAtWar(civID);
             AIMoveArmiesWar.MoveAtWar(civID);
         }
         else
         {
+            AIMoveFleetsPeace.MoveAtPeace(civID);
             AIMoveArmiesPeace.MoveAtPeace(civID);
         }
     }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PerimeterHelper
@@ -102,26 +103,37 @@ public class PerimeterHelper
         {
             return (int)HexBendType.Uturn;
         }
-        Debug.LogWarning("Unknown bend type " + prevDir + " " + nextDir);
+        //Debug.LogWarning("Unknown bend type " + prevDir + " " + nextDir);
         return 2;
     }
     public static List<Vector3Int> GetPerimFrom(Vector3Int startPos, List<Vector3Int> area)
     {
         List<Vector3Int> perimeterCube = new List<Vector3Int>();
         List<Vector3Int> areaCube = area.ConvertAll(i => TileData.evenr_to_cube(i));
-        int travelDirection = 5;
+        List<int> directions = new List<int>{5,0,1,2,3,4};
+        int travelDirection = directions[0];
         Vector3Int currentCellCube = TileData.evenr_to_cube(startPos);
         bool found = false;
         int loops = 0;
+        foreach (int direction in directions)
+        {
+            Vector3Int nextCellCube = TileData.cube_neighbour(currentCellCube, direction);
+            if (areaCube.Contains(nextCellCube))
+            {
+                travelDirection = direction;
+                break;
+            }
+        }
+        //Debug.Log("Start Pos Tile " + startPos);
         while (found == false && loops < area.Count * 10)
         {
-            List<int> directions = DirectionPriority(travelDirection);
+            directions = DirectionPriority(travelDirection);
             foreach (int direction in directions)
             {
                 Vector3Int nextCellCube = TileData.cube_neighbour(currentCellCube, direction);
                 if (areaCube.Contains(nextCellCube))
                 {
-
+                    //Debug.Log("Next Tile " +  direction);
                     perimeterCube.Add(nextCellCube);
                     travelDirection = direction;
                     currentCellCube = nextCellCube;
@@ -133,31 +145,68 @@ public class PerimeterHelper
         }
         if (loops >= area.Count * 9)
         {
-            Debug.Log("Max Loops " + perimeterCube.Count);
+            //Debug.Log("Max Loops " + perimeterCube.Count);
             return perimeterCube.ConvertAll(i => TileData.cube_to_evenr(i));
         }
+        //Debug.Log("End Pos Tile " + startPos);
         return perimeterCube.ConvertAll(i => TileData.cube_to_evenr(i));
     }
-    public static List<Vector3Int> GetPerimeter(List<Vector3Int> area)
+    public static List<List<Vector3Int>> GetPerimeter(List<Vector3Int> area)
     {
-        if(area.Count == 0) { return new List<Vector3Int>(); }
-        if(area.Count == 1) { return area; }
-       
-        area.Sort((x, y) => y.y.CompareTo(x.y));
-        int smallestY = area[0].y;
-        List<Vector3Int> highest = area.FindAll(i => i.y == smallestY);
-        highest.Sort((x, y) => y.x.CompareTo(x.x));
-        Vector3Int startPos = highest[0];
-        List<Vector3Int> perim = GetPerimFrom(startPos, area);  
-        if(highest.Count > 1)
+        if(area.Count == 0) { return new List<List<Vector3Int>>(); }
+        if(area.Count == 1) { return new List<List<Vector3Int>>() { area }; }
+        List<Vector3Int> initalArea = area.ToList();
+        area.RemoveAll(i => NeigborsInArea(i, initalArea) == 6);
+        List<Vector3Int> perim = GetPerimFrom(BestStartPos(area), initalArea);
+        List<List<Vector3Int>> perims = new List<List<Vector3Int>>() { perim };
+        area.RemoveAll(i => perim.Contains(i));
+        int loops = 0;
+        while (area.Count > 0 && loops < 50)
         {
-            List<Vector3Int> perimLeft = GetPerimFrom(highest[highest.Count-1], area);
-            if(perimLeft.Distinct().Count() > perim.Distinct().Count())
+            if (area.Count == 1) { perims.Add(area); break; }
+            perim = GetPerimFrom(BestStartPos(area), area);
+            perims.Add(perim);
+            area.RemoveAll(i => perim.Contains(i));
+            loops++;
+        }
+        return perims;
+    }
+    public static Vector3Int BestStartPos(List<Vector3Int> area)
+    {
+        area.Sort((x, y) => NeigborsInArea(x, area).CompareTo(NeigborsInArea(y, area)));
+        int minNeighbors = NeigborsInArea(area[0], area);
+        List<Vector3Int> possibleStartPos = area.FindAll(i => NeigborsInArea(i, area) == minNeighbors);
+        possibleStartPos.Sort((x, y) => y.y.CompareTo(x.y));
+        int maxY = possibleStartPos[0].y;
+        possibleStartPos = possibleStartPos.FindAll(i => i.y == maxY);
+        possibleStartPos.Sort((x, y) => x.x.CompareTo(y.x));
+        return possibleStartPos[0];
+    }
+    public static int NeigborsInArea(Vector3Int pos, List<Vector3Int> area)
+    {
+        List<Vector3Int> neighbors = TileData.GetCubeNeighbors(TileData.evenr_to_cube(pos)).ConvertAll(i=>TileData.cube_to_evenr(i));
+        int inArea = 0;
+        foreach(var n in neighbors)
+        {
+            if (area.Contains(n))
             {
-                perim = perimLeft;
+                inArea++;
             }
         }
-        return perim;
+        return inArea;
+    }
+    public static int NeigborsSameCiv(TileData tile)
+    {
+        List<TileData> neighbors = TileData.GetCubeNeighbors(TileData.evenr_to_cube(tile.pos)).ConvertAll(i => Map.main.GetTile(TileData.cube_to_evenr(i)));
+        int inArea = 0;
+        foreach (var n in neighbors)
+        {
+            if (tile.civID == n.civID)
+            {
+                inArea++;
+            }
+        }
+        return inArea;
     }
     public static List<int> DirectionPriority(int current)
     {
@@ -167,7 +216,7 @@ public class PerimeterHelper
         prio.Add(Shift(current, -1));
         prio.Add(Shift(current, -2));
         prio.Add(Shift(current, -3));
-        prio.Add(Shift(current, -4));
+        //prio.Add(Shift(current, -4));
         return prio;
     }
     public static int Shift(int current,int amount)

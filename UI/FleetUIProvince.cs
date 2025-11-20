@@ -5,7 +5,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ArmyUIProvince : MonoBehaviour
+public class FleetUIProvince : MonoBehaviour
 {
     [SerializeField] GameObject siegeCanvas,armyCanvas,tabPrefab,starPrefab;
     [SerializeField] RectTransform panel;
@@ -16,7 +16,7 @@ public class ArmyUIProvince : MonoBehaviour
     List<GameObject> tabsList = new List<GameObject>();
     List<GameObject> starsList = new List<GameObject>();
 
-    public Army army;
+    public Fleet fleet;
     private void Start()
     {
         armySelect.onClick.AddListener(SelectArmy);
@@ -31,36 +31,41 @@ public class ArmyUIProvince : MonoBehaviour
             panel.sizeDelta = new Vector2(0, 0);
             return;
         }
-        if (army == null)
+        if (fleet == null)
         {
             UIManager.main.WorldSpaceUI.Remove(gameObject);
             Destroy(gameObject); 
             return; 
         }
-        if (army.inBattle) 
+        if (fleet.inBattle) 
         {
             armyCanvas.SetActive(false);
             siegeCanvas.SetActive(false);
             panel.sizeDelta = new Vector2(0, 0);
             return;
         }
-        transform.position = army.tile.worldPos();
-        TileData tile = Map.main.GetTile(army.pos);
-        if (tile.armiesOnTile.Count == 1||(army.civID == Player.myPlayer.myCivID && army.path.Count > 0))
+        transform.position = fleet.tile.worldPos();
+        TileData tile = Map.main.GetTile(fleet.pos);
+        if(tile.portTile != Vector3Int.zero)
+        {
+            Vector3 portPos = (transform.position + Map.main.GetTile(tile.portTile).worldPos()) / 2;
+            transform.position = portPos;
+        }
+        if (tile.fleetsOnTile.Count == 1||(fleet.civID == Player.myPlayer.myCivID && fleet.path.Count > 0))
         {
             armyCanvas.SetActive(true);            
             SetupTabs(0);
-            if (army.general != null && army.general.active)
+            if (fleet.general != null && fleet.general.active)
             {
-                SetupStars(army.general.Stars());
+                SetupStars(fleet.general.Stars());
             }
             else
             {
                 SetupStars(0);
             }
-            armyNum.text = armySizeText((int)army.ArmySize());
+            armyNum.text = fleet.boats.Count + "";
             MoraleFill();
-            if (tile.underSiege && army.path.Count == 0 && tile.siege.armiesSieging.Contains(army))
+            if (tile.underSiege && fleet.path.Count == 0)
             {
                 SetupSiegePanel();
                 siegeCanvas.SetActive(true);
@@ -70,18 +75,14 @@ public class ArmyUIProvince : MonoBehaviour
                 panel.sizeDelta = new Vector2(130, 40);
                 siegeCanvas.SetActive(false);
             }
-            ColorArmyPanel(army);
-            attrition.gameObject.SetActive(army.GetAttrition() > 0);
-            string hoverText = "Attrition: " + Mathf.Round(army.GetAttrition() * 100f) / 100f + "%\n\n";
-            hoverText += AttritionText();
-            attrition.GetComponent<HoverText>().text = hoverText;
-            exiled.gameObject.SetActive(army.exiled);
+            ColorArmyPanel(fleet);
+            exiled.gameObject.SetActive(fleet.exiled);
         }
         else
         {
-            List<Army> armies = tile.armiesOnTile.ToList();
-            armies.RemoveAll(i => i.inBattle);
-            if(armies.Count == 0) 
+            List<Fleet> fleets = tile.fleetsOnTile.ToList();
+            fleets.RemoveAll(i => i.inBattle);
+            if(fleets.Count == 0) 
             {
                 armyCanvas.SetActive(false);
                 siegeCanvas.SetActive(false);
@@ -92,12 +93,12 @@ public class ArmyUIProvince : MonoBehaviour
                 SetupStars(0);
                 return; 
             }
-            armies.Sort((x, y) => PriorityScore(x).CompareTo(PriorityScore(y)));
-            Army priority = armies[0];
-            if (priority == army)
+            fleets.Sort((x, y) => PriorityScore(x).CompareTo(PriorityScore(y)));
+            Fleet priority = fleets[0];
+            if (priority == fleet)
             {
                 armyCanvas.SetActive(true);
-                SetupTabs(armies.Count);
+                SetupTabs(fleets.Count);
                 if(priority.general != null && priority.general.active)
                 {
                     SetupStars(priority.general.Stars());
@@ -108,18 +109,18 @@ public class ArmyUIProvince : MonoBehaviour
                 }
                 int size = 0;
                 int index = 0;
-                foreach(var armyOnTile in armies)
+                foreach(var armyOnTile in fleets)
                 {
                     if (armyOnTile.civID == priority.civID || (priority.civID > -1 && Game.main.civs[priority.civID].atWarTogether.Contains(armyOnTile.civID)))
                     {
-                        size += (int)armyOnTile.ArmySize();
+                        size += (int)armyOnTile.boats.Count;
                     }
                     tabsList[index].GetComponent<Image>().color = GetTabColor(armyOnTile);
                     index++;
                 }
-                armyNum.text = armySizeText(size);
+                armyNum.text = size + "";
                 MoraleFill();
-                if (tile.underSiege && priority.path.Count == 0 && tile.siege.armiesSieging.Contains(priority))
+                if (tile.underSiege && priority.path.Count == 0)
                 {
                     SetupSiegePanel();
                     siegeCanvas.SetActive(true);
@@ -130,11 +131,7 @@ public class ArmyUIProvince : MonoBehaviour
                     siegeCanvas.SetActive(false);
                 }
                 ColorArmyPanel(priority);
-                attrition.gameObject.SetActive(army.GetAttrition() > 0);
-                string hoverText = "Attrition: " + Mathf.Round(army.GetAttrition() * 100f) / 100f + "%\n\n";
-                hoverText += AttritionText();
-                attrition.GetComponent<HoverText>().text = hoverText;
-                exiled.gameObject.SetActive(army.exiled);
+                exiled.gameObject.SetActive(fleet.exiled);
             }
             else
             {
@@ -148,37 +145,7 @@ public class ArmyUIProvince : MonoBehaviour
                 return;
             }
         }
-    }
-    string AttritionText()
-    {
-        string percent = "";       
-        float armysize = army.ArmySize();
-        if (army.civID > -1)
-        {
-            Civilisation civ = Game.main.civs[army.civID];
-            foreach (var aot in army.tile.armiesOnTile)
-            {
-                if (civ.atWarTogether.Contains(aot.civID) && aot != army)
-                {
-                    armysize += aot.ArmySize();
-                }
-            }
-            if (civ.atWarWith.Contains(army.tile.civID))
-            {
-                percent += "Base: 1%\n";
-                percent += army.tile.fortLevel > 0 ? "From Fort Level: " + army.tile.fortLevel + "%\n" : "";
-                percent += army.tile.localAttritionForEnemies.value > 0? "From Local Bonuses: " + army.tile.localAttritionForEnemies.value + "%\n" : "";
-                percent += army.tile.civ.attritionForEnemies.value > 0 ? "From Global Bonuses: " + army.tile.civ.attritionForEnemies.value + "%\n" : "";
-            }            
-        }
-        if (armysize / 1000f > army.tile.supplyLimit)
-        {
-            percent += "From Supply: " + Mathf.Round(100f * Mathf.Clamp((armysize / 1000f - army.tile.supplyLimit) * (10f / ((float)army.tile.supplyLimit)), 0f, 5f)) / 100f + "%\n";
-        }
-        if(army.civID > -1) 
-        { Civilisation civ = Game.main.civs[army.civID]; percent += "Multiplied By: " + Mathf.Round(100f * (1f + civ.landAttrition.value)) + "%"; }
-        return percent;
-    }
+    }    
     void SetupTabs(int amount)
     {
         while (tabsList.Count != amount)
@@ -217,22 +184,22 @@ public class ArmyUIProvince : MonoBehaviour
     {
         panel.sizeDelta = new Vector2(260, 40);
         siegeCanvas.SetActive(true);
-        Siege siege = army.tile.siege;
+        Siege siege = fleet.tile.siege;
         siegeFill.fillAmount = (float)siege.tickTimer / (float)siege.tickTime;
         siegePercent.text = Mathf.Round(siege.progress * 100f) + "%";
     }
     void MoraleFill()
     {
-        if (army.AverageMaxMorale() > 0)
+        if (fleet.TotalMaxSailors() > 0)
         {
-            moraleFill.fillAmount = army.AverageMorale() / army.AverageMaxMorale();
+            moraleFill.fillAmount = fleet.TotalSailors() / fleet.TotalMaxSailors();
         }
         else
         {
             moraleFill.fillAmount = 0;
         }
     }
-    float PriorityScore(Army target)
+    float PriorityScore(Fleet target)
     {
         if (Player.myPlayer.myCivID > -1)
         {
@@ -263,7 +230,7 @@ public class ArmyUIProvince : MonoBehaviour
             return 5f;
         }
     }
-    Color GetTabColor(Army target)
+    Color GetTabColor(Fleet target)
     {
         if (target.civID > -1 && Player.myPlayer.myCivID > -1)
         {
@@ -271,7 +238,7 @@ public class ArmyUIProvince : MonoBehaviour
             Civilisation myCiv = Game.main.civs[Player.myPlayer.myCivID];
             if (target.civID == myCiv.CivID)
             {
-                return Player.myPlayer.selectedArmies.Contains(target) ? Color.yellow : Color.green;
+                return Player.myPlayer.selectedFleets.Contains(target) ? Color.yellow : Color.green;
             }
             else if (myCiv.atWarTogether.Contains(target.civID))
             {
@@ -297,7 +264,7 @@ public class ArmyUIProvince : MonoBehaviour
             return Color.black;
         }
     }
-    void ColorArmyPanel(Army leader)
+    void ColorArmyPanel(Fleet leader)
     {
         if (leader.civID > -1)
         {
@@ -309,7 +276,7 @@ public class ArmyUIProvince : MonoBehaviour
                 Civilisation myCiv = Game.main.civs[Player.myPlayer.myCivID];
                 if (leader.civID == myCiv.CivID)
                 {
-                    armyPanel.color = Player.myPlayer.selectedArmies.Contains(army) ? Color.yellow : Color.green;
+                    armyPanel.color = Player.myPlayer.selectedFleets.Contains(fleet) ? Color.yellow : Color.green;
                 }
                 else if (myCiv.atWarTogether.Contains(leader.civID))
                 {
@@ -335,21 +302,12 @@ public class ArmyUIProvince : MonoBehaviour
             armyPanel.color = Color.red;
         }
     }
-    string armySizeText(int armyQ)
-    {
-        string text =  armyQ + "";
-        if(armyQ >= 1000)
-        {
-            text = Mathf.Round(armyQ * 10f) / 10000f + "k";
-        }
-        return text;
-    }
     void SelectArmy()
     {
-        if (!Game.main.Started && army.civID == Player.myPlayer.myCivID) { return; }
+        if (!Game.main.Started && fleet.civID == Player.myPlayer.myCivID) { return; }
         Player.myPlayer.selectedArmies.Clear();
         Player.myPlayer.selectedFleets.Clear();
-        Player.myPlayer.selectedArmies.Add(army);
+        Player.myPlayer.selectedFleets.Add(fleet);
         UIManager.main.CivUI.SetActive(false);
         Map.main.tileMapManager.DeselectTile();
     }
@@ -358,7 +316,7 @@ public class ArmyUIProvince : MonoBehaviour
         if (!Game.main.Started) { return; }
         Player.myPlayer.selectedArmies.Clear();
         Player.myPlayer.selectedFleets.Clear();
-        Player.myPlayer.selectedTile = army.tile;
+        Player.myPlayer.selectedTile = fleet.tile;
         Player.myPlayer.tileSelected = true;
         Player.myPlayer.siegeSelected = true;
     }

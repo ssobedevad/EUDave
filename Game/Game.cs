@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using static System.Net.Mime.MediaTypeNames;
 
 public class Game : MonoBehaviour
 {
@@ -14,6 +15,7 @@ public class Game : MonoBehaviour
     [SerializeField] List<CivDataInit> civDatas = new List<CivDataInit>();
     public List<Civilisation> civs = new List<Civilisation>();
     public List<Battle> ongoingBattles = new List<Battle>();
+    public List<NavalBattle> ongoingNavalBattles = new List<NavalBattle>();
     public List<War> ongoingWars = new List<War>();
     public List<Army> rebelFactions = new List<Army>();
     public List<RebelArmyStats> rebelStats = new List<RebelArmyStats>();
@@ -204,6 +206,8 @@ public class Game : MonoBehaviour
                     {
                         tile.currentCol = civC;
                         Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        tile.tileText.text = tile.Name;
+                        tile.tileText.fontSize = 0.2f;
                     }
                 }
                 else
@@ -232,6 +236,11 @@ public class Game : MonoBehaviour
                     {
                         tile.currentCol = civC;
                         Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        if (tile.civID > -1)
+                        {
+                            tile.tileText.text = terrain.name;
+                            tile.tileText.fontSize = 0.2f;
+                        }
                     }
                 }
             }
@@ -246,6 +255,11 @@ public class Game : MonoBehaviour
                     {
                         tile.currentCol = civC;
                         Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        if (tile.civID > -1)
+                        {
+                            tile.tileText.text = resource.name;
+                            tile.tileText.fontSize = 0.2f;
+                        }
                     }
                 }
             }
@@ -260,6 +274,8 @@ public class Game : MonoBehaviour
                     {
                         tile.currentCol = civC;
                         Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        tile.tileText.text = ""+tile.totalDev;
+                        tile.tileText.fontSize = 0.5f;
                     }
                 }          
             }
@@ -281,6 +297,8 @@ public class Game : MonoBehaviour
                     {
                         tile.currentCol = civC;
                         Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        tile.tileText.text = "";
+                        tile.tileText.fontSize = 0.2f;
                     }
                 }
             }
@@ -291,13 +309,15 @@ public class Game : MonoBehaviour
                     Color civC = Color.gray;
                     if (tile.religion > -1)
                     {
-                        civC = Map.main.religions[tile.religion].c;
-                    }
-
-                    if (!Equal(tile.currentCol, civC))
-                    {
-                        tile.currentCol = civC;
-                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        Religion religion = Map.main.religions[tile.religion];
+                        civC = religion.c;
+                        if (!Equal(tile.currentCol, civC))
+                        {
+                            tile.currentCol = civC;
+                            Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                            tile.tileText.text = religion.name;
+                            tile.tileText.fontSize = 0.2f;
+                        }
                     }
                 }
             }
@@ -308,13 +328,16 @@ public class Game : MonoBehaviour
                     Color civC = Color.gray;
                     if (tile.civ.government > -1)
                     {
-                        civC = Map.main.governmentTypes[tile.civ.government].c;
-                    }
+                        GovernmentType government = Map.main.governmentTypes[tile.civ.government];
+                        civC = government.c;
 
-                    if (!Equal(tile.currentCol, civC))
-                    {
-                        tile.currentCol = civC;
-                        Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        if (!Equal(tile.currentCol, civC))
+                        {
+                            tile.currentCol = civC;
+                            Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                            tile.tileText.text = government.name;
+                            tile.tileText.fontSize = 0.2f;
+                        }
                     }
                 }
             }
@@ -356,6 +379,8 @@ public class Game : MonoBehaviour
                     {
                         tile.currentCol = civC;
                         Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        tile.tileText.text = "";
+                        tile.tileText.fontSize = 0.2f;
                     }
                 }
             }
@@ -370,6 +395,8 @@ public class Game : MonoBehaviour
                     {
                         tile.currentCol = civC;
                         Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        tile.tileText.text = "" + Mathf.Round(tile.control);
+                        tile.tileText.fontSize = 0.5f;
                     }
                 }
             }
@@ -403,6 +430,8 @@ public class Game : MonoBehaviour
                             {
                                 tile.currentCol = civC;
                                 Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                                tile.tileText.text = "";
+                                tile.tileText.fontSize = 0.2f;
                             }
                         }
                     }
@@ -433,6 +462,8 @@ public class Game : MonoBehaviour
                     {
                         tile.currentCol = civC;
                         Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                        tile.tileText.text = "" + tile.marketLevel;
+                        tile.tileText.fontSize = 0.5f;
                     }
                 }
             }
@@ -452,6 +483,8 @@ public class Game : MonoBehaviour
                         {
                             tile.currentCol = civC;
                             Map.main.tileMapManager.tilemap.SetColor(tile.pos, civC);
+                            tile.tileText.text = "";
+                            tile.tileText.fontSize = 0.2f;
                         }
                     }
                 }

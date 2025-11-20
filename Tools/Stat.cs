@@ -92,7 +92,7 @@ public class Stat
             }
             else if (modifier.type == ModifierType.Multiplicative)
             {
-                Mult *= modifier.value;
+                Mult += modifier.value;
             }
         }
         value += baseBonus;

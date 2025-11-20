@@ -6,12 +6,12 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ArmyUIPanel : MonoBehaviour
+public class FleetUIPanel : MonoBehaviour
 {
     [SerializeField] Transform regimentTransform;
     public List<GameObject> regiments = new List<GameObject>();
     [SerializeField] TextMeshProUGUI armyName;
-    [SerializeField] GameObject regimentPrefab,armyPanel,generalPanel;
+    [SerializeField] GameObject regimentPrefab, armyPanel, generalPanel;
     [SerializeField] Button[] buttons;
     [SerializeField] Sprite[] unitSprites;
     [SerializeField] TextMeshProUGUI[] unitQuantities;
@@ -19,14 +19,14 @@ public class ArmyUIPanel : MonoBehaviour
 
     private void Start()
     {
-        buttons[0].onClick.AddListener(OpenSiegeView);
-        buttons[1].onClick.AddListener(ConsolidateRegiments);
-        buttons[2].onClick.AddListener(Split);
-        buttons[3].onClick.AddListener(Disband);
-        buttons[4].onClick.AddListener(ToggleAttach);
-        buttons[5].onClick.AddListener(DetatchMercs);
-        buttons[6].onClick.AddListener(ChooseGeneral);
-        buttons[7].onClick.AddListener(BoardFleet);
+        //buttons[0].onClick.AddListener(OpenSiegeView);
+        //buttons[1].onClick.AddListener(ConsolidateRegiments);
+        //buttons[2].onClick.AddListener(Split);
+        //buttons[3].onClick.AddListener(Disband);
+        //buttons[4].onClick.AddListener(ToggleAttach);
+        //buttons[5].onClick.AddListener(DetatchMercs);
+        //buttons[6].onClick.AddListener(ChooseGeneral);
+        //buttons[7].onClick.AddListener(BoardFleet);
         generalPanel.SetActive(false);
         armyPanel.SetActive(true);
     }
@@ -55,7 +55,7 @@ public class ArmyUIPanel : MonoBehaviour
                 transports++;
             }
         }
-        while (fleet.army.Count < transports && army.regiments.Count > 0)
+        while(fleet.army.Count < transports && army.regiments.Count > 0)
         {
             fleet.army.Add(army.regiments[0]);
             army.regiments.RemoveAt(0);
@@ -80,17 +80,17 @@ public class ArmyUIPanel : MonoBehaviour
     }
     private void OnGUI()
     {
-        if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
+       if (Player.myPlayer.selectedFleets.Count == 1 && !Player.myPlayer.selectedFleets[0].inBattle)
         {
-            Army army = Player.myPlayer.selectedArmies[0];
-            int infantry = 0;
-            int cavalry = 0;
-            int artillery = 0;
-            if (army.regiments != null && regiments != null)
+            Fleet fleet = Player.myPlayer.selectedFleets[0];
+            int transport = 0;
+            int trade = 0;
+            int combat = 0;
+            if (fleet.boats != null && regiments != null)
             {
-                while (regiments.Count != army.regiments.Count)
+                while (regiments.Count != fleet.boats.Count)
                 {
-                    if (regiments.Count > army.regiments.Count)
+                    if (regiments.Count > fleet.boats.Count)
                     {
                         Destroy(regiments[0]);
                         regiments.RemoveAt(0);
@@ -100,52 +100,56 @@ public class ArmyUIPanel : MonoBehaviour
                         regiments.Add(Instantiate(regimentPrefab, regimentTransform));
                     }
                 }
-                for (int i = 0; i < army.regiments.Count; i++)
+                for (int i = 0; i < fleet.boats.Count; i++)
                 {
-                    Regiment regiment = army.regiments[i];
-                    if(regiment.type == 0)
+                    Boat boat = fleet.boats[i];
+                    if (boat.type == 0)
                     {
-                        infantry++;
+                        transport++;
                     }
-                    else if (regiment.type == 1)
+                    else if (boat.type == 1)
                     {
-                        cavalry++;
+                        trade++;
                     }
-                    else if (regiment.type == 2)
+                    else if (boat.type == 2)
                     {
-                        artillery++;
+                        combat++;
                     }
                     Image[] images = regiments[i].GetComponentsInChildren<Image>();
-                    TextMeshProUGUI regSize = regiments[i].GetComponentInChildren<TextMeshProUGUI>();
-                    if (regiment != null)
+                    TextMeshProUGUI[] texts = regiments[i].GetComponentsInChildren<TextMeshProUGUI>();
+                    if (boat != null)
                     {
-                        regSize.text = regiment.size + "";
-                        images[0].color = regiment.mercenary ? Color.green : Color.white;
-                        images[1].sprite = unitSprites[regiment.type];
-                        if (regiment.size > 0)
+                        texts[0].text = boat.sailors + "";
+                        texts[1].text ="Supply: " +  Mathf.Round(boat.supply) + "/" +Mathf.Round(boat.supplyMax);
+                        texts[2].text ="Durability: " + Mathf.Round(boat.hullStrength) + "/" +Mathf.Round(boat.hullStrengthMax);
+                        images[0].color = boat.mercenary ? Color.green : Color.white;
+                        images[1].sprite = unitSprites[boat.type];
+                        if (boat.cannons > 0)
                         {
-                            images[4].fillAmount = regiment.morale / regiment.maxMorale;
+                            texts[3].text =  boat.cannons + "<sprite index=0>";
                         }
                         else
                         {
-                            images[4].fillAmount = 0;
+                            texts[3].text = "";
                         }
                     }
                     else
                     {
-                        regSize.text = 0 + "";
-                        images[4].fillAmount = 0;
+                        texts[0].text = 0 + "";
+                        texts[1].text = 0 + "";
+                        texts[2].text = 0 + "";
+                        texts[3].text = "";
                     }
                 }
-                unitQuantities[0].text = infantry + "";
-                unitQuantities[1].text = cavalry + "";
-                unitQuantities[2].text = artillery + "";
+                unitQuantities[0].text = transport + "";
+                unitQuantities[1].text = trade + "";
+                unitQuantities[2].text = combat + "";
                 for (int i = 0; i < generalStats.Length; i++)
                 {
                     TextMeshProUGUI text = generalStats[i];
-                    if (army.general != null && army.general.active)
+                    if (fleet.general != null && fleet.general.active)
                     {
-                        int skill = i == 0 ? army.general.meleeSkill : i == 1 ? army.general.flankingSkill : i == 2 ? army.general.rangedSkill : i == 3 ? army.general.siegeSkill : army.general.maneuverSkill;                  
+                        int skill = i == 0 ? fleet.general.meleeSkill : i == 1 ? fleet.general.flankingSkill : i == 2 ? fleet.general.rangedSkill : i == 3 ? fleet.general.siegeSkill : fleet.general.maneuverSkill;
                         text.text = skill + "";
                     }
                     else
@@ -153,9 +157,9 @@ public class ArmyUIPanel : MonoBehaviour
                         text.text = "0";
                     }
                 }
-            }            
+            }
 
-        }        
+        }
         else
         {
             gameObject.SetActive(false);

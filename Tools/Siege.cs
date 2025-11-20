@@ -214,6 +214,10 @@ public class Siege
         }
         inProgress = false;
         Game.main.tenMinTick.RemoveListener(Timer);
+        foreach(var fleet in target.fleetsOnTile)
+        {
+            fleet.SetPath(target.portTile);
+        }
     }
 
 }

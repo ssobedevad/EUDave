@@ -23,6 +23,10 @@ public class TileMapManager : MonoBehaviour
             {
                 Player.myPlayer.selectedArmies.ForEach(i=>i.SetPath(tilemapPos));
             }
+            else if (Player.myPlayer.selectedFleets.Count > 0 && Game.main.Started && Player.myPlayer.myCivID > -1)
+            {
+                Player.myPlayer.selectedFleets.ForEach(i => i.SetPath(tilemapPos));
+            }
             else
             {             
                 UIManager.main.CivUI.SetActive(true);
@@ -87,6 +91,7 @@ public class TileMapManager : MonoBehaviour
             Player.myPlayer.selectedTile = tileData;
             Player.myPlayer.siegeSelected = tileData.underSiege && !Player.myPlayer.siegeSelected;
             Player.myPlayer.selectedArmies.Clear();
+            Player.myPlayer.selectedFleets.Clear();
             MoveSelector(tilemapPos);
         }
         Debug.Log("On Tile " + tileData.armiesOnTile.Count);

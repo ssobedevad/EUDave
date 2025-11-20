@@ -313,7 +313,7 @@ public class PeaceDealUI : MonoBehaviour
         int loops = 0;
         if(target.GetTotalWarScore(other.CivID) < 100)
         {
-            if(other.remainingDiploRelations > 0 && other.subjects.Count < other.GetTotalDev()/200 && target.subjects.Count == 0)
+            if(other.diplomaticCapacity + target.governingCapacity < other.diplomaticCapacityMax.value && other.subjects.Count < other.GetTotalDev()/200 && target.subjects.Count == 0)
             {
                 PeaceDeal.RequestSubjugation();
                 Debug.Log("Subject");

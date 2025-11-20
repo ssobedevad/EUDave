@@ -6,8 +6,10 @@ public class Map : MonoBehaviour
 {
     public static Map main;
     [SerializeField] public TileMapManager tileMapManager;
-    [SerializeField] public Transform indicatorTransform;
+    [SerializeField] public Transform buildingTransform,fortTransform,capitalTransform,unitTransform,borderTransform;
     [SerializeField] public ResourceType[] resourceTypes;
+    [SerializeField] public Sprite[] statusSprites;
+    [SerializeField] public Sprite portSprite;
     [SerializeField] public Terrain[] terrains;
     [SerializeField] public Advisor[] advisorsA;
     [SerializeField] public Advisor[] advisorsD;
@@ -24,7 +26,7 @@ public class Map : MonoBehaviour
     [SerializeField] public GovernmentType[] governmentTypes;
     [SerializeField] public MercenaryGroup[] mercenaries;
     [SerializeField] public CasusBelli[] casusBellis;
-    [SerializeField] public GameObject capitalIndicatorPrefab,resourceIndicatorPrefab,armyPrefab,fortPrefab,boatPrefab;
+    [SerializeField] public GameObject capitalIndicatorPrefab,resourceIndicatorPrefab,armyPrefab,fortPrefab,boatPrefab,settlementPrefab,tileTextPrefab;
     public Dictionary<string, TradeRegion> tradeRegions = new Dictionary<string, TradeRegion>();
     public Dictionary<string, Terrain> terrainDict = new Dictionary<string, Terrain>();
     public Dictionary<string,ResourceType> resourceDict = new Dictionary<string,ResourceType>();
@@ -32,6 +34,7 @@ public class Map : MonoBehaviour
     private int boundsMinX,boundsMinY,boundsMaxX,boundsMaxY;
     [SerializeField] Tilemap resources, terrain,civs,religion;
     [SerializeField] public GameObject civBorderPrefab,civNamePrefab;
+    [SerializeField] public Trait[] rulerTraits;
 
     private void Awake()
     {

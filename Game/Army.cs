@@ -92,8 +92,8 @@ public class Army : MonoBehaviour
     }
     public static Army NewArmy(TileData tile, int civID, List<Regiment> regiments,bool merc = false)
     {
-        Army a = Instantiate(Map.main.armyPrefab, tile.worldPos(), Quaternion.identity, Map.main.indicatorTransform).GetComponent<Army>();
-        ArmyUIProvince uIProvince = Instantiate(UIManager.main.ArmyUIPrefab, tile.worldPos(), Quaternion.identity, UIManager.main.worldCanvas).GetComponent<ArmyUIProvince>();
+        Army a = Instantiate(Map.main.armyPrefab, tile.worldPos(), Quaternion.identity, Map.main.unitTransform).GetComponent<Army>();
+        ArmyUIProvince uIProvince = Instantiate(UIManager.main.ArmyUIPrefab, tile.worldPos(), Quaternion.identity, UIManager.main.unitCanvas).GetComponent<ArmyUIProvince>();
         uIProvince.army = a;
         UIManager.main.WorldSpaceUI.Add(uIProvince.gameObject);
         Game.main.dayTick.AddListener(a.DayTick);
@@ -270,14 +270,6 @@ public class Army : MonoBehaviour
             Game.main.rebelStats.RemoveAt(index);
         }
     }
-    public void OnMouseDown()
-    {
-        if (Player.myPlayer.myCivID == civID || Player.myPlayer.myCivID == -1)
-        {
-            Player.myPlayer.selectedArmies.Clear();
-            Player.myPlayer.selectedArmies.Add(this);
-        }
-    }
     public void CombineInto(Army army)
     {
         if (army.civID == civID)
@@ -351,15 +343,39 @@ public class Army : MonoBehaviour
     }
     public float ArmyStrength()
     {
+        float strength = 0;
         if (civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            return ArmySize() * AverageMorale() * Mathf.Pow(civ.discipline.value, 2) * civ.militaryTactics.value;
+            foreach(var unit in regiments)
+            {
+                if(unit.type < 0 || unit.type >= civ.units.Count) { continue; }
+                float power = (float)unit.size/(float)unit.maxSize;
+                power *= unit.morale;
+                power *= Mathf.Max(civ.units[unit.type].meleeDamage.value * (1f + ((general != null &&general.active) ? general.meleeSkill * 0.1f : 0f))
+                    , civ.units[unit.type].flankingDamage.value * (1f + ((general != null && general.active) ? general.flankingSkill * 0.1f : 0f))
+                    , civ.units[unit.type].rangedDamage.value * (1f + ((general != null && general.active) ? general.rangedSkill * 0.1f : 0f)));
+                power *= 1f + civ.units[unit.type].combatAbility.value;
+
+                strength += power;
+            }            
         }
         else
         {
-            return ArmySize() * AverageMorale();
+            RebelArmyStats rebelArmyStats = RebelArmyStats.GetRebelStats(this);
+            foreach (var unit in regiments)
+            {
+                if (unit.type < 0 || unit.type >= rebelArmyStats.units.Length) { continue; }
+                float power = (float)unit.size / (float)unit.maxSize;
+                power *= unit.morale;
+                power *= Mathf.Max(rebelArmyStats.units[unit.type].meleeDamage.value * (1f + ((general != null && general.active) ? general.meleeSkill * 0.1f : 0f))
+                    , rebelArmyStats.units[unit.type].flankingDamage.value * (1f + ((general != null && general.active) ? general.flankingSkill * 0.1f : 0f))
+                    , rebelArmyStats.units[unit.type].rangedDamage.value * (1f + ((general != null && general.active) ? general.rangedSkill * 0.1f : 0f)));
+                power *= 1f + rebelArmyStats.units[unit.type].combatAbility.value;
+                strength += power;
+            }
         }
+        return strength;
     }
     public float AverageMorale()
     {
@@ -430,7 +446,7 @@ public class Army : MonoBehaviour
                 if (!CanMoveHostileZOC(path[0],pos)) { path.Clear(); return; }
                 if (moveTimer >= moveTime)
                 {                  
-                    if (Pathfinding.CanMoveToTile(path[0], false))
+                    if (Pathfinding.CanMoveToTile(pos,path[0], false))
                     {                        
                         Vector3Int target = path[0];
                         path.RemoveAt(0);
@@ -697,7 +713,7 @@ public class Army : MonoBehaviour
             regiment.morale = Mathf.Min(regiment.morale, 0.5f);
         }
         path.Clear();
-        var newPath = Pathfinding.FindBestPath(pos, destination, this, false);
+        var newPath = Pathfinding.FindBestPath(pos, destination, army: this, isBoat: false);
         if (newPath.Length > 0)
         {
             path.AddRange(newPath.ToList());
@@ -710,14 +726,14 @@ public class Army : MonoBehaviour
         if (moveTimer < moveTime * 0.5f)
         {
             path.Clear();
-            newPath = Pathfinding.FindBestPath(pos, destination, this, false);
+            newPath = Pathfinding.FindBestPath(pos, destination,army: this,isBoat: false);
         }
         else if (path.Count > 0)
         {
             Vector3Int goal = path.First();
             path.Clear();
             path.Add(goal);
-            newPath = Pathfinding.FindBestPath(goal, destination, this, false);
+            newPath = Pathfinding.FindBestPath(goal, destination, army: this, isBoat: false);
         }
         if(newPath.Length > 0)
         {

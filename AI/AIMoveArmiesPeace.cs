@@ -36,23 +36,44 @@ public class AIMoveArmiesPeace
         if (armiesToMerge.Count > 1)
         {
             Army central = armiesToMerge[0];
-            central.isMerging = true;
-            for (int i = 1; i < armiesToMerge.Count; i++)
+            int total = central.regiments.Count;
+            if (total + armiesToMerge[1].regiments.Count < central.tile.supplyLimit)
             {
-                Army merge = armiesToMerge[i];
-                merge.mergeTargets.Add(central);
-                central.mergeTargets.Add(merge);
-                merge.isMerging = true;
-                merge.SetPath(central.pos);
+                central.isMerging = true;
+                for (int i = 1; i < armiesToMerge.Count; i++)
+                {
+                    Army army = armiesToMerge[i];
+                    if (total + army.regiments.Count > central.tile.supplyLimit)
+                    {
+                        break;
+                    }
+                    army.mergeTargets.Add(central);
+                    central.mergeTargets.Add(army);
+                    army.isMerging = true;
+                    army.SetPath(central.pos);
+                    total += army.regiments.Count;
+                }
             }
+        }
+        else
+        {
+            freeArmies.AddRange(armiesToMerge);
+            armiesToMerge.Clear();
         }
         if(freeArmies.Count > 0)
         {
-            if (freeArmies[0].general == null || !freeArmies[0].general.active)
+            if (civ.generals.Exists(i => i.army == null))
             {
-                if (civ.generals.Count > 0) 
+                foreach (var army in freeArmies)
                 {
-                    freeArmies[0].AssignGeneral(civ.generals[0]);
+                    if (civ.generals.Exists(i => i.army == null))
+                    {
+                        army.AssignGeneral(civ.generals.Find(i => i.army == null));
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
             AddHomeProvinces(civ);

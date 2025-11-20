@@ -194,8 +194,8 @@ public class DiplomacyUIPanel : MonoBehaviour
         ideas.GetComponent<HoverText>().text = ideasText;
         diprep.text = "Diplo Rep: " + Mathf.Round(civ.diploRep.value * 10f)/10f + " <sprite index=2>";
         diprep.GetComponent<HoverText>().text = civ.diploRep.ToString();
-        diprel.text = "Diplo Relations: "+(Mathf.Round(civ.diploRelations.value) - civ.remainingDiploRelations) +"/"+ Mathf.Round(civ.diploRelations.value) + " <sprite index=2>";
-        diprel.GetComponent<HoverText>().text = civ.diploRelations.ToString();
+        diprel.text = "Diplomatic Capacity: "+ Mathf.Round(civ.diplomaticCapacity) +"/"+ Mathf.Round(civ.diplomaticCapacityMax.value) + " <sprite index=2>";
+        diprel.GetComponent<HoverText>().text = civ.diplomaticCapacityMax.ToString();
         civReligion.sprite = Map.main.religions[civ.religion].sprite;
         civReligion.GetComponent<HoverText>().text = Map.main.religions[civ.religion].GetHoverText(civ);
         if (Player.myPlayer.myCivID > -1 && Game.main.Started)
@@ -367,23 +367,23 @@ public class DiplomacyUIPanel : MonoBehaviour
 
     public static string GetPositiveReasons(Civilisation target, Civilisation fromCiv)
     {
-        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].value > 0? "Opinion: " + 0.25f * target.opinionOfThem[fromCiv.CivID].value : "";
-        reasons += fromCiv.diploRep.value > 0 ? "\nDiplo Rep: " + fromCiv.diploRep.value * 5f : "";
-        reasons += Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f > 0f ? "\nRelative Military Strength: " + Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f : "";       
+        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].value > 0? "Opinion: " + 0.25f * target.opinionOfThem[fromCiv.CivID].value +"\n": "";
+        reasons += fromCiv.diploRep.value > 0 ? "Diplo Rep: " + fromCiv.diploRep.value * 5f  + "\n": "";
+        reasons += Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f > 0f ? "Relative Military Strength: " + Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f : "";       
         return reasons;
     }
     public static string GetNegativeReasons(Civilisation target, Civilisation fromCiv)
     {
-        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].value < 0 ? "Opinion: " + -0.25f * target.opinionOfThem[fromCiv.CivID].value : "";
-        reasons += fromCiv.diploRep.value < 0 ? "Diplo Rep: " + fromCiv.diploRep.value * -5f : "";
-        reasons += Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f < 0f ? "\nRelative Military Strength: " + Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * -12f : "";
-        reasons += Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) > 0 ? "\nDistance Between Borders: " + Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) : "";
-        reasons += fromCiv.atWarWith.Count > 0 ? "\nYou are at War: 1000" : "";
-        reasons += (fromCiv.CivID == target.overlordID) ? "\nThey are a your subject: 1000" : "";
-        reasons += (fromCiv.overlordID == target.CivID) ? "\nThey are a your overlord: 1000" : "";
-        reasons += (target.overlordID > -1 && target.libertyDesire < 50f) ? "\nThey are a Loyal Subject: 1000" : "";
-        reasons += (fromCiv.overlordID > -1 && fromCiv.libertyDesire < 50f) ? "\nYou are a Loyal Subject: 1000" : "";
-        reasons += target.remainingDiploRelations <= 0 ? "\nToo Many Diplomatic Relations: " + (target.remainingDiploRelations - 1) * -20f : "";
+        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].value < 0 ? "Opinion: " + -0.25f * target.opinionOfThem[fromCiv.CivID].value + "\n" : "";
+        reasons += fromCiv.diploRep.value < 0 ? "Diplo Rep: " + fromCiv.diploRep.value * -5f + "\n": "";
+        reasons += Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f < 0f ? "Relative Military Strength: " + Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * -12f + "\n" : "";
+        reasons += Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) > 0 ? "Distance Between Borders: " + Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) + "\n" : "";
+        reasons += fromCiv.atWarWith.Count > 0 ? "You are at War: 1000\n" : "";
+        reasons += (fromCiv.CivID == target.overlordID) ? "They are a your subject: 1000\n" : "";
+        reasons += (fromCiv.overlordID == target.CivID) ? "They are a your overlord: 1000\n" : "";
+        reasons += (target.overlordID > -1 && target.libertyDesire < 50f) ? "They are a Loyal Subject: 1000\n" : "";
+        reasons += (fromCiv.overlordID > -1 && fromCiv.libertyDesire < 50f) ? "You are a Loyal Subject: 1000\n" : "";
+        reasons += (target.diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > target.diplomaticCapacityMax.value ? "Target Would Be Over Diplomatic Capacity: " + (target.diplomaticCapacity + 25 +fromCiv.governingCapacity * 0.5f - target.diplomaticCapacityMax.value) / target.diplomaticCapacityMax.value * -100f + "\n" : "";
         return reasons;
     }
     public float AllianceOffer(Civilisation target, Civilisation fromCiv)
@@ -397,7 +397,7 @@ public class DiplomacyUIPanel : MonoBehaviour
         choice += (fromCiv.overlordID == target.CivID) ? -1000 : 0;
         choice += (target.overlordID > -1 && target.libertyDesire < 50f) ? -1000 : 0;
         choice += (fromCiv.overlordID > -1 && fromCiv.libertyDesire < 50f) ? -1000 : 0;
-        choice += target.remainingDiploRelations <= 0 ? (target.remainingDiploRelations -1) * 20f : 0f;
+        choice += ((target.diplomaticCapacity +25f+ fromCiv.governingCapacity * 0.5f) > target.diplomaticCapacityMax.value ? (target.diplomaticCapacity +25f+ fromCiv.governingCapacity * 0.5f - target.diplomaticCapacityMax.value) / target.diplomaticCapacityMax.value * -100f : 0f);
         return choice;
     }
 }

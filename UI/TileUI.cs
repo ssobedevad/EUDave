@@ -8,13 +8,13 @@ using UnityEngine.UI;
 public class TileUI : MonoBehaviour
 {
     [SerializeField] TextMeshProUGUI terrainName, regionName, devA, devB, devC, devT, resourceValue, devCostText;
-    [SerializeField] Image tileImage, resourceImage, coreFill,infFill,cavFill,siegeFill,mercFill,buildFill,religionFill,religionIcon,occupiedIcon;
-    [SerializeField] Button addInf,addCav,addSiege,openMercMenu, devAButton, devBButton, devCButton, startCore, toggleBuildingMenu,convertReligion,moveCapital,toggleGP;
+    [SerializeField] Image tileImage, resourceImage, coreFill,mercFill,buildFill,religionFill,religionIcon,occupiedIcon;
+    [SerializeField] Button openMercMenu, devAButton, devBButton, devCButton, startCore, toggleBuildingMenu,convertReligion,moveCapital,toggleGP,promoteStatus;
     [SerializeField] GameObject buildingMenu,mercenaryMenu,greatProjectMenu;
     [SerializeField] Sprite unknown;
     [SerializeField] TextMeshProUGUI forceLimit, unrest,rebelHeldTime;
-    [SerializeField] TextMeshProUGUI population;
-    [SerializeField] TextMeshProUGUI productionIncome, taxIncome, control,govCap;
+    [SerializeField] TextMeshProUGUI population,status,controlDecay;
+    [SerializeField] TextMeshProUGUI productionIncome, taxIncome, control,govCap,totalIncome;
     [SerializeField] Button increaseControl,decreaseControl;
     [SerializeField] Button expandInf, reduceInf;
     [SerializeField] Transform coreBack;
@@ -22,9 +22,6 @@ public class TileUI : MonoBehaviour
     [SerializeField] List<GameObject> cores = new List<GameObject>();
     private void Start()
     {
-        addInf.onClick.AddListener(delegate{ AddArmy(0); });
-        addCav.onClick.AddListener(delegate { AddArmy(1); });
-        addSiege.onClick.AddListener(delegate { AddArmy(2); });
         devAButton.onClick.AddListener(delegate { AddDev(0); });
         devBButton.onClick.AddListener(delegate { AddDev(1); });
         devCButton.onClick.AddListener(delegate { AddDev(2); });
@@ -39,6 +36,13 @@ public class TileUI : MonoBehaviour
         convertReligion.onClick.AddListener(StartConvertReligion);
         occupiedIcon.GetComponent<Button>().onClick.AddListener(RequestOccupation);
         moveCapital.onClick.AddListener(MoveCapital);
+        promoteStatus.onClick.AddListener(PromoteStatus);
+    }
+    void PromoteStatus()
+    {
+        if (!Player.myPlayer.tileSelected) { return; }
+        TileData tile = Player.myPlayer.selectedTile;
+        tile.PromoteStatus();
     }
     void MoveCapital()
     {
@@ -123,7 +127,54 @@ public class TileUI : MonoBehaviour
         buildingMenu.SetActive(!buildingMenu.activeSelf);
         mercenaryMenu.SetActive(false);
         greatProjectMenu.SetActive(false);
-        toggleBuildingMenu.GetComponentsInChildren<Transform>()[1].rotation = Quaternion.Euler(new Vector3(0, 0, buildingMenu.activeSelf ? 90f : -90f));
+        toggleBuildingMenu.GetComponentsInChildren<Image>()[1].color = buildingMenu.activeSelf ? Color.white : Color.gray;
+    }
+    string StatusToString(int status)
+    {
+        switch (status)
+        {
+            case 0:
+                return "Settlement";
+            case 1:
+                return "Town";
+            case 2:
+                return "City";
+            case 3:
+                return "Mega City";
+            default:
+                return "N/A";
+        }
+    }
+    string StatusButtonHover(int status)
+    {
+        switch (status)
+        {
+            case 0:
+                return "Promote To Town";
+            case 1:
+                return "Promote To City";
+            case 2:
+                return "Promote To Mega City";
+            case 3:
+                return "Maximum Status";
+            default:
+                return "N/A";
+        }
+    }
+
+    string StatusHover(int status)
+    {
+        string text = "Current Status Level Gives:\n\n";
+        text += "Governing Cost: " + ((1f + (status == 0 ? -0.5f : status == 1 ? 0f : status == 2 ? 1f : 2f)) * 100f) + "%\n";
+        if (status > 1)
+        {
+            int level = status - 1;
+            text += "Dev Cost Modifier: " + (-5 * level) + "%\n";
+            text += "Construction Time: " + (-10 * level) + "%\n";
+            text += "Construction Cost: " + (-5 * level) + "%\n";
+            text += "Local Unrest: " + (-1 * level);
+        }
+        return text;
     }
     private void OnGUI()
     {
@@ -134,7 +185,7 @@ public class TileUI : MonoBehaviour
             Player.myPlayer.selectedTile = null;
             buildingMenu.SetActive(false);
             mercenaryMenu.SetActive(false);
-            toggleBuildingMenu.GetComponentsInChildren<Transform>()[1].rotation = Quaternion.Euler(new Vector3(0, 0,-90f));
+            toggleBuildingMenu.GetComponentsInChildren<Image>()[1].color = buildingMenu.activeSelf ? Color.white : Color.gray;
         }
         if (!Player.myPlayer.tileSelected) { return; }
         TileData tile = Player.myPlayer.selectedTile;
@@ -150,7 +201,14 @@ public class TileUI : MonoBehaviour
         devT.text = tile.totalDev + "";
         if (owned)
         {
+            moveCapital.GetComponentsInChildren<Image>()[1].color = tile.civ.capitalPos == tile.pos ? Color.white : Color.gray;
+            moveCapital.GetComponentInChildren<HoverText>().text = tile.civ.capitalPos == tile.pos ? "Already Capital ":"Move Capital For 200<sprite index=1>" ;
+            promoteStatus.GetComponentsInChildren<Image>()[1].color = tile.CanPromoteStatus() ? Color.white : Color.gray;
+            promoteStatus.GetComponentInChildren<HoverText>().text = StatusButtonHover(tile.status) + (tile.status < 3 ?"\nCost: "+ tile.PromoteStatusCost() : "") + (tile.status == 0? "\nPromotion Slots: " + tile.civ.controlCentres.Count + "/" + (int)tile.civ.maxSettlements.value : "");
             govCap.text = "Gov Cap: "+ tile.GetGoverningCost();
+            status.text = "Status: " + StatusToString(tile.status);
+            status.transform.parent.GetComponent<HoverText>().text = StatusHover(tile.status);
+            //controlDecay.text = "Control Decay: " + (tile.status == 0 ? "N/A" :Mathf.Round((tile.status == 0 ? 100f : tile.status == 1 ? 50f : tile.status == 2 ? 25f : 10f) * (1f + tile.civ.controlDecay.value)));
         }
         else
         {
@@ -227,10 +285,7 @@ public class TileUI : MonoBehaviour
         SetCoreText();
         SetReligionConvertText();
         SetEconText();
-        SetDevCostText();
-        SetArmyRecruitText(0);
-        SetArmyRecruitText(1);
-        SetArmyRecruitText(2);
+        SetDevCostText();      
         SetPopulationText();
         SetForceLimitText();
         SetUnrestText();
@@ -268,18 +323,18 @@ public class TileUI : MonoBehaviour
         {
             religionIcon.GetComponent<HoverText>().text = Map.main.religions[tile.religion].GetHoverText(tile.civ);
         }
-        if (owned)
-        {
-            addInf.enabled = true;
-            addCav.enabled = tile.civ.techUnlocks.Contains("Flanking Units");
-            addSiege.enabled = tile.civ.techUnlocks.Contains("Siege Units");
-        }
-        else
-        {
-            addInf.enabled = false;
-            addCav.enabled = false;
-            addSiege.enabled = false;
-        }
+        //if (owned)
+        //{
+        //    addInf.enabled = true;
+        //    addCav.enabled = tile.civ.techUnlocks.Contains("Flanking Units");
+        //    addSiege.enabled = tile.civ.techUnlocks.Contains("Siege Units");
+        //}
+        //else
+        //{
+        //    addInf.enabled = false;
+        //    addCav.enabled = false;
+        //    addSiege.enabled = false;
+        //}
         if(tile.mercenaryQueue.Count == 0)
         {
             mercFill.fillAmount = 0f;
@@ -288,44 +343,47 @@ public class TileUI : MonoBehaviour
         {
             mercFill.fillAmount = 1f - (float)tile.mercenaryTimer / (float)tile.GetRecruitTime();
         }
-        if (tile.recruitQueue.Count == 0) 
-        {
-            infFill.fillAmount = 0f;
-            cavFill.fillAmount = 0f;
-            siegeFill.fillAmount = 0f;
-            if (owned)
-            {
-                Civilisation civ = tile.civ;
-                addInf.GetComponent<Image>().color = civ.coins >= tile.GetRecruitCost(0)? Color.green : Color.red;
-                addCav.GetComponent<Image>().color = tile.civ.techUnlocks.Contains("Flanking Units") ? civ.coins >= tile.GetRecruitCost(1) ? Color.green : Color.red : Color.gray;
-                addSiege.GetComponent<Image>().color = tile.civ.techUnlocks.Contains("Siege Units") ? civ.coins >= tile.GetRecruitCost(2) ? Color.green : Color.red : Color.gray;
-            }
-        }
-        else  
-        {
-            int type = tile.recruitQueue.First();
-            addInf.GetComponent<Image>().color = type == 0 ? Color.yellow : Color.red;
-            addCav.GetComponent<Image>().color = type == 1 ? Color.yellow : tile.civ.techUnlocks.Contains("Flanking Units") ? Color.red : Color.gray;
-            addSiege.GetComponent<Image>().color = type == 2 ? Color.yellow : tile.civ.techUnlocks.Contains("Siege Units") ? Color.red : Color.gray;
-            infFill.fillAmount = type == 0? 1f - (float)tile.recruitTimer/(float)tile.GetRecruitTime() : 0f;
-            cavFill.fillAmount = type == 1 ? 1f - (float)tile.recruitTimer / (float)tile.GetRecruitTime() : 0f;
-            siegeFill.fillAmount = type == 2 ? 1f - (float)tile.recruitTimer / (float)tile.GetRecruitTime() : 0f;
-        }
+        //if (tile.recruitQueue.Count == 0) 
+        //{
+        //    infFill.fillAmount = 0f;
+        //    cavFill.fillAmount = 0f;
+        //    siegeFill.fillAmount = 0f;
+        //    if (owned)
+        //    {
+        //        Civilisation civ = tile.civ;
+        //        addInf.GetComponent<Image>().color = civ.coins >= tile.GetRecruitCost(0)? Color.green : Color.red;
+        //        addCav.GetComponent<Image>().color = tile.civ.techUnlocks.Contains("Flanking Units") ? civ.coins >= tile.GetRecruitCost(1) ? Color.green : Color.red : Color.gray;
+        //        addSiege.GetComponent<Image>().color = tile.civ.techUnlocks.Contains("Siege Units") ? civ.coins >= tile.GetRecruitCost(2) ? Color.green : Color.red : Color.gray;
+        //    }
+        //}
+        //else  
+        //{
+        //    int type = tile.recruitQueue.First();
+        //    addInf.GetComponent<Image>().color = type == 0 ? Color.yellow : Color.red;
+        //    addCav.GetComponent<Image>().color = type == 1 ? Color.yellow : tile.civ.techUnlocks.Contains("Flanking Units") ? Color.red : Color.gray;
+        //    addSiege.GetComponent<Image>().color = type == 2 ? Color.yellow : tile.civ.techUnlocks.Contains("Siege Units") ? Color.red : Color.gray;
+        //    infFill.fillAmount = type == 0? 1f - (float)tile.recruitTimer/(float)tile.GetRecruitTime() : 0f;
+        //    cavFill.fillAmount = type == 1 ? 1f - (float)tile.recruitTimer / (float)tile.GetRecruitTime() : 0f;
+        //    siegeFill.fillAmount = type == 2 ? 1f - (float)tile.recruitTimer / (float)tile.GetRecruitTime() : 0f;
+        //}
 
         if (tile.buildQueue.Count == 0) { buildFill.fillAmount = 0f; }
         else { buildFill.fillAmount = 1f - (float)tile.buildTimer / (float)Map.main.Buildings[tile.buildQueue.First()].GetTime(tile, tile.civ); }
 
-        forceLimit.text = Mathf.Round(tile.GetForceLimit() * 100f) / 100f + "<sprite index=0>";
-        unrest.text = Mathf.Round(tile.unrest * 100f) / 100f + "<sprite index=11>";
-        productionIncome.text = Mathf.Round(tile.GetDailyProductionValue()*100f)/100f + " <sprite index=0>";
-        taxIncome.text = Mathf.Round(tile.GetDailyTax() * 100f) / 100f + " <sprite index=0>";
-        control.text = Mathf.Round(tile.control * 100f) / 100f + "%";
+        forceLimit.text = "Force Limit: " +Mathf.Round(tile.GetForceLimit() * 100f) / 100f + "<sprite index=0>";
+        unrest.text = "Local Unrest: " + Mathf.Round(tile.unrest * 100f) / 100f + "<sprite index=11>";
+        float prod = Mathf.Round(tile.GetDailyProductionValue() * 100f) / 100f;
+        float tax = Mathf.Round(tile.GetDailyTax() * 100f) / 100f;
+        productionIncome.text = "Production: " + prod + " <sprite index=0>";
+        taxIncome.text = "Tax: " + tax + " <sprite index=0>";
+        totalIncome.text = "Total: " + (prod + tax) + " <sprite index=0>";
+        control.text = "Control: " + Mathf.Round(tile.control * 100f) / 100f + "%";
         Color c = Color.Lerp(Color.red, Color.green, (float)tile.avaliablePopulation / (float)(tile.avaliableMaxPopulation+1));    
         if(tile.avaliablePopulation >= tile.avaliableMaxPopulation)
         {
             c = Color.magenta;
         }
-        population.text = "<#"+c.ToHexString()+">" +tile.avaliablePopulation + "<sprite index=0>";
+        population.text = "Population: " + "<#" +c.ToHexString()+">" +tile.avaliablePopulation + "<sprite index=0>";
         devCostText.text = tile.GetDevCost() + "";
         regionName.text = tile.region;
         terrainName.text = tile.Name;
@@ -375,14 +433,19 @@ public class TileUI : MonoBehaviour
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
         if (civ.CivID != data.civID && civ.CivID != data.civ.overlordID) { return; }
+        if (data.localUnrest.modifiers.Exists(i => i.name == "Control Increased" || i.name == "Control Decreased"))
+        {
+            return;
+        }
         if (up)
         {
-            data.control += 25f;
+
+            data.control = Mathf.Clamp(data.control + 25,0,data.maxControl);
             data.localUnrest.AddModifier(new Modifier(10f, ModifierType.Flat, "Control Increased", 25920));
         }
         else
         {
-            data.control -= 25f;
+            data.control = Mathf.Clamp(data.control - 25, 0, data.maxControl);
             data.localUnrest.AddModifier(new Modifier(-10f, ModifierType.Flat, "Control Decreased", 25920));
         }
     }
@@ -407,18 +470,7 @@ public class TileUI : MonoBehaviour
                 data.infrastructureLevel--;
             }
         }
-        data.localTaxEfficiency.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.1f, 1);
-        data.localDevCost.UpdateModifier("Infrastructure", data.infrastructureLevel * -0.15f, 1);
-        data.localProductionQuantity.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.05f, 1);
-        data.localProductionValue.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.05f, 1);
-        data.localPopulationGrowth.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.05f, 1);
-        data.localMaxPopulation.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.1f, 1);
-        data.localConstructionCost.UpdateModifier("Infrastructure", data.infrastructureLevel * -0.05f, 1);
-        data.localConstructionTime.UpdateModifier("Infrastructure", data.infrastructureLevel * -0.05f, 1);
-        data.localDefensiveness.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.05f, 1);
-        data.localRecruitmentTime.UpdateModifier("Infrastructure", data.infrastructureLevel * -0.15f, 1);
-        data.localGoverningCost.UpdateModifier("Infrastructure", data.infrastructureLevel * 15f, 1);
-        data.localGoverningCostMod.UpdateModifier("Infrastructure", data.infrastructureLevel * 0.1f, 1);
+        data.UpdateInfrastructureModifiers();
     }
     void StartConvertReligion()
     {
@@ -523,45 +575,45 @@ public class TileUI : MonoBehaviour
         }
         hoverText.text = text;
     }
-    void SetArmyRecruitText(int index)
-    {
-        TileData data = Player.myPlayer.selectedTile;
-        if (Player.myPlayer.myCivID == -1 || data.civID == -1) { return; }
-        Civilisation civ = Player.myPlayer.myCiv;
-        if (civ.CivID != data.civID) { return; }
-        HoverText hoverText = index == 0 ? addInf.GetComponent<HoverText>() : index == 1? addCav.GetComponent<HoverText>() : addSiege.GetComponent<HoverText>();
-        if (data.recruitQueue.Count == 0)
-        {
-            string text = "It will cost " + data.GetRecruitCost(index) + "<sprite index=0> to recruit from this tile\n\n";
-            text += "Base: " + civ.units[index].baseCost +"<sprite index=0>\n";
-            text += "Local Bonuses: " + data.localRecruitmentCost.ToString() + "\n";
-            text += "Global Bonuses: " + civ.regimentCost.ToString() + "\n\n";
-            text += "This will take " + Mathf.Round(data.GetRecruitTime() * 10f/6f)/10f + " hours\n\n";
-            text += "Base: 12 hours\n";
-            text += "Local Bonuses: " + data.localRecruitmentTime.ToString() + "\n";
-            text += "Global Bonuses: " + civ.recruitmentTime.ToString() + "\n\n";
-            hoverText.text = text;
-        }
-        else
-        {
-            string text = "Currently recruiting from this tile\n";
-            if (data.recruitQueue.Count > 1)
-            {
-                text += "There are " + (data.recruitQueue.Count - 1) + " regiments in the queue\n\n";
-            }
-            text += "It will be complete in " + data.recruitTimer + " days\n\n";
-            text = "It will cost " + data.GetRecruitCost(index) + "<sprite index=0> to recruit from this tile\n\n";
-            text += "Base: "+ civ.units[index].baseCost+"<sprite index=0>\n";
-            text += "Local Bonuses: " + data.localRecruitmentCost.ToString() + "\n";
-            text += "Global Bonuses: " + civ.regimentCost.ToString() + "\n\n";
-            text += "This will take " + Mathf.Round(data.GetRecruitTime() * 10f / 6f) / 10f + " hours\n\n";
-            text += "Base: 12 hours\n";
-            text += "Local Bonuses: " + data.localRecruitmentTime.ToString() + "\n";
-            text += "Global Bonuses: " + civ.recruitmentTime.ToString() + "\n\n";
-            hoverText.text = text;
-        }
+    //void SetArmyRecruitText(int index)
+    //{
+    //    TileData data = Player.myPlayer.selectedTile;
+    //    if (Player.myPlayer.myCivID == -1 || data.civID == -1) { return; }
+    //    Civilisation civ = Player.myPlayer.myCiv;
+    //    if (civ.CivID != data.civID) { return; }
+    //    HoverText hoverText = index == 0 ? addInf.GetComponent<HoverText>() : index == 1? addCav.GetComponent<HoverText>() : addSiege.GetComponent<HoverText>();
+    //    if (data.recruitQueue.Count == 0)
+    //    {
+    //        string text = "It will cost " + data.GetRecruitCost(index) + "<sprite index=0> to recruit from this tile\n\n";
+    //        text += "Base: " + civ.units[index].baseCost +"<sprite index=0>\n";
+    //        text += "Local Bonuses: " + data.localRecruitmentCost.ToString() + "\n";
+    //        text += "Global Bonuses: " + civ.regimentCost.ToString() + "\n\n";
+    //        text += "This will take " + Mathf.Round(data.GetRecruitTime() * 10f/6f)/10f + " hours\n\n";
+    //        text += "Base: 12 hours\n";
+    //        text += "Local Bonuses: " + data.localRecruitmentTime.ToString() + "\n";
+    //        text += "Global Bonuses: " + civ.recruitmentTime.ToString() + "\n\n";
+    //        hoverText.text = text;
+    //    }
+    //    else
+    //    {
+    //        string text = "Currently recruiting from this tile\n";
+    //        if (data.recruitQueue.Count > 1)
+    //        {
+    //            text += "There are " + (data.recruitQueue.Count - 1) + " regiments in the queue\n\n";
+    //        }
+    //        text += "It will be complete in " + data.recruitTimer + " days\n\n";
+    //        text = "It will cost " + data.GetRecruitCost(index) + "<sprite index=0> to recruit from this tile\n\n";
+    //        text += "Base: "+ civ.units[index].baseCost+"<sprite index=0>\n";
+    //        text += "Local Bonuses: " + data.localRecruitmentCost.ToString() + "\n";
+    //        text += "Global Bonuses: " + civ.regimentCost.ToString() + "\n\n";
+    //        text += "This will take " + Mathf.Round(data.GetRecruitTime() * 10f / 6f) / 10f + " hours\n\n";
+    //        text += "Base: 12 hours\n";
+    //        text += "Local Bonuses: " + data.localRecruitmentTime.ToString() + "\n";
+    //        text += "Global Bonuses: " + civ.recruitmentTime.ToString() + "\n\n";
+    //        hoverText.text = text;
+    //    }
 
-    }
+    //}
     void SetCoreText()
     {
         TileData data = Player.myPlayer.selectedTile;

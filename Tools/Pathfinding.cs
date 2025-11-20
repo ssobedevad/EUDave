@@ -5,7 +5,7 @@ using UnityEngine;
 
 public static class Pathfinding
 {
-    public static Vector3Int[] FindBestPath(Vector3Int startPos, Vector3Int destination, Army army = null , bool isBoat = false)
+    public static Vector3Int[] FindBestPath(Vector3Int startPos, Vector3Int destination, Army army = null,Fleet fleet = null , bool isBoat = false)
     {
         if (Map.main.GetTile(startPos) == null || Map.main.GetTile(destination) == null) { Debug.Log("Start or end does not exist start: " + startPos + " end: " + destination); return new Vector3Int[0]; }
         
@@ -38,18 +38,31 @@ public static class Pathfinding
             if (current == destination) { found = true; break; }
             TileData currentTile = Map.main.GetTile(current);
             foreach (var n in currentTile.GetNeighbors())
-            {               
+            {
+                TileData tile = Map.main.GetTile(n);
                 int newCost = cost_so_far[current] + 1;
-                if (!CanMoveToTile(n, isBoat)) { continue; }
+                if (!CanMoveToTile(current,n, isBoat)) { continue; }
                 if (army != null)
                 {
                     if (!army.exiled && army.civID > -1)
-                    {
-                        TileData tile = Map.main.GetTile(n);
+                    {                       
                         Civilisation civ = Game.main.civs[army.civID];
                         if (!army.HasAccess(tile.civID)) { continue; }
                         if (!army.CanMoveHostileZOC(n, current)) { continue; }
                         if (tile.armiesOnTile.Exists(i => civ.atWarWith.Contains(i.civID)) && n != destination && !army.retreating) { continue; }
+                    }
+                }
+                else if (fleet != null)
+                {
+                    if (!fleet.exiled && fleet.civID > -1)
+                    {
+                        Civilisation civ = Game.main.civs[fleet.civID];
+                        if (!Army.HasAccess(tile.civID,civ)) { continue; }
+                        if (tile.civID > -1)
+                        {
+                            if (fleet.army.Count <= 0 && (tile.civID != civ.CivID || tile.occupied && tile.occupiedByID != civ.CivID)) { continue; }
+                        }
+                        if (tile.fleetsOnTile.Exists(i => civ.atWarWith.Contains(i.civID)) && n != destination && !fleet.retreating) { continue; }
                     }
                 }
                 if (!cost_so_far.Keys.Contains(n) || newCost < cost_so_far[n])
@@ -137,14 +150,15 @@ public static class Pathfinding
         return newPath;
     }
 
-    public static bool CanMoveToTile(Vector3Int pos, bool isBoat)
+    public static bool CanMoveToTile(Vector3Int from,Vector3Int pos, bool isBoat)
     {
         if (Map.main.tileMapManager.tilemap.GetTile(pos) == null) { return false; }
         TileData tileData = Map.main.GetTile(pos);
+        TileData currentTile = Map.main.GetTile(from);
         if (tileData.terrain == null) { return false; }
         if (isBoat)
         {
-            return tileData.terrain.isSea;
+            return (currentTile.terrain.isSea && tileData.terrain.isSea) || (tileData.isCoastal && from == tileData.portTile) || (currentTile.isCoastal && pos == currentTile.portTile);
         }
         else
         {

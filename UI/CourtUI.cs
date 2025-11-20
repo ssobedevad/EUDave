@@ -7,8 +7,10 @@ using UnityEngine.UI;
 public class CourtUI : MonoBehaviour
 {
     [SerializeField] TextMeshProUGUI rulerName, heirName, advisorA, advisorD, advisorM,admin,diplo,mil,salaryA,salaryD,salaryM;
-    [SerializeField] Button advisorAB, advisorDB, advisorMB,disinherit,focusA,focusD,focusM,advisorAUpgrade,advisorAFire, advisorDUpgrade, advisorDFire, advisorMUpgrade, advisorMFire;
+    [SerializeField] TextMeshProUGUI rulerSkills, heirSkills, rulerAge, heirAge;
+    [SerializeField] Button advisorAB, advisorDB, advisorMB,disinherit,abdicate,focusA,focusD,focusM,advisorAUpgrade,advisorAFire, advisorDUpgrade, advisorDFire, advisorMUpgrade, advisorMFire;
     [SerializeField] GameObject advisorShopPanel,courtPanel;
+    [SerializeField] GameObject[] rulerTraits,heirTraits;
     [SerializeField] Transform advisorShopBack;
     [SerializeField] GameObject advisorPrefab;
     [SerializeField] Sprite blank;
@@ -95,12 +97,38 @@ public class CourtUI : MonoBehaviour
         admin.text = "";
         diplo.text = "";
         mil.text = "";
+        for (int i = 0; i < rulerTraits.Length; i++)
+        {
+            if (civ.ruler.active && civ.ruler.traits.Count > i)
+            {
+                rulerTraits[i].GetComponent<Image>().sprite = civ.ruler.traits[i].icon;
+                rulerTraits[i].GetComponent<HoverText>().text = civ.ruler.traits[i].GetHoverText(civ);
+            }
+            else
+            {
+                rulerTraits[i].GetComponent<Image>().sprite = UIManager.main.icons[2];
+                rulerTraits[i].GetComponent<HoverText>().text = "";
+            }
+            if (civ.heir.active && civ.heir.traits.Count > i)
+            {
+                heirTraits[i].GetComponent<Image>().sprite = civ.heir.traits[i].icon;
+                heirTraits[i].GetComponent<HoverText>().text = civ.heir.traits[i].GetHoverText(civ);
+            }
+            else
+            {
+                heirTraits[i].GetComponent<Image>().sprite = UIManager.main.icons[2];
+                heirTraits[i].GetComponent<HoverText>().text = "";
+            }
+        }
         if (civ.ruler.active)
         {
-            rulerName.text = civ.ruler.Name + " "+civ.ruler.age.ToString(true, true) + civ.ruler.adminSkill + "<sprite index=1> " + civ.ruler.diploSkill + "<sprite index=2> " + civ.ruler.milSkill + "<sprite index=3>";
+            rulerName.text = civ.ruler.Name;
+            rulerAge.text = "Age: " + civ.ruler.age.ToString(true);
+            rulerSkills.text = civ.ruler.adminSkill + "<sprite index=1> " + civ.ruler.diploSkill + "<sprite index=2> " + civ.ruler.milSkill + "<sprite index=3>";
             admin.text = "" + (3 + civ.ruler.adminSkill + (civ.advisorA.active ? civ.advisorA.skillLevel : 0) + (civ.focus > -1 ? (civ.focus == 0 ? 2 : -1) : 0));
             diplo.text = "" + (3 + civ.ruler.diploSkill + (civ.advisorD.active ? civ.advisorD.skillLevel : 0) + (civ.focus > -1 ? (civ.focus == 1 ? 2 : -1) : 0));
             mil.text = "" + (3 + civ.ruler.milSkill + (civ.advisorM.active ? civ.advisorM.skillLevel : 0) + (civ.focus > -1 ? (civ.focus == 2 ? 2 : -1) : 0));
+            
         }
         else
         {
@@ -108,7 +136,9 @@ public class CourtUI : MonoBehaviour
         }
         if (civ.heir.active)
         {
-            heirName.text = civ.heir.Name + " " + civ.heir.age.ToString(true, true) + civ.heir.adminSkill + "<sprite index=1> " + civ.heir.diploSkill + "<sprite index=2> " + civ.heir.milSkill + "<sprite index=3>";
+            heirName.text = civ.heir.Name;
+            heirAge.text = "Age: " + civ.heir.age.ToString(true);
+            heirSkills.text = civ.heir.adminSkill + "<sprite index=1> " + civ.heir.diploSkill + "<sprite index=2> " + civ.heir.milSkill + "<sprite index=3>";
         }
         else
         {
