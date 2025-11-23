@@ -51,6 +51,10 @@ while currentPos not startPos:
 return Path Reversed
 ```
 
+Example path avoiding obstacles (Sea):
+
+<img width="688" height="403" alt="image" src="https://github.com/user-attachments/assets/992bdd9f-b016-4684-bd28-77fa3c5e2ccf" />
+
 ### Hexagonal Perimeters of complex areas
 
 One interesting problem for a map game is dealing with creating borders and names as a way of visually feeding back to the player about their progress. 
