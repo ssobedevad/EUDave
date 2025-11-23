@@ -70,9 +70,11 @@ The Number of Bordering Tiles approach:
 If you give each tile a score based on how many neighboring tiles they have that are within the area that you want to create a border around then remove any with 6 or more (cannot be a border as that means that they are completely surrounded) and then start on the top left extreme point (lowest neighbors).
 This allows you to also remove any tiles not included in the border and then create another border for the remaining and repeat dealing with the issue of disconnected areas. 
 
-Map with borders and names
+Map with Borders and Names:
+
 <img width="834" height="370" alt="image" src="https://github.com/user-attachments/assets/ae553e79-c03f-4ec8-9488-9f137cf46392" />
 
+The Names have been spaced out over each seperate area based on the difference between the highest,lowest,leftmost and rightmost tiles and sized and rotated to fit the area the name is then centered at the tile with the most neighbours belonging to the same area.
 
 ### CPU controller decision making and coordination
 
