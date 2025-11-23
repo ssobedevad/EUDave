@@ -67,13 +67,11 @@ If you assume there is only one area and it is a fairly standard shape then you 
 
 The Number of Bordering Tiles approach:
 
-If you give each tile a score based on how many neighboring tiles they have that are within the area that you want to create a border around then remove any with 6 or more (cannot be a border as that means that they are completely surrounded) and then start on the top left extreme point (lowest neighbours).
+If you give each tile a score based on how many neighboring tiles they have that are within the area that you want to create a border around then remove any with 6 or more (cannot be a border as that means that they are completely surrounded) and then start on the top left extreme point (lowest neighbors).
 This allows you to also remove any tiles not included in the border and then create another border for the remaining and repeat dealing with the issue of disconnected areas. 
-This method also has a few issues if the extreme points are not well placed and such the border will close too early leaving multiple borders in a connected area:
 
-<img width="318" height="233" alt="image" src="https://github.com/user-attachments/assets/b15a6cc3-cff5-4477-9c9f-cef6b2c9e9ee" />
-
-
+Map with borders and names
+<img width="834" height="370" alt="image" src="https://github.com/user-attachments/assets/ae553e79-c03f-4ec8-9488-9f137cf46392" />
 
 
 ### CPU controller decision making and coordination
