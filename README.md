@@ -13,6 +13,7 @@ However, this does not mean that it cannot be implemented at smaller scale as ML
 ### Install
 
 Download zip of https://github.com/ssobedevad/EUDave-Builds
+
 Run EUDave.exe
 
 ## Complex Algorithms and Features
@@ -83,6 +84,12 @@ Map with Borders and Names:
 
 The Names have been spaced out over each seperate area based on the difference between the highest,lowest,leftmost and rightmost tiles and sized and rotated to fit the area the name is then centered at the tile with the most neighbours belonging to the same area.
 
+Map With Water and Terrain Shaders:
+
+<img width="1292" height="540" alt="image" src="https://github.com/user-attachments/assets/fe0abba4-4113-4532-985d-51d3e6fd4d66" />
+
+This uses moving Voronoi noise for the water and layered perlin noise for the terrain. 
+All written in hlsl.
 ### CPU controller decision making and coordination
 
 The amount of possible actions that can be taken in this game is very large and there is no specific goal so it is very challenging to create a general CPU that interacts with both the player and the other CPU's in a dynamic way.
@@ -97,8 +104,20 @@ Most notably I managed an 85% reduction in time for managing the color that each
 By storing data about the last color in each tile and creating a lighter weight equality for color I was able to use the slower methods for changing tile colors much less frequently.
 Also by storing information about neighboring tiles inside the tiles themselves it saves a lot of time that I was previously calculating this every time that it was required even though it remained constant throughout the game.
 
+### Combat and Battle lines
+
+An important factor of a map game is ensuring the combat is fairly predictable while being simple enough to understand and well displayed to the player. 
+I have used a two level battle line system to simulate warfare in which units are entered into the line if they could hit something on the opposing side. 
+Initially filled by the side with the smallest number of units outwards from the central position. 
+The otehr side then fills to a width where all placed units can hit units on the opposing line based on their range.
+Leftover units are kept in reserve to replace dead/retreated units.
+
+
 ## References
 RedBlobGames Hexagonal Grids https://www.redblobgames.com/grids/hexagons/
+
 RedBlobGames Astar Pathfinding https://www.redblobgames.com/pathfinding/a-star/introduction.html
 
 Perimeter Helper https://dillonshook.com/hex-city-borders/
+
+Land Warfare https://eu4.paradoxwikis.com/Land_warfare
