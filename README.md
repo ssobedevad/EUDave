@@ -10,7 +10,10 @@ However, this does not mean that it cannot be implemented at smaller scale as ML
 
 ### The Game
 
-### How to Install
+### Install
+
+Download zip of https://github.com/ssobedevad/EUDave-Builds
+Run EUDave.exe
 
 ## Complex Algorithms and Features
 
