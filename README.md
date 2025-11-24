@@ -121,3 +121,5 @@ RedBlobGames Astar Pathfinding https://www.redblobgames.com/pathfinding/a-star/i
 Perimeter Helper https://dillonshook.com/hex-city-borders/
 
 Land Warfare https://eu4.paradoxwikis.com/Land_warfare
+
+Shaders https://www.ronja-tutorials.com/
