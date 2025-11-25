@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
-using Unity.VisualScripting;
+
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -383,7 +383,7 @@ public class TileUI : MonoBehaviour
         {
             c = Color.magenta;
         }
-        population.text = "Population: " + "<#" +c.ToHexString()+">" +tile.avaliablePopulation + "<sprite index=0>";
+        population.text = "Population: " + "<#" + ColorUtility.ToHtmlStringRGB(c) + ">" +tile.avaliablePopulation + "<sprite index=0>";
         devCostText.text = tile.GetDevCost() + "";
         regionName.text = tile.region;
         terrainName.text = tile.Name;

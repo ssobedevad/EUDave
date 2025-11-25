@@ -72,6 +72,11 @@ public class Game : MonoBehaviour
             RefreshTradeRegions();
         }
     }
+    public void ResetGame()
+    {
+        gameTime.Reset();
+
+    }
     private void Update()
     {
         float[] speedVals = new float[] { 1f/3f, 1f/6f, 1f/12f, 1f/30f, 0f };
@@ -199,7 +204,9 @@ public class Game : MonoBehaviour
                     if(tile.civ.overlordID > -1)
                     {
                         civC = Game.main.civs[tile.civ.overlordID].c;
-                        civC.a *= 0.6f;
+                        civC.r *= 0.8f;
+                        civC.g *= 0.8f;
+                        civC.b *= 0.8f;
                     }
 
                     if (!Equal(tile.currentCol,civC))

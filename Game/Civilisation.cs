@@ -2,15 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
-
-using UnityEngine.Tilemaps;
-using UnityEngine.WSA;
+using UnityEngine.Events;
 
 [Serializable]
 public class Civilisation
 {
+    public float AIAggressiveness,AIAdministrative,AIDiplomatic,AIMilitary;
     public Color c;
     public string civName;
     public Vector3Int capitalPos;
@@ -70,6 +68,7 @@ public class Civilisation
     public List<Loan> loans = new List<Loan>();
     public float armyTradition;
     public float overextension;
+    public float maxAE;
     public float revanchism;
     public List<string> techUnlocks = new List<string>();
     public List<int> reforms = new List<int>();
@@ -169,6 +168,12 @@ public class Civilisation
     public bool updateBorders;
     public List<WeightedChoice> events = new List<WeightedChoice>();
     public int avaliablePopulation;
+    public UnityEvent winWar = new UnityEvent();
+    public UnityEvent winBattle = new UnityEvent();
+    public UnityEvent winSiege = new UnityEvent();
+    public UnityEvent loseWar = new UnityEvent();
+    public UnityEvent loseBattle = new UnityEvent();
+    public UnityEvent loseSiege = new UnityEvent();
     public int GetIntegrationCost(Civilisation overlord)
     {
         int baseCost = 8 * GetTotalDev();
@@ -391,7 +396,14 @@ public class Civilisation
         milPower += 100 + 16 * ruler.milSkill;
         coins += coinsIncome * 16;
         AddArmyTradition(ruler.milSkill * 5f + monthlyTradition.value * 6);
-
+        AIAggressiveness = Mathf.Clamp((ruler.milSkill+ruler.adminSkill + ruler.diploSkill) * 5f + UnityEngine.Random.Range(-40f, 40f),1f,100f);
+        AIAdministrative = Mathf.Clamp(ruler.adminSkill * 16f + UnityEngine.Random.Range(1f, 40f), 1f, 100f);
+        AIDiplomatic = Mathf.Clamp(ruler.diploSkill * 16f + UnityEngine.Random.Range(1f, 40f), 1f, 100f);
+        AIMilitary = Mathf.Clamp(ruler.milSkill * 16f + UnityEngine.Random.Range(1f, 40f), 1f, 100f);
+        float total = AIAdministrative + AIDiplomatic + AIMilitary;
+        AIAdministrative /= total;
+        AIDiplomatic /= total;
+        AIMilitary /= total;
     }
     public void UpdateGovernmentRank()
     {
@@ -420,8 +432,7 @@ public class Civilisation
 
     }
     public void SetupBorderLine()
-    {
-        //Debug.Log("Civ Border: " + civName);
+    {        
         var perims = PerimeterHelper.GetPerimeter(GetAllCivTiles().ToList());
         int index = 0;
         foreach (var perim in perims)
@@ -450,9 +461,9 @@ public class Civilisation
             {
                 color = Game.main.civs[overlordID].c;
             }
-            color.r *= 0.6f;
-            color.g *= 0.6f;
-            color.b *= 0.6f;
+            color.r *= 0.4f;
+            color.g *= 0.4f;
+            color.b *= 0.4f;
             border.startColor = color;
             border.endColor = color;
             SetupCountryName(perim,index);
@@ -550,7 +561,6 @@ public class Civilisation
         Game.main.dayTick.AddListener(DayTick);
         Game.main.tenMinTick.AddListener(TenMinTick);
         Game.main.monthTick.AddListener(MonthTick);
-        InitExploration();
         truces = new int[Game.main.civs.Count];
         opinionOfThem = new Stat[Game.main.civs.Count];
         for (int i = 0; i < Game.main.civs.Count; i++)
@@ -741,7 +751,10 @@ public class Civilisation
             Civilisation civ = Game.main.civs[i];
             opinionOfThem[i].decayAmount = (1f + civ.improveRelations.value);
         }
-
+        if (maxAE < 0)
+        {
+            maxAE += (1f + improveRelations.value) / 1440f;
+        }
 
         foreach (var tileData in GetAllCivTileDatas())
         {
@@ -948,19 +961,19 @@ public class Civilisation
         int amount = 0;
         List<TileData> tiles = GetAllCivTileDatas();
         tiles.RemoveAll(i => i.occupied || i.underSiege);
-        tiles.RemoveAll(i => i.avaliablePopulation == 0 || i.avaliableMaxPopulation == 0);
+        tiles.RemoveAll(i => i.avaliablePopulation <= 0 || i.avaliableMaxPopulation == 0);
         if (tiles.Count == 0) { return 0; }
         int apd = targetAmount / GetTotalDev();
         foreach (var tile in tiles)
         {
-            int used = Mathf.Min(apd * tile.totalDev, tile.avaliablePopulation - tile.developmentB * 200);
+            int used = Mathf.Min(apd * tile.totalDev,Mathf.Max(tile.avaliablePopulation - tile.developmentB * 200,0));
             tile.avaliablePopulation -= used;
             tile.population -= used;
             amount += used;
         }        
         if (amount < targetAmount)
         {            
-            tiles.Sort((x, y) => (y.populationGrowth).CompareTo(x.populationGrowth));
+            tiles.Sort((x, y) => (y.population).CompareTo(x.population));
             foreach (var tile in tiles)
             {
                 int remainder = targetAmount - amount;
@@ -1248,10 +1261,22 @@ public class Civilisation
             countryNames[0].gameObject.SetActive(false);
             borders.ForEach(i =>i.gameObject.SetActive(false));
             GameObject.Destroy(capitalIndicator);
+            if(overlordID > -1 && Game.main.civs[overlordID].subjects.Contains(CivID))
+            {
+                Game.main.civs[overlordID].subjects.Remove(CivID);
+                overlordID = -1;
+            }
             foreach (var army in armies.ToList())
             {
+                army.OnExitTile();
                 GameObject.Destroy(army.gameObject);
-                armies.Remove(army);
+                armies.Remove(army);                
+            }
+            foreach (var fleet in fleets.ToList())
+            {
+                fleet.OnExitTile();
+                GameObject.Destroy(fleet.gameObject);
+                fleets.Remove(fleet);
             }
             allies.ToList().ForEach(i => BreakAlliance(i));
             foreach (var war in GetWars())
@@ -1488,7 +1513,7 @@ public class Civilisation
         globalUnrest.UpdateModifier("Overextension", (overextension * 5f) / 100f, 1);
         foreach (var rebelFaction in rebelFactions.Values.ToList())
         {
-            rebelFaction.Update();
+            //rebelFaction.Update();
         }
         if (ruler.active)
         {
@@ -1684,7 +1709,7 @@ public class Civilisation
             int civToID = peaceDeal.civTo[index];
             Civilisation civTo = Game.main.civs[civToID];
             TileData tile = Map.main.GetTile(province);
-            ApplyAE(tile, civTo, GetBaseAE(tile, civTo, 0.6f, mainTarget ? 1f : 1.5f));
+            ApplyAE(tile, civTo, GetBaseAE(tile, civTo, 0.6f, mainTarget ? 1f : 1.5f),peaceDeal.fullAnnexation);
         }
         if (peaceDeal.subjugation)
         {
@@ -1704,11 +1729,11 @@ public class Civilisation
         ae *= nonCBModifier;
         return ae;
     }
-    public void ApplyAE(TileData province,Civilisation target,float ae)
+    public void ApplyAE(TileData province,Civilisation target,float ae,bool fullAnnex = false)
     {
         foreach(var civ in Game.main.civs)
         {
-            if(!civ.isActive() || civ == target) { continue; }
+            if(!civ.isActive() || (civ == target && fullAnnex)) { continue; }
             float religionMod = civ.religion == province.religion ? 0.5f : -0.5f;
             float infidelMod = civ.religion == province.civ.religion && target.religion != civ.religion ? 0.5f : 0;
             float distMod = 1f / (1f + MinimumDistBetween(civ, province.pos) / 2f);
@@ -1716,6 +1741,11 @@ public class Civilisation
             float subjectMod = target.subjects.Contains(civ.CivID) ? 0.1f : 1f;
             float realAE = ae * (1f + religionMod + infidelMod + distMod) * allyMod * subjectMod;
             civ.opinionOfThem[target.CivID].IncreaseModifier("Aggressive Expansion", -realAE, 1,true);
+            float civae = civ.opinionOfThem[target.CivID].modifiers.Find(i => i.name == "Aggressive Expansion").value;
+            if (civae < maxAE)
+            {
+                maxAE = civae;
+            }
         }
     }
     public void AcceptPeaceDeal(PeaceDeal peaceDeal,bool mainTarget = true)
@@ -1884,25 +1914,6 @@ public class Civilisation
             }
         }
     }
-    public void DiscoverTile(TileData tile)
-    {
-        DiscoverResource(tile);
-        
-        if (!isPlayer)
-        {
-           
-        }
-        if (Player.myPlayer.myCivID == CivID)
-        {
-            Map.main.tileMapManager.tilemapUnknown.SetTileFlags(tile.pos, TileFlags.None);
-            Map.main.tileMapManager.tilemapUnknown.SetColor(tile.pos, Color.clear);
-        }
-        if (explorePos.Contains(tile.pos)) { explorePos.Remove(tile.pos); }
-        if (!visited.Contains(tile.pos))
-        {
-            visited.Add(tile.pos);           
-        }
-    }
     public float GetSubjectIncome()
     {
         float income = 0;
@@ -1958,9 +1969,6 @@ public class Civilisation
         RemoveCivModifier("Tax Income", "Subject");
         RemoveCivModifier("Development Cost", "Subject");
         target.subjects.Remove(CivID);
-    }
-    public void DiscoverResource(TileData tileData)
-    {       
     }
     public void DeclareWar(int targetID,Vector3Int warGoal,CasusBelli casusBelli)
     {
@@ -2111,9 +2119,6 @@ public class Civilisation
         choice += ((diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > diplomaticCapacityMax.value? ((diplomaticCapacity +25 + fromCiv.governingCapacity *0.5f - diplomaticCapacityMax.value)/ diplomaticCapacityMax.value) * -100f : 0f);
         //Debug.Log("Choice Alliance Offer " + choice);
         return choice > 0;
-    }
-    void InitExploration()
-    {
     }
 
     public Vector3Int SafeProvince()

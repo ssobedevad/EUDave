@@ -15,7 +15,7 @@ public class TileText : MonoBehaviour
     }
     void CamChange()
     {
-        Color c = CameraController.main.cam.orthographicSize <= 8 ? Color.white: Color.clear;
+        Color c = CameraController.main.cam.orthographicSize <= 6 ? Color.white: Color.clear;
         if (!Game.main.Equal(c, text.color))
         {
             text.color = c;

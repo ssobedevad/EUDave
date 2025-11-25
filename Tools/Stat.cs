@@ -118,7 +118,7 @@ public class Stat
         }
         else
         {
-            Debug.Log("Modifier with name " + modifier.name + " already exists on stat " + name);
+            //Debug.Log("Modifier with name " + modifier.name + " already exists on stat " + name);
         }
     }
     public void IncreaseModifier(string name, float byAmount, int type = 0,bool Decay = true)

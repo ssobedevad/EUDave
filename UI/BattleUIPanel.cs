@@ -149,8 +149,9 @@ public class BattleUIPanel : MonoBehaviour
                     Regiment regiment = battle.attackingFrontLine.regiments[i];
                     if(regiment != null && regiment.type > -1)
                     {
-                        attackerList[i].GetComponentsInChildren<Image>()[2].enabled = true;
-                        attackerList[i].GetComponentsInChildren<Image>()[2].sprite = unitIcons[regiment.type];
+                        attackerList[i].GetComponentsInChildren<Image>()[1].enabled = true;
+                        attackerList[i].GetComponentsInChildren<Image>()[1].sprite = unitIcons[regiment.type];
+                        attackerList[i].GetComponentsInChildren<Image>()[1].color = civColA.color;
                         if (regiment.size > 0)
                         {
                             attackerList[i].GetComponent<Image>().color = Color.Lerp(Color.red,Color.green, regiment.morale / regiment.maxMorale);
@@ -166,7 +167,7 @@ public class BattleUIPanel : MonoBehaviour
                     {
                         attackerList[i].GetComponent<Image>().color = Color.gray;
                         attackerList[i].GetComponent<Image>().fillAmount = 1;
-                        attackerList[i].GetComponentsInChildren<Image>()[2].enabled = false;
+                        attackerList[i].GetComponentsInChildren<Image>()[1].enabled = false;
                     }
                 }
             }
@@ -189,8 +190,9 @@ public class BattleUIPanel : MonoBehaviour
                     Regiment regiment = battle.attackingBackLine.regiments[i];
                     if (regiment != null && regiment.type > -1)
                     {
-                        attackerBackList[i].GetComponentsInChildren<Image>()[2].enabled = true;
-                        attackerBackList[i].GetComponentsInChildren<Image>()[2].sprite = unitIcons[regiment.type];
+                        attackerBackList[i].GetComponentsInChildren<Image>()[1].enabled = true;
+                        attackerBackList[i].GetComponentsInChildren<Image>()[1].sprite = unitIcons[regiment.type];
+                        attackerBackList[i].GetComponentsInChildren<Image>()[1].color = civColA.color;
                         if (regiment.size > 0)
                         {
                             attackerBackList[i].GetComponent<Image>().color = Color.Lerp(Color.red, Color.green, regiment.morale / regiment.maxMorale);
@@ -206,7 +208,7 @@ public class BattleUIPanel : MonoBehaviour
                     {
                         attackerBackList[i].GetComponent<Image>().color = Color.gray;
                         attackerBackList[i].GetComponent<Image>().fillAmount = 1;
-                        attackerBackList[i].GetComponentsInChildren<Image>()[2].enabled = false;
+                        attackerBackList[i].GetComponentsInChildren<Image>()[1].enabled = false;
                     }
                 }
             }
@@ -229,8 +231,9 @@ public class BattleUIPanel : MonoBehaviour
                     Regiment regiment = battle.defendingFrontLine.regiments[i];
                     if (regiment != null && regiment.type > -1)
                     {
-                        defenderList[i].GetComponentsInChildren<Image>()[2].enabled = true;
-                        defenderList[i].GetComponentsInChildren<Image>()[2].sprite = unitIcons[regiment.type];
+                        defenderList[i].GetComponentsInChildren<Image>()[1].enabled = true;
+                        defenderList[i].GetComponentsInChildren<Image>()[1].sprite = unitIcons[regiment.type];
+                        defenderList[i].GetComponentsInChildren<Image>()[1].color = civColD.color;
                         if (regiment.size > 0)
                         {
                             defenderList[i].GetComponent<Image>().color = Color.Lerp(Color.red, Color.green, regiment.morale / regiment.maxMorale);
@@ -247,7 +250,7 @@ public class BattleUIPanel : MonoBehaviour
                     {
                         defenderList[i].GetComponent<Image>().color = Color.gray;
                         defenderList[i].GetComponent<Image>().fillAmount = 1;
-                        defenderList[i].GetComponentsInChildren<Image>()[2].enabled = false;
+                        defenderList[i].GetComponentsInChildren<Image>()[1].enabled = false;
                     }
                 }
             }
@@ -270,8 +273,9 @@ public class BattleUIPanel : MonoBehaviour
                     Regiment regiment = battle.defendingBackLine.regiments[i];
                     if (regiment != null && regiment.type > -1)
                     {
-                        defenderBackList[i].GetComponentsInChildren<Image>()[2].enabled = true;
-                        defenderBackList[i].GetComponentsInChildren<Image>()[2].sprite = unitIcons[regiment.type];
+                        defenderBackList[i].GetComponentsInChildren<Image>()[1].enabled = true;
+                        defenderBackList[i].GetComponentsInChildren<Image>()[1].sprite = unitIcons[regiment.type];
+                        defenderList[i].GetComponentsInChildren<Image>()[1].color = civColD.color;
                         if (regiment.size > 0)
                         {
                             defenderBackList[i].GetComponent<Image>().color = Color.Lerp(Color.red, Color.green, regiment.morale / regiment.maxMorale);
@@ -288,7 +292,7 @@ public class BattleUIPanel : MonoBehaviour
                     {
                         defenderBackList[i].GetComponent<Image>().color = Color.gray;
                         defenderBackList[i].GetComponent<Image>().fillAmount = 1;
-                        defenderBackList[i].GetComponentsInChildren<Image>()[2].enabled = false;
+                        defenderBackList[i].GetComponentsInChildren<Image>()[1].enabled = false;
                     }
                 }
             }

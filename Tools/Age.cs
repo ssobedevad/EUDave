@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using Unity.VisualScripting;
-using UnityEngine;
 
 [Serializable]
 public class Age
@@ -23,6 +20,14 @@ public class Age
         total += months * 30 * 24 * 6;
         total += years * 12 * 30 * 24 * 6;
         return total;
+    }
+    public void Reset()
+    {
+        tenMins = 0;
+        hours = 0;
+        days = 0;
+        months = 0;
+        years = 0;
     }
     public void Activate()
     {

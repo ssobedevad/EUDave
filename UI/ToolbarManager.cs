@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using Unity.Burst.Intrinsics;
-using Unity.VisualScripting;
+
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -93,7 +93,7 @@ public class ToolbarManager : MonoBehaviour
             {
                 c = Color.magenta;
             }
-            string colorCode  = "<#" + c.ToHexString() + ">";
+            string colorCode  = "<#" + ColorUtility.ToHtmlStringRGB(c) + ">";
             int armyQ = civ.GetTotalTilePopulation();
             if (armyQ < 1000)
             {

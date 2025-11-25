@@ -66,7 +66,7 @@ public class TileMapManager : MonoBehaviour
                 return;
             }
             SelectTile(tilemapPos);
-        }
+        }        
     }
     public void DeselectTile()
     {
@@ -94,7 +94,7 @@ public class TileMapManager : MonoBehaviour
             Player.myPlayer.selectedFleets.Clear();
             MoveSelector(tilemapPos);
         }
-        Debug.Log("On Tile " + tileData.armiesOnTile.Count);
+        //Debug.Log("On Tile " + tileData.armiesOnTile.Count);
         
         if (!Game.main.Started || Player.myPlayer.spectator)
         {

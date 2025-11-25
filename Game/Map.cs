@@ -6,7 +6,7 @@ public class Map : MonoBehaviour
 {
     public static Map main;
     [SerializeField] public TileMapManager tileMapManager;
-    [SerializeField] public Transform buildingTransform,fortTransform,capitalTransform,unitTransform,borderTransform;
+    [SerializeField] public Transform buildingTransform,fortTransform,capitalTransform,unitTransform,borderTransform,tileTextTransform;
     [SerializeField] public ResourceType[] resourceTypes;
     [SerializeField] public Sprite[] statusSprites;
     [SerializeField] public Sprite portSprite;

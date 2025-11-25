@@ -773,6 +773,15 @@ public class Army : MonoBehaviour
 
         return false;
     }
+    public void DisbandMercs()
+    {
+        regiments.RemoveAll(i => i.mercenary);
+        if (regiments.Count == 0)
+        {
+            OnExitTile();
+            Destroy(gameObject);
+        }
+    }
     public void Disband()
     {
         regiments.RemoveAll(i => i.mercenary);

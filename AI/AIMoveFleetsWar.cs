@@ -281,6 +281,7 @@ public class AIMoveFleetsWar
     }
     static void MergeArmies(int civID)
     {
+        if (fleetsToMerge.Count == 0) { return; }
         Fleet central = fleetsToMerge[0];
         int total = central.CombatWidth();
         if (total < 31)

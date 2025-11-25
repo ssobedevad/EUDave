@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
+using static UnityEngine.RuleTile.TilingRuleOutput;
 
 public class AIManager : MonoBehaviour
 {
@@ -10,7 +12,7 @@ public class AIManager : MonoBehaviour
     private void Start()
     {
         Game.main.tenMinTick.AddListener(TenMinTick);
-        Game.main.dayTick.AddListener(DayTick);
+        Game.main.hourTick.AddListener(HourTick);
     }
     public void Update()
     {       
@@ -39,10 +41,11 @@ public class AIManager : MonoBehaviour
                 TakeGovernmentReform(civ);
                 PromoteStatus(civ);
             }
-        }       
+        }
     }
-    public void DayTick()
+    public void HourTick()
     {
+        if (Game.main.gameTime.totalTicks() < 6 * 24 * 7) { return; }
         DeclareCivWars();
     }
     public void UpdateMoveRebels()
@@ -98,7 +101,7 @@ public class AIManager : MonoBehaviour
         }
         else
         {
-            foreach(var centre in civ.controlCentres)
+            foreach(var centre in civ.controlCentres.ToList())
             {
                 if(centre.Value < 3)
                 {
@@ -201,14 +204,15 @@ public class AIManager : MonoBehaviour
             if(civ.TotalMaxArmySize()/1000f > civ.forceLimit.value && civ.atWarWith.Count == 0)
             {
                 int armiesToRemove = (int)(civ.TotalMaxArmySize() / 1000f - civ.forceLimit.value);
-                foreach (var army in civ.armies)
+                foreach (var army in civ.armies.ToList())
                 {
-                    if(army.ArmyMaxSize() <= armiesToRemove)
+                    army.DisbandMercs();
+                    if(army.ArmyMaxSize()/1000f <= armiesToRemove)
                     {
                         armiesToRemove -= (int)(army.ArmyMaxSize()/1000f);
                         army.Disband();
                     }
-                    else if(army.ArmyMaxSize() > armiesToRemove)
+                    else if(army.ArmyMaxSize()/1000f > armiesToRemove)
                     {
                         int remain = (int)(army.ArmyMaxSize() / 1000f - armiesToRemove);
                         armiesToRemove -= armiesToRemove;
@@ -221,12 +225,12 @@ public class AIManager : MonoBehaviour
                     }
                 }
             }
-            if (civ.FortMaintenance() >= 1 && civ.atWarWith.Count == 0 && civ.overlordID == -1)
+            if (civ.FortMaintenance() > 1 && civ.atWarWith.Count == 0 && civ.overlordID == -1)
             {
                 List<Vector3Int> forts = civ.GetAllCivTiles().FindAll(i => Map.main.GetTile(i).hasFort);
                 for (int i = 0; i < forts.Count; i++)
                 {
-                    if (balance <= -1)
+                    if (balance < -1)
                     {
                         TileData data = Map.main.GetTile(forts[i]);
                         data.RemoveBuilding(0);
@@ -238,12 +242,20 @@ public class AIManager : MonoBehaviour
                     }
                 }
             }
-        }
+            int advisorCheck = UnityEngine.Random.Range(0, 3);
+            Advisor advisor = advisorCheck == 0 ? civ.advisorA : advisorCheck == 1 ? civ.advisorD : civ.advisorM;
+            if (advisor != null && advisor.active)
+            {
+                advisor.active = false;
+                civ.RemoveAdvisor(advisor);
+            }
+            
+        }   
         else
         {
-            if(balance > 0f)
+            if (balance > 0f)
             {
-                if(civ.loans.Count > 0)
+                if (civ.loans.Count > 0)
                 {
                     if (civ.coins >= civ.loans[0].value)
                     {
@@ -251,86 +263,75 @@ public class AIManager : MonoBehaviour
                         civ.loans.RemoveAt(0);
                     }
                 }
-               if(civ.advisorA == null || !civ.advisorA.active)
-               {
-                    foreach(var advisor in civ.advisorsA)
-                    {
-                        if (advisor.active)
-                        {
-                            if(civ.coins >= advisor.HireCost(civ) && balance >= advisor.Salary(civ))
-                            {
-                                civ.AssignAdvisor(advisor);
-                                balance -= advisor.Salary(civ);
-                                break;
-                            }
-                        }
-                    }
-                    
-               }
-                if (civ.advisorD == null || !civ.advisorD.active)
+                int advisorCheck = UnityEngine.Random.Range(0, 3);
+                Advisor advisor = advisorCheck == 0 ? civ.advisorA : advisorCheck == 1 ? civ.advisorD : civ.advisorM;
+                List<Advisor> advisors = advisorCheck == 0 ? civ.advisorsA : advisorCheck == 1 ? civ.advisorsD : civ.advisorsM;
+                if (advisor == null || !advisor.active)
                 {
-                    foreach (var advisor in civ.advisorsD)
+                    foreach (var ad in advisors)
                     {
-                        if (advisor.active)
+                        if (ad.active)
                         {
-                            if (civ.coins >= advisor.HireCost(civ) && balance >= advisor.Salary(civ))
+                            if (civ.coins >= ad.HireCost(civ) && balance >= ad.Salary(civ))
                             {
-                                civ.AssignAdvisor(advisor);
-                                balance -= advisor.Salary(civ);
+                                civ.AssignAdvisor(ad);
+                                balance -= ad.Salary(civ);
                                 break;
                             }
                         }
                     }
-
                 }
-                if (civ.advisorM == null || !civ.advisorM.active)
+                else
                 {
-                    foreach (var advisor in civ.advisorsM)
+                    if (civ.coins >= advisor.HireCost(civ, 1) && advisor.Salary(civ, 1) - advisor.Salary(civ, 0) < balance)
                     {
-                        if (advisor.active)
+                        civ.coins -= advisor.HireCost(civ, 1);
+                        advisor.skillLevel += 1;
+                    }
+                }
+
+                foreach (var buildingID in WeightedChoiceManager.Shuffle(civ.unlockedBuildings))
+                {
+                    Building building = Map.main.Buildings[buildingID];
+                    if (building.fortLevel > 0)
+                    {
+                        if (balance > building.fortLevel && civ.coins >= building.baseCost)
                         {
-                            if (civ.coins >= advisor.HireCost(civ) && balance >= advisor.Salary(civ))
-                            {
-                                civ.AssignAdvisor(advisor);
-                                balance -= advisor.Salary(civ);
-                                break;
-                            }
+                            List<TileData> possible = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
+                            possible.RemoveAll(i => i.buildings.Contains(buildingID) || i.buildQueue.Contains(buildingID) || i.terrain.attackerDiceRoll == 0);
+                            if (possible.Count == 0) { continue; }
+                            possible[0].StartBuilding(buildingID);
                         }
                     }
-
-                }
-            }
-            foreach(var buildingID in civ.unlockedBuildings)
-            {
-                Building building = Map.main.Buildings[buildingID];
-                if(building.fortLevel > 0)
-                {
-                    if(balance > building.fortLevel && civ.coins >= building.baseCost)
+                    else if (civ.coins >= building.baseCost)
                     {
                         List<TileData> possible = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
                         possible.RemoveAll(i => i.buildings.Contains(buildingID) || i.buildQueue.Contains(buildingID));
                         if (possible.Count == 0) { continue; }
-                        possible.Sort((x, y) => y.hasZOC.CompareTo(x.hasZOC));
+                        if (building.Name == "Temple" || building.Name == "Cathedral")
+                        {
+                            possible.Sort((x, y) => y.GetDailyTax().CompareTo(x.GetDailyTax()));
+                        }
+                        else if (building.Name == "Workshop" || building.Name == "Factory" || building.Name == "Market" || building.Name == "Marketplace")
+                        {
+                            possible.Sort((x, y) => y.GetDailyProductionValue().CompareTo(x.GetDailyProductionValue()));
+                        }
+                        else if (building.Name == "Infirmary" || building.Name == "Hospital")
+                        {
+                            possible.Sort((x, y) => y.populationGrowth.CompareTo(x.populationGrowth));
+                        }
+                        else if (building.Name == "Town Hall" || building.Name == "City Hall")
+                        {
+                            possible.Sort((x, y) => y.GetGoverningCost().CompareTo(x.GetGoverningCost()));
+                        }
+                        else if (building.Name == "School" || building.Name == "University")
+                        {
+                            possible.Sort((x, y) => y.totalDev.CompareTo(x.totalDev));
+                        }
                         possible[0].StartBuilding(buildingID);
                     }
                 }
-                else if(civ.coins >= building.baseCost)
-                {
-                    List<TileData> possible = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
-                    possible.RemoveAll(i => i.buildings.Contains(buildingID) || i.buildQueue.Contains(buildingID));
-                    if(possible.Count == 0) { continue; }
-                    if (building.Name == "Temple")
-                    {
-                        possible.Sort((x, y) => y.GetDailyTax().CompareTo(x.GetDailyTax()));
-                    }
-                    else if (building.Name == "Workshop" || building.Name == "Market")
-                    {
-                        possible.Sort((x, y) => y.GetDailyProductionValue().CompareTo(x.GetDailyProductionValue()));                    
-                    }
-                    possible[0].StartBuilding(buildingID);
-                }
             }
-            
         }
     }
     public void TakeIdeaGroups(Civilisation civ)
@@ -399,7 +400,7 @@ public class AIManager : MonoBehaviour
                 }
             }
         }
-        if (civ.stability < 0 && !needCores && civ.overextension <= 10f)
+        if (civ.stability < 0 && !needCores && civ.GetStabilityCost() <= 100f)
         {
             if (civ.adminPower >= civ.GetStabilityCost() && civ.stability < 3)
             {
@@ -445,9 +446,9 @@ public class AIManager : MonoBehaviour
         }
         if (monthDiff > 4 || civ.adminPower > 900)
         {
-            if (!needCores && civ.GetWars().Count == 0 && civ.adminPower > cost)
+            if ((!needCores && civ.GetWars().Count == 0 && civ.adminPower > cost )|| civ.adminPower > 900)
             {
-                if (civ.stability < 1)
+                if (civ.stability < civ.AIAdministrative * 3f)
                 {
                     if (civ.adminPower >= civ.GetStabilityCost() && civ.stability < 3)
                     {
@@ -577,112 +578,165 @@ public class AIManager : MonoBehaviour
             }
         }
     }
-    public void DeclareCivWars()
+    public float GetWarDeclareDesire(Civilisation attacker, Civilisation defender)
     {
-        for (int i = (int)(Game.main.gameTime.totalTicks()/144f) % armyMoveUpdateTime; i < Game.main.civs.Count; i += armyMoveUpdateTime)
+        float score = attacker.AIAggressiveness;
+        score -= 100f * attacker.GetWars().Count;
+        score += 200f * ((float)attacker.GetTotalTilePopulation() / (float)attacker.GetTotalMaxPopulation() - 0.8f);
+        score += Mathf.Min((attacker.AIAggressiveness - attacker.overextension) * 10f,0);
+        score += Mathf.Clamp(attacker.GetBalance(),-100f,100f);
+        score += Mathf.Min(attacker.claims.FindAll(i => defender.civTiles.Contains(i)).Count * 5f,20f);
+        score += Mathf.Min(attacker.cores.FindAll(i => defender.civTiles.Contains(i)).Count * 20f,100f);
+        score += attacker.truces[defender.CivID] > 0 ? -1000f : 0f;
+        score += attacker.atWarTogether.Contains(defender.CivID) ? -1000f : 0f;
+        score += attacker.atWarWith.Contains(defender.CivID) ? -1000f : 0f;
+        score += attacker.overlordID > -1 && attacker.libertyDesire < 50f ? -1000f : 0f;
+        score += attacker.overlordID > -1 && attacker.libertyDesire > 50f && defender.CivID == attacker.overlordID ? 20f : 0f;
+        score += attacker.overlordID > -1 && defender.CivID != attacker.overlordID ? -1000f : 0f;
+
+        float armyStrength = attacker.TotalMilStrength();
+        float targetStrength = defender.TotalMilStrength();
+        foreach(var war in attacker.GetWars())
         {
-            if (i < Game.main.civs.Count )
+            Civilisation target = war.GetOpposingLeader(attacker.CivID);
+            List<Civilisation> targetAllies = war.attackerCiv == target ? war.attackerAllies : war.defenderAllies;
+            targetStrength += target.TotalMilStrength();
+            if (target.subjects.Count > 0)
             {
-                Civilisation civ = Game.main.civs[i];
-                if (civ.isPlayer || !civ.isActive() || (civ.overlordID > -1 && civ.libertyDesire < 50f)) { continue; }
-                if(civ.atWarWith.Count == 0 && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.75f && civ.overextension <= 50f && civ.GetBalance() > 0)
+                foreach (var subject in defender.subjects)
                 {
-                    foreach (var n in WeightedChoiceManager.Shuffle(civ.civNeighbours))
+                    Civilisation subjectCiv = Game.main.civs[subject];
+                    targetStrength += subjectCiv.TotalMilStrength();
+                }
+            }
+            foreach (var allyCiv in targetAllies)
+            {
+                targetStrength += allyCiv.TotalMilStrength();
+                if (defender.subjects.Count > 0)
+                {
+                    foreach (var subject in defender.subjects)
                     {
-                        Civilisation neighbor = Game.main.civs[n];
-                        if (neighbor.overlordID > -1)
-                        {
-                            neighbor = Game.main.civs[neighbor.overlordID];       
-                            if(neighbor == civ) { continue; }
-                        }
-                        float armyStrength = civ.TotalMilStrength();
-                        float targetStrength = neighbor.TotalMilStrength();
-                        if (civ.subjects.Count > 0)
-                        {
-                            foreach (var subject in civ.subjects)
-                            {
-                                Civilisation subjectCiv = Game.main.civs[subject];
-                                if (DeclareWarPanelUI.CallToArms(neighbor, civ, subjectCiv, false) > 0)
-                                {
-                                    armyStrength += subjectCiv.TotalMilStrength();
-                                }
-                            }
-                        }
-                        foreach (var ally in civ.allies)
-                        {
-                            Civilisation allyCiv = Game.main.civs[ally];
-                            if (DeclareWarPanelUI.CallToArms(neighbor, civ, allyCiv, false) > 0)
-                            {
-                                armyStrength += allyCiv.TotalMilStrength();
+                        Civilisation subjectCiv = Game.main.civs[subject];
+                        targetStrength += subjectCiv.TotalMilStrength();
+                    }
+                }
+            }
+        }
+        if (attacker.subjects.Count > 0)
+        {
+            foreach (var subject in attacker.subjects)
+            {
+                Civilisation subjectCiv = Game.main.civs[subject];
+                if (DeclareWarPanelUI.CallToArms(defender, attacker, subjectCiv, false) > 0)
+                {
+                    armyStrength += subjectCiv.TotalMilStrength();
+                }
+            }
+        }
+        foreach (var ally in attacker.allies)
+        {
+            Civilisation allyCiv = Game.main.civs[ally];
+            if (DeclareWarPanelUI.CallToArms(defender, attacker, allyCiv, false) > 0)
+            {
+                armyStrength += allyCiv.TotalMilStrength();
 
-                                if (civ.subjects.Count > 0)
-                                {
-                                    foreach (var subject in civ.subjects)
-                                    {
-                                        Civilisation subjectCiv = Game.main.civs[subject];
-                                        if (DeclareWarPanelUI.CallToArms(neighbor, civ, subjectCiv, false) > 0)
-                                        {
-                                            armyStrength += subjectCiv.TotalMilStrength();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-
-                        if (neighbor.subjects.Count > 0)
+                if (attacker.subjects.Count > 0)
+                {
+                    foreach (var subject in attacker.subjects)
+                    {
+                        Civilisation subjectCiv = Game.main.civs[subject];
+                        if (DeclareWarPanelUI.CallToArms(defender, attacker, subjectCiv, false) > 0)
                         {
-                            foreach (var subject in neighbor.subjects)
-                            {
-                                Civilisation subjectCiv = Game.main.civs[subject];
-                                if (DeclareWarPanelUI.CallToArms(civ, neighbor, subjectCiv, true) > 0)
-                                {
-                                    targetStrength += subjectCiv.TotalMilStrength();
-                                }
-                            }
-                        }
-                        foreach (var ally in neighbor.allies)
-                        {
-                            Civilisation allyCiv = Game.main.civs[ally];
-                            if (DeclareWarPanelUI.CallToArms(civ, neighbor, allyCiv, true) > 0)
-                            {
-                                targetStrength += allyCiv.TotalMilStrength();
-
-                                if (neighbor.subjects.Count > 0)
-                                {
-                                    foreach (var subject in neighbor.subjects)
-                                    {
-                                        Civilisation subjectCiv = Game.main.civs[subject];
-                                        if (DeclareWarPanelUI.CallToArms(civ, neighbor, subjectCiv, true) > 0)
-                                        {
-                                            targetStrength += subjectCiv.TotalMilStrength();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        if (civ.truces[neighbor.CivID] == 0 && targetStrength < armyStrength * 2f)
-                        {
-                            List<WarGoal> goals = DeclareWarPanelUI.GetPossibleWarGoals(civ, neighbor);
-                            foreach (var goal in goals)
-                            {
-                                if (goal.cb.canTakeProvinces)
-                                {
-                                    civ.DeclareWar(n, goal.target, goal.cb);
-                                    break;
-                                }
-                            }
-                            if (goals.Count > 0)
-                            {
-                                break;
-                            }
+                            armyStrength += subjectCiv.TotalMilStrength();
                         }
                     }
                 }
             }
         }
+        if (defender.subjects.Count > 0)
+        {
+            foreach (var subject in defender.subjects)
+            {
+                Civilisation subjectCiv = Game.main.civs[subject];
+                if (DeclareWarPanelUI.CallToArms(attacker, defender, subjectCiv, true) > 0)
+                {
+                    targetStrength += subjectCiv.TotalMilStrength();
+                }
+            }
+        }
+        foreach (var ally in defender.allies)
+        {
+            Civilisation allyCiv = Game.main.civs[ally];
+            if (DeclareWarPanelUI.CallToArms(attacker, defender, allyCiv, true) > 0)
+            {
+                targetStrength += allyCiv.TotalMilStrength();
+
+                if (defender.subjects.Count > 0)
+                {
+                    foreach (var subject in defender.subjects)
+                    {
+                        Civilisation subjectCiv = Game.main.civs[subject];
+                        if (DeclareWarPanelUI.CallToArms(attacker, defender, subjectCiv, true) > 0)
+                        {
+                            targetStrength += subjectCiv.TotalMilStrength();
+                        }
+                    }
+                }
+            }
+        }
+        float strengthRatio = (1f + armyStrength) / (1f + targetStrength);
+        score += strengthRatio > 5f ? 100f : 0f;
+        score += strengthRatio > 2f ? 10f : 0f;
+        score += strengthRatio > (2f - attacker.AIAggressiveness/100f) ? 0f : -1000f;
+        return score;
     }
+    public void DeclareCivWars()
+    {
+        int i = Game.main.gameTime.totalTicks()/6 % Game.main.civs.Count;
+        Civilisation civ = Game.main.civs[i];
+        if (civ.isPlayer || !civ.isActive() || (civ.overlordID > -1 && civ.libertyDesire < 50f)) { return; }
+        int target = -1;
+        float score = -1f;
+        foreach (var n in civ.civNeighbours)
+        {
+            Civilisation neighbor = Game.main.civs[n];
+            if (neighbor.overlordID > -1)
+            {
+                neighbor = Game.main.civs[neighbor.overlordID];
+                if (neighbor == civ) { continue; }
+            }
+            float targetScore = GetWarDeclareDesire(civ, neighbor);
+            if(targetScore > score)
+            {
+                score = targetScore;
+                target = neighbor.CivID;
+            }
+        }
+        if (score < 0)
+        {
+            return;
+        }
+        Civilisation targetCiv = Game.main.civs[target];
+        Debug.Log("Declaring war " + civ.civName + " on " + targetCiv.civName + " desire: " + score);
+        if (civ.truces[targetCiv.CivID] == 0)
+        {
+            List<WarGoal> goals = DeclareWarPanelUI.GetPossibleWarGoals(civ, targetCiv);
+            foreach (var goal in goals)
+            {
+                if (goal.cb.canTakeProvinces)
+                {
+                    civ.DeclareWar(targetCiv.CivID, goal.target, goal.cb);
+                    break;
+                }
+            }
+            if (goals.Count > 0)
+            {
+                return;
+            }
+        }
+    }
+        
+    
     public void OfferAlliances()
     {
         for (int i = Time.frameCount % armyMoveUpdateTime; i < Game.main.civs.Count; i += armyMoveUpdateTime)
@@ -714,23 +768,25 @@ public class AIManager : MonoBehaviour
             {
                 War war = Game.main.ongoingWars[i];
                 if (war.warScore == 100 && !war.attackerCiv.isPlayer) 
-                {                  
+                {
                     //Debug.Log("Peace Out Defender By 100% " + war.GetName());
+                    PeaceDeal peaceDeal = PeaceDealUI.Suggested(war.defenderCiv, war);
                     war.EndWar();
-                    war.defenderCiv.AcceptPeaceDeal(PeaceDealUI.Suggested(war.defenderCiv, war),true);
+                    war.defenderCiv.AcceptPeaceDeal(peaceDeal,true);
                     continue; 
                 }
                 if (war.warScore == -100 && !war.defenderCiv.isPlayer) 
                 {
-                    
+
                     //Debug.Log("Peace Out Attacker By 100% " + war.GetName());
+                    PeaceDeal peaceDeal = PeaceDealUI.Suggested(war.attackerCiv, war);
                     war.EndWar();
-                    war.attackerCiv.AcceptPeaceDeal(PeaceDealUI.Suggested(war.attackerCiv, war), true);
+                    war.attackerCiv.AcceptPeaceDeal(peaceDeal, true);
                     continue; 
                 }
                 if (!war.attackerCiv.isPlayer && !war.defenderCiv.isPlayer)
                 {
-                    if(war.warScore >= 100f - (float)war.lengthOfWar/180f)
+                    if(war.warScore > 0 && war.defenderCiv.GetWars().Count > 1)
                     {
                         PeaceDeal peaceDeal = PeaceDealUI.Suggested(war.defenderCiv, war);
                         if (PeaceDealUI.WillAccept(peaceDeal,war.defenderCiv,war))
@@ -742,7 +798,7 @@ public class AIManager : MonoBehaviour
                             continue;
                         }
                     }
-                    if(war.warScore <= -100f + (float)war.lengthOfWar / 180f)
+                    if(war.warScore < 0 && war.attackerCiv.GetWars().Count > 1)
                     {
                         PeaceDeal peaceDeal = PeaceDealUI.Suggested(war.attackerCiv, war);
                         if (PeaceDealUI.WillAccept(peaceDeal, war.attackerCiv, war))

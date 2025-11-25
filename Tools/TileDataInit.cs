@@ -21,7 +21,7 @@ public class TileDataInit : MonoBehaviour
         TileData data = Map.main.GetTile(pos);
         if(data != null)
         {
-            data.tileText = Instantiate(Map.main.tileTextPrefab, transform.position, Quaternion.Euler(0, 0, Random.Range(0,60)), UIManager.main.worldCanvasText).GetComponent<TextMeshProUGUI>();
+            data.tileText = Instantiate(Map.main.tileTextPrefab, transform.position, Quaternion.Euler(0, 0, Random.Range(0,60)), Map.main.tileTextTransform).GetComponent<TextMeshProUGUI>();
             data.tileText.text = Name;
             data.Name = Name;
             data.region = Region;

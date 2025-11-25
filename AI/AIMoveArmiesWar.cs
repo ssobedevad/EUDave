@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Burst.Intrinsics;
 using UnityEngine;
 
 public class AIMoveArmiesWar
@@ -124,7 +125,7 @@ public class AIMoveArmiesWar
         }
         if (armiesExiled.Count > 0)
         {
-            armiesExiled.ForEach(i => i.SetPath(i.RetreatProvince()));
+            armiesExiled.ForEach(i => i.SetPath(civ.capitalPos));
         }
         SupportBattles(civ);
         CheckRunAway(civID);
@@ -189,17 +190,25 @@ public class AIMoveArmiesWar
             {               
                 if (TileData.evenr_distance(eArmy.pos,army.pos) < 2)
                 {
-                    if (eArmy.effectiveSize > effectiveStrength * 1.1f)
+                    if (eArmy.effectiveSize > effectiveStrength * (0.9f + 0.3f * civ.AIAggressiveness / 100f))
                     {
                         if (siege && GetSiegeStayDesire(army) < 50)
                         {                           
                             if (eArmy.moving)
                             {
                                 army.SetPath(army.RetreatProvince());
+                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                                {
+                                    Debug.Log("Retreat from siege: " + GetSiegeStayDesire(army) + " Retreat Province: " + army.RetreatProvince());
+                                }
                             }
                             else if (!eArmy.sieging)
                             {
                                 army.path.Clear();
+                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                                {
+                                    Debug.Log("Wait from siege: " + GetSiegeStayDesire(army) + " Retreat Province: " + army.RetreatProvince());
+                                }
                             }
                         }
                         else if (!siege)
@@ -207,10 +216,18 @@ public class AIMoveArmiesWar
                             if (eArmy.moving)
                             {
                                 army.SetPath(army.RetreatProvince());
+                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                                {
+                                    Debug.Log("Retreat: " + GetSiegeStayDesire(army) + " Retreat Province: " + army.RetreatProvince());
+                                }
                             }
                             else if (!eArmy.sieging)
                             {
                                 army.path.Clear();
+                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                                {
+                                    Debug.Log("Wait: " + GetSiegeStayDesire(army) + " Retreat Province: " + army.RetreatProvince());
+                                }
                             }
                         }
                     }
@@ -364,11 +381,19 @@ public class AIMoveArmiesWar
                             {
                                 Army army = moveArmies[i];
                                 army.SetPath(closePos);
+                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                                {
+                                    Debug.Log("Move Near Battle: " + closePos + " Battle Province: " + battle.pos);
+                                }
                             }
                             else if (minDist >= maxDist - 1)
                             {
                                 Army army = moveArmies[i];
                                 army.SetPath(battle.pos);
+                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                                {
+                                    Debug.Log("Move To Battle: " + battle.pos);
+                                }
                             }
                         }
                         moveArmies.Clear();
@@ -424,7 +449,7 @@ public class AIMoveArmiesWar
                 }
                 civArmiesTemp.RemoveAt(bestID);
                 dists.RemoveAt(bestID);
-                if (moveArmies_effectiveSize >= enemyEffectiveSize)
+                if (moveArmies_effectiveSize >= enemyEffectiveSize * (2f - civ.AIAggressiveness/100f))
                 {
                     if (moveArmies.Count > 0)
                     {
@@ -436,12 +461,20 @@ public class AIMoveArmiesWar
                             if (moveDists[i] > minDist)
                             {
                                 Army army = moveArmies[i];
-                                army.SetPath(closePos);                                
+                                army.SetPath(closePos);
+                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                                {
+                                    Debug.Log("Move Near Enemy: " + closePos + " Enemy Province: " + eArmy.pos);
+                                }
                             }
                             else if(minDist >= maxDist - 1) 
                             {
                                 Army army = moveArmies[i];
                                 army.SetPath(eArmy.pos);
+                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                                {
+                                    Debug.Log("Move To Enemy: " + eArmy.pos);
+                                }
                             }
                         }
                         moveArmies.Clear();
@@ -509,8 +542,16 @@ public class AIMoveArmiesWar
                 central.mergeTargets.Add(army);
                 army.isMerging = true;
                 army.SetPath(central.pos);
+                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                {
+                    Debug.Log("Move To Merge: " + central.pos + " From Province: " + army.pos);
+                }
                 total += army.regiments.Count;
             }
+        }
+        else
+        {
+            armies.AddRange(armiesToMerge);
         }
     }
     public static void DeterminePossibleProvinces(Civilisation civ)
@@ -523,23 +564,20 @@ public class AIMoveArmiesWar
         foreach(var province in civ.GetAllCivTiles()) 
         {
             TileData data = Map.main.GetTile(province);
-            if (data.occupied||data.underSiege)
+            if (data.occupied)
             {
                 allyProvinces.Add(province);
             }
         }
-        foreach(var allyid in civ.allies)
+        foreach(var allyid in civ.atWarTogether)
         {
             Civilisation ally = Game.main.civs[allyid];
-            if (ally.atWarWith.Exists(i => civ.atWarWith.Contains(i)))
+            foreach (var province in ally.GetAllCivTiles())
             {
-                foreach (var province in ally.GetAllCivTiles())
+                TileData data = Map.main.GetTile(province);
+                if ((data.occupied && (civ.atWarWith.Contains(data.occupiedByID) || data.occupiedByID == -1)))
                 {
-                    TileData data = Map.main.GetTile(province);
-                    if ((data.occupied && (civ.atWarWith.Contains(data.occupiedByID) || data.occupiedByID == -1) ) || data.underSiege)
-                    {
-                        allyProvinces.Add(province);
-                    }
+                    allyProvinces.Add(province);
                 }
             }
         }
@@ -581,6 +619,10 @@ public class AIMoveArmiesWar
                 }
                 else
                 {
+                    if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
+                    {
+                        Debug.Log("Move To Province: " + provs[0] + " From Province: " + army.pos);
+                    }
                     provs.RemoveAt(0);
                     break;
                 }

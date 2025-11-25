@@ -13,6 +13,18 @@ public class AIMoveFleetsPeace
         List<Fleet> freeFleets = new List<Fleet>();
         allyCoastalProvinces.Clear();
         Civilisation civ = Game.main.civs[civID];
+        if(civ.TotalMaxArmySize()/1000f >= civ.forceLimit.value - 1 && civ.fleets.Count < 2)
+        {
+            if(civ.civCoastalTiles.Count > 0)
+            {
+                TileData boatTile = civ.civCoastalTiles[0];
+                float cost = boatTile.GetRecruitCost(0);
+                if (civ.coins >= cost)
+                {
+                    boatTile.StartRecruitingBoat(0);
+                }              
+            }
+        }
         foreach(var fleet in civ.fleets)
         {
             if (AIMoveFleetsWar.ShouldMergeFleet(civ, fleet))

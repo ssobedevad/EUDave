@@ -2,7 +2,7 @@
 using System.IO;
 using TMPro;
 using TreeEditor;
-using Unity.VisualScripting;
+
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using UnityEngine.WSA;
@@ -364,7 +364,7 @@ public class TileData
     public bool CanPromoteStatus()
     {
         if (civID == -1) { return false; }
-        if(civ.maxSettlements.value <= civ.controlCentres.Count) { return false; }
+        if(civ.maxSettlements.value <= civ.controlCentres.Count && status == 0) { return false; }
         if (status >= 3) { return false; }
         if(totalDev < status * 10f + 5f) { return false; }
         return civ.adminPower >= PromoteStatusCost();

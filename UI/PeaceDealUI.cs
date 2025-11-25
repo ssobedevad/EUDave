@@ -2,8 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using TreeEditor;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 using UnityEngine.UI;
+using static UnityEditor.PlayerSettings;
 using static UnityEngine.GraphicsBuffer;
 
 public class PeaceDealUI : MonoBehaviour
@@ -282,17 +285,28 @@ public class PeaceDealUI : MonoBehaviour
             }
         }
     }
-    public static float ProvinceValue(Vector3Int pos, Vector3Int fromPos)
+    public static float ProvinceValue(TileData data,Civilisation forCiv)
     {
-        TileData data = Map.main.GetTile(pos);
         if (data == null) { return 0; }
-        float score = TileData.evenr_distance(pos, fromPos) * 10f;
-        score /= (data.totalDev * data.tileResource.Value + data.fortLevel * 5f);
+        float maximumControl = 10f;
+        foreach (var contolCentre in forCiv.controlCentres)
+        {
+            float controlDecay = (contolCentre.Value == 0 ? 100f : contolCentre.Value == 1 ? 50f : contolCentre.Value == 2 ? 25f : 10f) * (1f + forCiv.controlDecay.value);
+            float possibleMaximumControl = 100f - controlDecay * TileData.evenr_distance(data.pos, contolCentre.Key) + data.totalDev;
+            maximumControl = Mathf.Max(possibleMaximumControl, maximumControl);
+        }
+        float score = 100f - maximumControl;
+        score *= forCiv.cores.Contains(data.pos) ? 0.1f : forCiv.claims.Contains(data.pos) ? 0.5f : 1f;
+        score *= 1f / data.tileResource.Value;
         return score;
     }
     public static PeaceDeal Suggested(Civilisation target, War war)
     {
         Civilisation other = war.GetOpposingLeader(target.CivID);
+        float desiredMaxOE = war.attackerCiv == target ? other.AIAggressiveness : 50f;
+        float currentOE = other.overextension;
+        //float desiredMaxAE = war.attackerCiv == target ? other.AIAggressiveness * 0.5f : 25f;
+        //float currentAE = other.maxAE;
         bool forAttacker = (war.defenderCiv == target || war.defenderAllies.Contains(target));
         bool isPrimary = (target == war.attackerCiv || target == war.defenderCiv);
         PeaceDeal PeaceDeal = new PeaceDeal(war, target,other);
@@ -309,24 +323,32 @@ public class PeaceDealUI : MonoBehaviour
         }
         PriorityQueue<Vector3Int,float> possible = new PriorityQueue<Vector3Int,float>();
         List<Vector3Int> visited = PeaceDeal.possible.ToList();
-        visited.ForEach(i => possible.Enqueue(i, ProvinceValue(i,other.capitalPos)));
+        visited.ForEach(i => possible.Enqueue(i, ProvinceValue(Map.main.GetTile(i),other)));
         int loops = 0;
-        if(target.GetTotalWarScore(other.CivID) < 100)
+        if(target.GetTotalWarScore(other.CivID) < 100f)
         {
             if(other.diplomaticCapacity + target.governingCapacity < other.diplomaticCapacityMax.value && other.subjects.Count < other.GetTotalDev()/200 && target.subjects.Count == 0)
             {
-                PeaceDeal.RequestSubjugation();
-                Debug.Log("Subject");
+                PeaceDeal temp = new PeaceDeal(PeaceDeal);
+                temp.RequestSubjugation();
+                if (WillAccept(temp, target, war))
+                {
+                    PeaceDeal.RequestSubjugation();                    
+                }
             }
         }
         if (PeaceDeal.warScore < 95f)
         {
+            PeaceDeal.SetPossible();
             while (possible.Count > 0 && loops < 100)
             {
                 TileData tileData = Map.main.GetTile(possible.Dequeue());
-                if (PeaceDeal.warScore + tileData.GetWarScore(other.CivID) < (war.warScore * (forAttacker ? 1f : -1f)))
+                PeaceDeal temp = new PeaceDeal(PeaceDeal);
+                temp.AddProvince(tileData.pos);
+                if (WillAccept(temp,target,war) && currentOE + tileData.totalDev * 0.8f <= desiredMaxOE)
                 {
                     PeaceDeal.AddProvince(tileData.pos);
+                    currentOE = PeaceDeal.overextension;
                     List<Vector3Int> neighbors = tileData.GetNeighbors();
                     foreach (var neighbor in neighbors)
                     {
@@ -335,7 +357,7 @@ public class PeaceDealUI : MonoBehaviour
                         if (n.occupied && n.occupiedByID != other.CivID) { continue; }
                         if (!visited.Contains(neighbor))
                         {
-                            possible.Enqueue(neighbor, ProvinceValue(neighbor, other.capitalPos));
+                            possible.Enqueue(neighbor, ProvinceValue(n, other));
                             visited.Add(neighbor);
                         }
                     }
@@ -347,7 +369,16 @@ public class PeaceDealUI : MonoBehaviour
         {
             for (int i = 0; i < Mathf.Min((100f - PeaceDeal.warScore) / 5f, 5); i++)
             {
-                PeaceDeal.AddLoan();
+                PeaceDeal temp = new PeaceDeal(PeaceDeal);
+                temp.AddLoan();
+                if (WillAccept(temp, target, war))
+                {
+                    PeaceDeal.AddLoan();
+                }
+                else
+                {
+                    break;
+                }
             }
         }
         return PeaceDeal;        

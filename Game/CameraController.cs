@@ -78,7 +78,7 @@ public class CameraController : MonoBehaviour
             }
             if (Input.mouseScrollDelta.y < 0)
             {
-                if (cam.orthographicSize < 1000)
+                if (cam.orthographicSize < 30)
                 {
                     cam.orthographicSize -= Input.mouseScrollDelta.y;
                 }
@@ -88,7 +88,7 @@ public class CameraController : MonoBehaviour
                 camChange.Invoke();
                 foreach (var civ in Game.main.civs)
                 {
-                    if (civ.countryNames[0] != null)
+                    if (civ.countryNames != null)
                     {
                         Color c = civ.c;
                         c.a = Mathf.Clamp(cam.orthographicSize / 20f - 0.5f, 0f, 1f);

@@ -148,8 +148,9 @@ public class War
                     attackerAlly.atWarTogether.Add(civ.CivID);
                     civ.atWarTogether.Add(attackerAlly.CivID);
                 }
+                attackerAllies.Add(civ);
             }
-            attackerAllies.Add(civ);
+            
             
         }
         else
@@ -175,8 +176,9 @@ public class War
                     defenderAlly.atWarTogether.Add(civ.CivID);
                     civ.atWarTogether.Add(defenderAlly.CivID);
                 }
+                defenderAllies.Add(civ);
             }
-            defenderAllies.Add(civ);
+           
         }
         UpdateWarScore();
     }

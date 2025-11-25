@@ -9,12 +9,27 @@ public class PeaceDeal
     public List<Vector3Int> possible = new List<Vector3Int>();
     public int numLoans;
     public float warScore;
+    public float overextension;
+    public float aggressiveExpansion;
     public War war;
     public Civilisation target;
     public Civilisation taker;
     public bool fullAnnexation;
     public bool subjugation;
 
+    public PeaceDeal(PeaceDeal clone)
+    {
+        war = clone.war;
+        target = clone.target;
+        taker = clone.taker;
+        warScore = clone.warScore;
+        subjugation = clone.subjugation;
+        provinces = clone.provinces;
+        civTo = clone.civTo; 
+        possible = clone.possible;
+        numLoans = clone.numLoans;
+        fullAnnexation = clone.fullAnnexation;
+    }
     public PeaceDeal(War War,Civilisation Target,Civilisation Taker)
     {
         war = War;
@@ -69,10 +84,15 @@ public class PeaceDeal
     void RecalculateWarScore()
     {
         warScore = 0f;
+        overextension = 0f;
+        aggressiveExpansion = 0f;
+        bool isPrimary = (target == war.attackerCiv || target == war.defenderCiv);
         foreach (var item in provinces)
         {
             TileData prov = Map.main.GetTile(item);
             warScore += prov.GetWarScore(taker.CivID);
+            overextension += prov.totalDev * 0.8f;
+            aggressiveExpansion += taker.GetBaseAE(prov, target, 0.6f, isPrimary ? 1f : 1.5f);
         }
         if (subjugation) 
         {
