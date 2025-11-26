@@ -10,6 +10,11 @@ However, this does not mean that it cannot be implemented at smaller scale as ML
 
 ### The Game
 
+Here is some sample gameplay that I have edited together:
+
+https://github.com/user-attachments/assets/a0882a64-3d6d-41d0-8d26-a73d40463352
+
+
 ### Install
 
 Download zip of https://github.com/ssobedevad/EUDave-Builds
