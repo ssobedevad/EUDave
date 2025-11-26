@@ -20,7 +20,6 @@ public class AIManager : MonoBehaviour
         if (!Game.main.Started) { return; }
         UpdateMoveArmies();
         UpdateCivWars();
-        UpdateMoveRebels();
     }
     public void TenMinTick()
     {
@@ -48,36 +47,6 @@ public class AIManager : MonoBehaviour
         if (Game.main.gameTime.totalTicks() < 6 * 24 * 7) { return; }
         DeclareCivWars();
     }
-    public void UpdateMoveRebels()
-    {
-        if (Time.frameCount % armyMoveUpdateTime == 1)
-        {
-            foreach (var rebel in Game.main.rebelFactions)
-            {
-                if(rebel.path.Count > 0 || rebel.tile.underSiege) { continue; }
-                List<Vector3Int> provs = new List<Vector3Int>();
-                provs.AddRange(rebel.tile.civ.GetAllCivTiles());
-                provs.AddRange(rebel.tile.GetNeighbors());
-                provs.RemoveAll(i => Map.main.GetTile(i).occupied);
-                provs.RemoveAll(i => Map.main.GetTile(i).civID == -1);
-                provs.Sort((x, y) => AIMoveArmiesWar.ProvinceScore(y, rebel.pos).CompareTo(AIMoveArmiesWar.ProvinceScore(x, rebel.pos)));
-                int loops = 0;
-                while (provs.Count > 0 && loops < 100)
-                {
-                    if (!rebel.SetPath(provs[0]))
-                    {
-                        provs.RemoveAt(0);
-                    }
-                    else
-                    {
-                        provs.RemoveAt(0);
-                        break;
-                    }
-                    loops++;
-                }              
-            }
-        }
-    }    
     public void PromoteStatus(Civilisation civ)
     {
         if(civ.adminPower < 50)
@@ -89,8 +58,8 @@ public class AIManager : MonoBehaviour
         {
             List<TileData> tiles = civ.GetAllCivTileDatas().ToList();
             if (tiles.Count == 0) { return; }
-            tiles.Sort((x, y) => ((1f - y.maxControl) * y.totalDev).CompareTo((1f - x.maxControl) * x.totalDev));
-            if (tiles[0].maxControl < 50)
+            tiles.Sort((x, y) => ((100f - y.maxControl) * y.totalDev).CompareTo((100f - x.maxControl) * x.totalDev));
+            if (tiles[0].maxControl < 40)
             {
                 TileData tile = tiles[0];
                 if (tile.CanPromoteStatus())
@@ -177,7 +146,7 @@ public class AIManager : MonoBehaviour
             }
             else
             {
-                if (civ.overextension > 0)
+                if (civ.GetWars().Count > 0)
                 {
                     GreatSwampUI.Ask(civ, 0);
                 }
@@ -298,7 +267,8 @@ public class AIManager : MonoBehaviour
                         if (balance > building.fortLevel && civ.coins >= building.baseCost)
                         {
                             List<TileData> possible = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
-                            possible.RemoveAll(i => i.buildings.Contains(buildingID) || i.buildQueue.Contains(buildingID) || i.terrain.attackerDiceRoll == 0);
+                            possible.RemoveAll(i => !i.GetNeighborTiles().Exists(i => i.civID > -1 && i.civID != civ.CivID));
+                            possible.RemoveAll(i => i.buildings.Contains(buildingID) || i.buildQueue.Contains(buildingID));
                             if (possible.Count == 0) { continue; }
                             possible[0].StartBuilding(buildingID);
                         }
@@ -336,6 +306,33 @@ public class AIManager : MonoBehaviour
     }
     public void TakeIdeaGroups(Civilisation civ)
     {
+        if(civ.focusCD == 0)
+        {
+            if(civ.AIAdministrative >= 50f)
+            {
+                civ.focus = 0;
+                civ.focusCD = 6;
+            }
+            else if (civ.AIDiplomatic >= 50f)
+            {
+                civ.focus = 1;
+                civ.focusCD = 6;
+            }
+            else if (civ.AIMilitary >= 50f)
+            {
+                civ.focus = 2;
+                civ.focusCD = 6;
+            }
+            else
+            {
+                List<WeightedChoice> focus = new List<WeightedChoice>();
+                focus.Add(new WeightedChoice(0, (int)civ.AIAdministrative));
+                focus.Add(new WeightedChoice(1, (int)civ.AIAdministrative));
+                focus.Add(new WeightedChoice(2, (int)civ.AIAdministrative));
+                civ.focus = WeightedChoiceManager.getChoice(focus).choiceID;
+                civ.focusCD = 6;
+            }
+        }
         List<IdeaGroupData> taken = new List<IdeaGroupData>();
         for (int i = 0; i < civ.unlockedIdeaGroupSlots; i++)
         {
@@ -346,8 +343,14 @@ public class AIManager : MonoBehaviour
                 {
                     if (taken.Exists(i => i.id == a && i.type == 0)) { continue; }
                     int weight = 100;
-                    if(Map.main.IdeasA[a].name == "Economic Ideas") { weight = weight += civ.loans.Count; }
-                    if (civ.ruler.adminSkill + civ.advisorA.skillLevel + 3 < 7) { weight = weight/2; }
+                    if (Map.main.IdeasA[a].name == "Economic Ideas") { weight = weight += civ.loans.Count; }
+                    if (Map.main.IdeasA[a].name == "Admin Ideas") { weight = (civ.governingCapacity > civ.governingCapacityMax.value ? weight * 2 : 1); }
+                    if (Map.main.IdeasA[a].name == "Innovative Ideas") { weight = civ.GetAllCivTiles().Count < 10 ? 5 : 1; }
+                    if (Map.main.IdeasA[a].name == "Infrastructure Ideas") { weight = civ.GetAllCivTiles().Count < 10 ? 2 : 1; }
+                    if (Map.main.IdeasA[a].name == "Humanist Ideas") { weight = civ.religiousUnity < 0.7f ? 2 : 1; }
+                    if (civ.ruler.adminSkill + civ.advisorA.skillLevel + 3 < 7 ) { weight = weight/2; }
+                    if (civ.adminTech < civ.diploTech && civ.adminTech < civ.milTech) { weight = weight / 2; }
+                    weight = (int)(weight * (1f + civ.AIAdministrative / 100f));
                     ideaGroups.Add(new WeightedChoice(a, weight, "0"));
                 }
                 for (int a = 0; a < Map.main.IdeasD.Length; a++)
@@ -356,7 +359,11 @@ public class AIManager : MonoBehaviour
                     int weight = 100;
                     if (Map.main.IdeasD[a].name == "Influence Ideas") { weight = weight * civ.subjects.Count; }
                     if (Map.main.IdeasD[a].name == "Religious Ideas") { weight = (civ.government == 4 ? weight * 2 : weight/2); }
+                    if (Map.main.IdeasD[a].name == "Government Ideas") { weight = (civ.governingCapacity > civ.governingCapacityMax.value ? weight * 2 : 1); }
+                    if (Map.main.IdeasD[a].name == "Government Ideas") { weight = (civ.diplomaticCapacity > civ.diplomaticCapacityMax.value ? weight * 2 : 1); }
                     if (civ.ruler.diploSkill + civ.advisorD.skillLevel + 3 < 7) { weight = weight / 2; }
+                    if (civ.diploTech < civ.adminTech && civ.diploTech < civ.milTech) { weight = weight / 2; }
+                    weight = (int)(weight * (1f + civ.AIDiplomatic / 100f));
                     ideaGroups.Add(new WeightedChoice(a, weight, "1"));
                 }
                 for (int a = 0; a < Map.main.IdeasM.Length; a++)
@@ -364,7 +371,12 @@ public class AIManager : MonoBehaviour
                     if (taken.Exists(i => i.id == a && i.type == 2)) { continue; }
                     int weight = 100;
                     if (Map.main.IdeasM[a].name == "Steppes Ideas") { weight = (civ.government == 3 ? weight * 2 : 0); }
+                    if (Map.main.IdeasM[a].name == "General Ideas") { weight = (civ.government == 2 ? weight * 2 : 1); }
+                    if (Map.main.IdeasM[a].name == "Quality Ideas") { weight = (civ.discipline.value > 1.1f ? weight * 2 : 1); }
+                    if (Map.main.IdeasM[a].name == "Quantity Ideas") { weight = (civ.GetTotalDev() > 300 ? weight * 2 : 1); }
                     if (civ.ruler.milSkill + civ.advisorM.skillLevel + 3 < 7) { weight = weight / 2; }
+                    if (civ.milTech < civ.diploTech && civ.milTech < civ.adminTech) { weight = weight / 2; }
+                    weight = (int)(weight * (1f + civ.AIMilitary / 100f));
                     ideaGroups.Add(new WeightedChoice(a, weight, "2"));
                 }
                 if (ideaGroups.Count > 0)
@@ -400,7 +412,7 @@ public class AIManager : MonoBehaviour
                 }
             }
         }
-        if (civ.stability < 0 && !needCores && civ.GetStabilityCost() <= 100f)
+        if (civ.stability < 0 && !needCores && civ.GetStabilityCost() <= 130f)
         {
             if (civ.adminPower >= civ.GetStabilityCost() && civ.stability < 3)
             {
@@ -431,15 +443,18 @@ public class AIManager : MonoBehaviour
         {
             monthDiff = 100;
         }
-        for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
+        if (monthDiff > 0)
         {
-            if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
+            for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
             {
-                if (civ.ideaGroups[j].type == 0 && civ.ideaGroups[j].unlockedLevel < 7)
+                if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
                 {
-                    if (civ.adminPower >= IdeasUI.GetIdeaCost(civ))
+                    if (civ.ideaGroups[j].type == 0 && civ.ideaGroups[j].unlockedLevel < 7)
                     {
-                        IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
+                        if (civ.adminPower >= IdeasUI.GetIdeaCost(civ))
+                        {
+                            IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
+                        }
                     }
                 }
             }
@@ -468,6 +483,15 @@ public class AIManager : MonoBehaviour
         int i = civ.CivID;
         int cost = 600;
         float monthDiff = 0;
+        List<Civilisation> civSubjects = civ.subjects.ConvertAll(i => Game.main.civs[i]);
+        if (civSubjects.Count > 0 && civ.diploRep.value >= 0)
+        {
+            civSubjects.Sort((x,y) => x.GetTotalDev().CompareTo(y.GetTotalDev()));
+            if (!civSubjects[0].integrating && civSubjects[0].libertyDesire < 50f)
+            {
+                civSubjects[0].integrating = true;
+            }
+        }
         if (Map.main.TechD.Length > civ.diploTech + 1)
         {
             Tech tech = Map.main.TechD[civ.diploTech + 1];
@@ -488,15 +512,18 @@ public class AIManager : MonoBehaviour
         {
             monthDiff = 100;
         }
-        for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
+        if (monthDiff > 0)
         {
-            if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
+            for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
             {
-                if (civ.ideaGroups[j].type == 1 && civ.ideaGroups[j].unlockedLevel < 7)
+                if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
                 {
-                    if (civ.diploPower >= IdeasUI.GetIdeaCost(civ))
+                    if (civ.ideaGroups[j].type == 1 && civ.ideaGroups[j].unlockedLevel < 7)
                     {
-                        IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
+                        if (civ.diploPower >= IdeasUI.GetIdeaCost(civ))
+                        {
+                            IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
+                        }
                     }
                 }
             }
@@ -550,15 +577,18 @@ public class AIManager : MonoBehaviour
         {
             monthDiff = 100;
         }
-        for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
+        if (monthDiff > 0)
         {
-            if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
+            for (int j = 0; j < civ.unlockedIdeaGroupSlots; j++)
             {
-                if (civ.ideaGroups[j].type == 2 && civ.ideaGroups[j].unlockedLevel < 7)
+                if (civ.ideaGroups[j] != null && civ.ideaGroups[j].active)
                 {
-                    if (civ.milPower >= IdeasUI.GetIdeaCost(civ))
+                    if (civ.ideaGroups[j].type == 2 && civ.ideaGroups[j].unlockedLevel < 7)
                     {
-                        IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
+                        if (civ.milPower >= IdeasUI.GetIdeaCost(civ))
+                        {
+                            IdeasUI.BuyIdea(j, civ.ideaGroups[j].unlockedLevel, civ);
+                        }
                     }
                 }
             }
@@ -582,8 +612,9 @@ public class AIManager : MonoBehaviour
     {
         float score = attacker.AIAggressiveness;
         score -= 100f * attacker.GetWars().Count;
+        score -= 100f * defender.GetWars().Count;
         score += 200f * ((float)attacker.GetTotalTilePopulation() / (float)attacker.GetTotalMaxPopulation() - 0.8f);
-        score += Mathf.Min((attacker.AIAggressiveness - attacker.overextension) * 10f,0);
+        score += attacker.overextension >= attacker.AIAggressiveness ? -1000f : 0f;
         score += Mathf.Clamp(attacker.GetBalance(),-100f,100f);
         score += Mathf.Min(attacker.claims.FindAll(i => defender.civTiles.Contains(i)).Count * 5f,20f);
         score += Mathf.Min(attacker.cores.FindAll(i => defender.civTiles.Contains(i)).Count * 20f,100f);
@@ -593,6 +624,9 @@ public class AIManager : MonoBehaviour
         score += attacker.overlordID > -1 && attacker.libertyDesire < 50f ? -1000f : 0f;
         score += attacker.overlordID > -1 && attacker.libertyDesire > 50f && defender.CivID == attacker.overlordID ? 20f : 0f;
         score += attacker.overlordID > -1 && defender.CivID != attacker.overlordID ? -1000f : 0f;
+        score += attacker.allies.Contains(defender.CivID) ? -1000f : 0f;
+        score += attacker.subjects.Contains(defender.CivID) ? -1000f : 0f;
+        score += attacker.militaryAccess.Contains(defender.CivID) ? -1000f : 0f;
 
         float armyStrength = attacker.TotalMilStrength();
         float targetStrength = defender.TotalMilStrength();

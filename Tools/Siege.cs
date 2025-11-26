@@ -157,12 +157,6 @@ public class Siege
         }
         else if (leaderCivID != target.civID && (target.civ.atWarWith.Contains(leaderCivID)|| leaderCivID == -1) && (!target.occupied || target.occupiedByID == -1 || (leaderCivID == -1 && target.occupied && target.occupiedByID > -1)) )
         {
-            if(leaderCivID == -1 && (!target.HasNeighboringActiveFort(-1)))
-            {
-                target.control = Mathf.Clamp(target.control - 10f,0f,target.maxControl);
-                target.heldByID = RebelArmyStats.GetRebelStats(armiesSieging[0]).rebelDemandsID;
-                target.heldByType = RebelArmyStats.GetRebelStats(armiesSieging[0]).rebelType;
-            }
             target.occupied = true;
             int occupyId = leaderCivID;
             if (leaderCivID > -1)
@@ -191,11 +185,6 @@ public class Siege
                 {
                     n.occupied = true;
                     n.occupiedByID = occupyId;
-                    if (leaderCivID == -1)
-                    {
-                        n.heldByID = RebelArmyStats.GetRebelStats(armiesSieging[0]).rebelDemandsID;
-                        n.heldByType = RebelArmyStats.GetRebelStats(armiesSieging[0]).rebelType;
-                    }
                 }
             }
         }

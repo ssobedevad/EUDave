@@ -47,7 +47,17 @@ public static class Pathfinding
                     if (!army.exiled && army.civID > -1)
                     {                       
                         Civilisation civ = Game.main.civs[army.civID];
-                        if (!army.HasAccess(tile.civID)) { continue; }
+                        if (!army.HasAccess(tile.civID)) 
+                        {
+                            if (tile.civID > -1 && tile.civ.AccessOffer(civ) && !civ.isPlayer && civ.diplomaticCapacity < civ.diplomaticCapacityMax.value)
+                            {
+                                civ.AccessRequest(tile.civID);
+                            }
+                            else
+                            {
+                                continue;
+                            }
+                        }
                         if (!army.CanMoveHostileZOC(n, current)) { continue; }
                         if (tile.armiesOnTile.Exists(i => civ.atWarWith.Contains(i.civID)) && n != destination && !army.retreating) { continue; }
                     }

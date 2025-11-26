@@ -25,6 +25,17 @@ public class War
         if (attackerCiv.CivID == civID || defenderCiv.CivID == civID|| attackerAllies.Exists(i=>i.CivID == civID) || defenderAllies.Exists(i => i.CivID == civID)) { return true; }
         return false;
     }
+    public bool InvolvingAll(List<int> civIDs)
+    {       
+        foreach(var id in civIDs)
+        {
+            if (!Involving(id))
+            {
+                return false;
+            }
+        }       
+        return true;
+    }
     public string GetName()
     {
         if (casusBelli.Name == "")

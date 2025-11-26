@@ -168,6 +168,9 @@ public class DiplomacyUIPanel : MonoBehaviour
             diplomaticActions[1].GetComponentsInChildren<Image>()[1].color = wouldAccept ? Color.green : Color.red;
             diplomaticActions[1].GetComponentsInChildren<Image>()[1].sprite = wouldAccept ? UIManager.main.icons[0] : UIManager.main.icons[1];
             diplomaticActions[1].GetComponentInChildren<HoverText>().text = hoverText;
+            bool milAccessAccept = civ.AccessOffer(myCiv);
+            diplomaticActions[2].GetComponentsInChildren<Image>()[1].color = milAccessAccept ? Color.green : Color.red;
+            diplomaticActions[2].GetComponentsInChildren<Image>()[1].sprite = milAccessAccept ? UIManager.main.icons[0] : UIManager.main.icons[1];
         }
         else
         {
@@ -218,6 +221,7 @@ public class DiplomacyUIPanel : MonoBehaviour
         {
             diplomaticActions[0].GetComponentInChildren<TextMeshProUGUI>().text = Player.myPlayer.myCiv.atWarWith.Contains(diploCivID)? "Sue for Peace" : "Declare War";
             diplomaticActions[1].GetComponentInChildren<TextMeshProUGUI>().text = Player.myPlayer.myCiv.allies.Contains(diploCivID) ? "Break Alliance" : "Offer Alliance";
+            diplomaticActions[2].GetComponentInChildren<TextMeshProUGUI>().text = Player.myPlayer.myCiv.militaryAccess.Contains(diploCivID) ? "Cancel Access" : "Request Access";
         }
         List<War> civWars = civ.GetWars();
         while (wars.Count != civWars.Count)
@@ -330,11 +334,11 @@ public class DiplomacyUIPanel : MonoBehaviour
         {
             if (!Player.myPlayer.myCiv.militaryAccess.Contains(diploCivID))
             {
-                Player.myPlayer.myCiv.militaryAccess.Add(diploCivID);
+                Player.myPlayer.myCiv.AccessRequest(diploCivID);
             }
             else
             {
-                Player.myPlayer.myCiv.militaryAccess.Remove(diploCivID);
+                Player.myPlayer.myCiv.RemoveAccess(diploCivID);
             }
         }
     }
@@ -369,14 +373,14 @@ public class DiplomacyUIPanel : MonoBehaviour
     {
         string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].value > 0? "Opinion: " + 0.25f * target.opinionOfThem[fromCiv.CivID].value +"\n": "";
         reasons += fromCiv.diploRep.value > 0 ? "Diplo Rep: " + fromCiv.diploRep.value * 5f  + "\n": "";
-        reasons += Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f > 0f ? "Relative Military Strength: " + Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f : "";       
+        reasons += Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) > 0f ? "Relative Military Strength: " + Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) : "";       
         return reasons;
     }
     public static string GetNegativeReasons(Civilisation target, Civilisation fromCiv)
     {
         string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].value < 0 ? "Opinion: " + -0.25f * target.opinionOfThem[fromCiv.CivID].value + "\n" : "";
         reasons += fromCiv.diploRep.value < 0 ? "Diplo Rep: " + fromCiv.diploRep.value * -5f + "\n": "";
-        reasons += Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f < 0f ? "Relative Military Strength: " + Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * -12f + "\n" : "";
+        reasons += Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) < 0f ? "Relative Military Strength: " + Mathf.Clamp(-50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) + "\n" : "";
         reasons += Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) > 0 ? "Distance Between Borders: " + Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) + "\n" : "";
         reasons += fromCiv.atWarWith.Count > 0 ? "You are at War: 1000\n" : "";
         reasons += (fromCiv.CivID == target.overlordID) ? "They are a your subject: 1000\n" : "";
@@ -390,7 +394,7 @@ public class DiplomacyUIPanel : MonoBehaviour
     {
         float choice = 0.25f * target.opinionOfThem[fromCiv.CivID].value;
         choice += 5f * fromCiv.diploRep.value;
-        choice += Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - target.TotalMilStrength() / 1000f) * 12f;
+        choice += Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f);
         choice -= Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10);
         choice += fromCiv.atWarWith.Count > 0 ? -1000 : 0;
         choice += (target.overlordID == fromCiv.CivID) ? -1000 : 0;

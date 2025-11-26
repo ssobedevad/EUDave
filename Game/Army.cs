@@ -167,19 +167,7 @@ public class Army : MonoBehaviour
                     path.Clear();
                 }
             }
-        }
-        else
-        {
-            RebelArmyStats rebelArmyStats = Game.main.rebelStats[Game.main.rebelFactions.IndexOf(this)];
-            foreach (var regiment in regiments)
-            {
-                regiment.maxMorale = rebelArmyStats.morale;
-                regiment.meleeDamage = rebelArmyStats.units[regiment.type].meleeDamage.value;
-                regiment.flankingDamage = rebelArmyStats.units[regiment.type].flankingDamage.value;
-                regiment.rangedDamage = rebelArmyStats.units[regiment.type].rangedDamage.value;
-                regiment.flankingRange = rebelArmyStats.units[regiment.type].flankingRange;
-            }
-        }
+        }       
         if (inBattle)
         {           
             if(Player.myPlayer.selectedArmies.Contains(this))
@@ -262,12 +250,6 @@ public class Army : MonoBehaviour
         if (civID > -1)
         {
             Game.main.civs[civID].armies.Remove(this);
-        }
-        else
-        {
-            int index = Game.main.rebelFactions.IndexOf(this);
-            Game.main.rebelFactions.Remove(this);
-            Game.main.rebelStats.RemoveAt(index);
         }
     }
     public void CombineInto(Army army)
@@ -359,22 +341,7 @@ public class Army : MonoBehaviour
 
                 strength += power;
             }            
-        }
-        else
-        {
-            RebelArmyStats rebelArmyStats = RebelArmyStats.GetRebelStats(this);
-            foreach (var unit in regiments)
-            {
-                if (unit.type < 0 || unit.type >= rebelArmyStats.units.Length) { continue; }
-                float power = (float)unit.size / (float)unit.maxSize;
-                power *= unit.morale;
-                power *= Mathf.Max(rebelArmyStats.units[unit.type].meleeDamage.value * (1f + ((general != null && general.active) ? general.meleeSkill * 0.1f : 0f))
-                    , rebelArmyStats.units[unit.type].flankingDamage.value * (1f + ((general != null && general.active) ? general.flankingSkill * 0.1f : 0f))
-                    , rebelArmyStats.units[unit.type].rangedDamage.value * (1f + ((general != null && general.active) ? general.rangedSkill * 0.1f : 0f)));
-                power *= 1f + rebelArmyStats.units[unit.type].combatAbility.value;
-                strength += power;
-            }
-        }
+        }       
         return strength;
     }
     public float AverageMorale()
@@ -479,15 +446,7 @@ public class Army : MonoBehaviour
         Civilisation civ = Game.main.civs[civID];
         if (tileData._battle != null)
         {
-            if (tileData._battle.AttackerRebels)
-            {
-                tileData._battle.AddToBattle(this, civID == -1);
-            }
-            else if (tileData._battle.DefenderRebels)
-            {
-                tileData._battle.AddToBattle(this, civID != -1);
-            }
-            else if (tileData._battle.attackerCiv.CivID == civID || civ.atWarWith.Contains(tileData._battle.defenderCiv.CivID))
+            if (tileData._battle.attackerCiv.CivID == civID || civ.atWarWith.Contains(tileData._battle.defenderCiv.CivID))
             {
                 tileData._battle.AddToBattle(this, true);
             }
@@ -546,7 +505,7 @@ public class Army : MonoBehaviour
     {        
         if (defenders.Count > 0 && attackers.Count > 0)
         {
-            War war = Game.main.ongoingWars.Find(i => i.Between(defenders[0].civID, civID));
+            War war = Game.main.ongoingWars.Find(i => i.InvolvingAll(new List<int>() { attackers[0].civID, defenders[0].civID }));
             Battle newBattle;
             if (war != null)
             {
@@ -858,6 +817,14 @@ public class Army : MonoBehaviour
             }
             if (To.hasFort && !From.hasFort)
             {
+                return true;
+            }
+            else if (To.hasFort && From.hasFort)
+            {
+                if(To.civID != From.civID)
+                { return false; }
+                if (!From.occupied)
+                { return false; }
                 return true;
             }
             else

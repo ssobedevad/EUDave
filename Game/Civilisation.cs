@@ -64,7 +64,6 @@ public class Civilisation
     public IdeaGroupData[] ideaGroups = new IdeaGroupData[8];
     public int totalIdeas = 0;
     public int unlockedIdeaGroupSlots = 0;
-    public Dictionary<string,RebelFaction> rebelFactions = new Dictionary<string,RebelFaction>();
     public List<Loan> loans = new List<Loan>();
     public float armyTradition;
     public float overextension;
@@ -396,7 +395,11 @@ public class Civilisation
         milPower += 100 + 16 * ruler.milSkill;
         coins += coinsIncome * 16;
         AddArmyTradition(ruler.milSkill * 5f + monthlyTradition.value * 6);
-        AIAggressiveness = Mathf.Clamp((ruler.milSkill+ruler.adminSkill + ruler.diploSkill) * 5f + UnityEngine.Random.Range(-40f, 40f),1f,100f);
+        SetAILevels();
+    }
+    public void SetAILevels()
+    {
+        AIAggressiveness = Mathf.Clamp(((ruler.milSkill + ruler.adminSkill + ruler.diploSkill) * 5f + UnityEngine.Random.Range(-40f, 40f)) , 0f,100f) * Game.main.AI_MAX_AGGRESSIVENESS/100f;
         AIAdministrative = Mathf.Clamp(ruler.adminSkill * 16f + UnityEngine.Random.Range(1f, 40f), 1f, 100f);
         AIDiplomatic = Mathf.Clamp(ruler.diploSkill * 16f + UnityEngine.Random.Range(1f, 40f), 1f, 100f);
         AIMilitary = Mathf.Clamp(ruler.milSkill * 16f + UnityEngine.Random.Range(1f, 40f), 1f, 100f);
@@ -1488,20 +1491,6 @@ public class Civilisation
                     }
                 }
             }
-            if (tileData.unrest > 0)
-            {
-                if(rebelFactions.ContainsKey(tileData.region))
-                {
-                    if (!rebelFactions[tileData.region].provinces.Contains(tileData.pos))
-                    {
-                        rebelFactions[tileData.region].provinces.Add(tileData.pos);
-                    }
-                }
-                else
-                {
-                    rebelFactions.Add(tileData.region,new RebelFaction(tileData.pos));
-                }
-            }
         }
         religiousUnity = Mathf.Clamp((float)religiousUnity / (float)totalDev,0f,1f);
         stabilityCost.UpdateModifier("Religious Unity", (1f - religiousUnity), 1);
@@ -1511,10 +1500,6 @@ public class Civilisation
         dailyControl.UpdateModifier("Overextension", (-overextension * 0.05f) / 100f, 1);
         improveRelations.UpdateModifier("Overextension", (-overextension * 0.5f) / 100f, 1);
         globalUnrest.UpdateModifier("Overextension", (overextension * 5f) / 100f, 1);
-        foreach (var rebelFaction in rebelFactions.Values.ToList())
-        {
-            //rebelFaction.Update();
-        }
         if (ruler.active)
         {
             adminPower = Mathf.Min(999,adminPower + 3 + ruler.adminSkill + (advisorA.active ? advisorA.skillLevel : 0) + (focus > -1 ? ( focus == 0 ? 2: -1) : 0));
@@ -1583,6 +1568,7 @@ public class Civilisation
         else if (!ruler.active)
         {
             ruler = new Ruler(heir);
+            SetAILevels();
             AddStability(-1);
             if (religion == 2 && religiousPoints > -1)
             {
@@ -2110,7 +2096,7 @@ public class Civilisation
     {
         float choice = 0.25f * opinionOfThem[fromCiv.CivID].value;
         choice += 5f * fromCiv.diploRep.value;
-        choice += Mathf.Atan(fromCiv.TotalMilStrength() / 1000f - TotalMilStrength() / 1000f) * 12f;
+        choice += Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + TotalMilStrength()) - 1f), -20f, 20f);
         choice -= Mathf.Max(0,MinimumDistTo(fromCiv) - 10);
         choice += fromCiv.atWarWith.Count > 0 ? -1000 : 0;
         choice += (fromCiv.overlordID == CivID) ? -1000 : 0;
@@ -2118,6 +2104,32 @@ public class Civilisation
         choice += (overlordID > -1 && libertyDesire < 50f) ? -1000 : 0;
         choice += ((diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > diplomaticCapacityMax.value? ((diplomaticCapacity +25 + fromCiv.governingCapacity *0.5f - diplomaticCapacityMax.value)/ diplomaticCapacityMax.value) * -100f : 0f);
         //Debug.Log("Choice Alliance Offer " + choice);
+        return choice > 0;
+    }
+    public void RemoveAccess(int targetID)
+    {
+        if (!militaryAccess.Contains(targetID) || targetID == -1 || targetID == CivID ) { return; }
+        Civilisation target = Game.main.civs[targetID];
+        militaryAccess.Remove(targetID);
+        UpdateDiplomaticCapacity();
+    }
+    public void AccessRequest(int targetID)
+    {
+        if (militaryAccess.Contains(targetID) || targetID == -1 || targetID == CivID || atWarWith.Contains(targetID)) { return; }
+        Civilisation target = Game.main.civs[targetID];
+        if (target.AccessOffer(this))
+        {
+            militaryAccess.Add(targetID);
+            UpdateDiplomaticCapacity();
+        }
+    }
+    public bool AccessOffer(Civilisation fromCiv)
+    {
+        float choice = 0.2f * opinionOfThem[fromCiv.CivID].value;
+        choice += 3f * fromCiv.diploRep.value;
+        choice += Mathf.Clamp(50f * ((1f+fromCiv.TotalMilStrength()) / (1f+TotalMilStrength()) -1f),-100f,100f);
+        choice += fromCiv.allies.Contains(CivID) ? 50f : 0f;
+        choice += fromCiv.atWarWith.Exists(i=>rivals.Contains(i)) ? 50f : 0f;
         return choice > 0;
     }
 
@@ -2167,6 +2179,7 @@ public class Civilisation
 
                 tileScore += tileData.hasZOC ? 2 : 0;
                 tileScore += tileData.hasFort ? 5 : 0;
+                tileScore += tileData.recruitQueue.Count * -10f;
             }
             else
             {

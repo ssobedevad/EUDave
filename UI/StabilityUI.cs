@@ -51,67 +51,40 @@ public class StabilityUI : MonoBehaviour
         text += civ.stabilityCost.ToString();
         stabButton.GetComponent<HoverText>().text = text;
         stabButton.interactable = civ.stability < 3;
-        if (!coreMode)
+        
+        List<TileData> tiles = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
+        tiles.RemoveAll(i => i.hasCore);
+        while (cores.Count != tiles.Count)
         {
-            List<RebelFaction> factions = civ.rebelFactions.Values.ToList();
-            factions.RemoveAll(i => i.totalUnrest <= 0 || i.provinces.Count <= 0 || i.size <= 1000);
-            while (rebelFactions.Count != factions.Count)
+            if (cores.Count > tiles.Count)
             {
-                if (rebelFactions.Count > factions.Count)
-                {
-                    int lastIndex = rebelFactions.Count - 1;
-                    Destroy(rebelFactions[lastIndex]);
-                    UIManager.main.UI.Remove(rebelFactions[lastIndex]);
-                    rebelFactions.RemoveAt(lastIndex);
-                }
-                else
-                {
-                    GameObject item = Instantiate(rebelFactionPrefab, rebelFactionTransform);
-                    rebelFactions.Add(item);
-                    UIManager.main.UI.Add(item);
-                }
+                int lastIndex = cores.Count - 1;
+                Destroy(cores[lastIndex]);
+                cores.RemoveAt(lastIndex);
             }
-            for (int i = 0; i < factions.Count; i++)
+            else
             {
-                RebelFaction rebelFaction = factions[i];
-                rebelFactions[i].GetComponentInChildren<TextMeshProUGUI>().text = "size: " + rebelFaction.size + " total unrest: " + rebelFaction.totalUnrest + " uprising progress: " + rebelFaction.uprisingProgress + " total provinces: " + rebelFaction.provinces.Count;
+                GameObject item = Instantiate(corePrefab, coreTransform);
+                Button coreButton = item.GetComponentInChildren<Button>();
+                int id = cores.Count;
+                coreButton.onClick.AddListener(delegate { CoreClick(id); });
+                cores.Add(item);
             }
         }
-        else
+        for (int i = 0; i < tiles.Count; i++)
         {
-            List<TileData> tiles = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
-            tiles.RemoveAll(i => i.hasCore);
-            while (cores.Count != tiles.Count)
-            {
-                if (cores.Count > tiles.Count)
-                {
-                    int lastIndex = cores.Count - 1;
-                    Destroy(cores[lastIndex]);
-                    cores.RemoveAt(lastIndex);
-                }
-                else
-                {
-                    GameObject item = Instantiate(corePrefab, coreTransform);
-                    Button coreButton = item.GetComponentInChildren<Button>();
-                    int id = cores.Count;
-                    coreButton.onClick.AddListener(delegate { CoreClick(id); });
-                    cores.Add(item);
-                }
-            }
-            for (int i = 0; i < tiles.Count; i++)
-            {
-                TileData tile = tiles[i];
-                Image[] images = cores[i].GetComponentsInChildren<Image>();
-                TextMeshProUGUI[] texts = cores[i].GetComponentsInChildren<TextMeshProUGUI>();
-                images[1].color = civ.c;
-                texts[0].text = tile.Name;
-                texts[1].text = tile.totalDev + "";
-                texts[2].text = (tile.totalDev * 0.8f) + "%";
-                texts[3].text = tile.GetCoreCost() + "";
-                texts[4].text = tile.needsCoring() ? "Core" : tile.coreTimer + "";
-                cores[i].GetComponentInChildren<Button>().interactable = tile.needsCoring();
-            }
+            TileData tile = tiles[i];
+            Image[] images = cores[i].GetComponentsInChildren<Image>();
+            TextMeshProUGUI[] texts = cores[i].GetComponentsInChildren<TextMeshProUGUI>();
+            images[1].color = civ.c;
+            texts[0].text = tile.Name;
+            texts[1].text = tile.totalDev + "";
+            texts[2].text = (tile.totalDev * 0.8f) + "%";
+            texts[3].text = tile.GetCoreCost() + "";
+            texts[4].text = tile.needsCoring() ? "Core" : tile.coreTimer + "";
+            cores[i].GetComponentInChildren<Button>().interactable = tile.needsCoring();
         }
+        
     }
     void CoreClick(int id)
     {

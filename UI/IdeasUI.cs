@@ -81,7 +81,7 @@ public class IdeasUI : MonoBehaviour
             if (civ.nationalIdeas.ideas.Length <= ideaIndex) { return; }
             
             Idea natI = civ.nationalIdeas.ideas[ideaIndex];
-            if (civ == Player.myPlayer.myCiv)
+            if (civ.CivID == Player.myPlayer.myCivID)
             {
                 Debug.Log(natI.name + " Unlock");
             }

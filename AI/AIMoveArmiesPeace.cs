@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -12,9 +13,20 @@ public class AIMoveArmiesPeace
         List<Army> freeArmies = new List<Army>();
         allyProvinces.Clear();
         Civilisation civ = Game.main.civs[civID];
+        if(civ.militaryAccess.Count > 0)
+        {
+            foreach(var civid in civ.militaryAccess.ToList())
+            {                
+                civ.RemoveAccess(civid);
+            }
+        }
         foreach(var army in civ.armies)
         {
-            if (AIMoveArmiesWar.ShouldMergeArmy(civ, army))
+            if (army.exiled && army.path.Count == 0)
+            {
+                army.SetPath(army.RetreatProvince());
+            }
+            else if (AIMoveArmiesWar.ShouldMergeArmy(civ, army))
             {
                 if (!army.isMerging)
                 {
@@ -23,35 +35,40 @@ public class AIMoveArmiesPeace
             }
             else
             {
-                if (army.exiled && army.path.Count == 0)
-                {
-                    army.SetPath(army.RetreatProvince());
-                }
-                else if(!army.exiled && army.path.Count == 0 && !army.tile.underSiege)
-                {
-                    freeArmies.Add(army);
-                }
+                freeArmies.Add(army);
             }
         }
         if (armiesToMerge.Count > 1)
         {
-            Army central = armiesToMerge[0];
-            int total = central.regiments.Count;
-            if (total + armiesToMerge[1].regiments.Count < central.tile.supplyLimit)
+            int total = 0;
+            Army central = null;
+            for (int i = 0; i < armiesToMerge.Count; i++)
             {
-                central.isMerging = true;
-                for (int i = 1; i < armiesToMerge.Count; i++)
+                Army army = armiesToMerge[i];
+                if (central == null) { central = army; total = central.regiments.Count; continue; }
+                if (total + army.regiments.Count < central.tile.supplyLimit)
                 {
-                    Army army = armiesToMerge[i];
-                    if (total + army.regiments.Count > central.tile.supplyLimit)
+                    if (central.pos == army.pos)
                     {
-                        break;
+                        army.CombineInto(central);
+                        continue;
                     }
+                    central.isMerging = true;
                     army.mergeTargets.Add(central);
                     central.mergeTargets.Add(army);
                     army.isMerging = true;
                     army.SetPath(central.pos);
                     total += army.regiments.Count;
+                }
+                else
+                {
+                    if (!central.isMerging)
+                    {
+                        freeArmies.Add(central);
+                    }
+                    central = army;
+                    total = central.regiments.Count;
+                    continue;
                 }
             }
         }
@@ -79,12 +96,13 @@ public class AIMoveArmiesPeace
             AddHomeProvinces(civ);
             MoveArmiesToProvinces(freeArmies);
         }
-        if(civ.TotalMaxArmySize()/1000f < (civ.forceLimit.value -1) && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f && Game.main.Started)
+        if(civ.TotalMaxArmySize()/1000f < (civ.forceLimit.value - 1) && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f && Game.main.Started)
         {
-            TileData capitalTile = Map.main.GetTile(civ.SafeProvince());
-            if (capitalTile.recruitQueue.Count == 0)
+            TileData safeProv = Map.main.GetTile(civ.SafeProvince());
+            if (safeProv.recruitQueue.Count == 0)
             {
-                capitalTile.StartRecruiting(0);
+                int desiredUnitType = AIMoveArmiesWar.GetDesiredUnitType(civ);
+                safeProv.StartRecruiting(desiredUnitType);
             }
         }
     }
@@ -93,11 +111,15 @@ public class AIMoveArmiesPeace
         foreach (var province in civ.GetAllCivTiles())
         {
             TileData data = Map.main.GetTile(province);
-            if (data.occupied || data.underSiege)
-            {
-                allyProvinces.Add(province);
-            }
+            allyProvinces.Add(province);
         }
+    }
+    public static float ProvinceScore(TileData tile,Civilisation civ,Army army)
+    {
+        float score = tile.supplyLimit;
+        score -= TileData.evenr_distance(tile.pos, army.pos) * 2;
+        score -= tile.armiesOnTile.Count > 1 ? tile.armiesOnTile.Count * 10f : 0f;
+        return score;
     }
     public static void MoveArmiesToProvinces(List<Army> armies)
     {
@@ -106,23 +128,11 @@ public class AIMoveArmiesPeace
         for (int i = 0; i < armies.Count; i++)
         {
             Army army = armies[i];
-            provs.Sort((x, y) => AIMoveArmiesWar.ProvinceScore(y, army.pos).CompareTo(AIMoveArmiesWar.ProvinceScore(x, army.pos)));
+            provs.Sort((x, y) => ProvinceScore(Map.main.GetTile(y), Game.main.civs[army.civID], army).CompareTo(ProvinceScore(Map.main.GetTile(x), Game.main.civs[army.civID], army)));
             int loops = 0;
             while (provs.Count > 0 && loops < 100)
-            {
-                if (Game.main.rebelFactions.Exists(i=>i.pos == provs[0]))
-                {
-                    List<Army> rebelsOnTile = Game.main.rebelFactions.FindAll(i => i.pos == provs[0]);
-                    float rebelStrength = 0;
-                    rebelsOnTile.ForEach(i => rebelStrength += i.ArmyStrength());
-                    if (rebelStrength > army.ArmyStrength())
-                    {
-                        provs.RemoveAt(0);
-                        loops++;
-                        continue;
-                    }
-                }
-                if (!army.SetPath(provs[0]))
+            {               
+                if (army.pos != provs[0] && !army.SetPath(provs[0]))
                 {
                     provs.RemoveAt(0);
                 }

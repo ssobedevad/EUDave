@@ -59,24 +59,11 @@ public class BattleUIPanel : MonoBehaviour
             else
             {
                 bonusRollD.transform.parent.gameObject.SetActive(false);
-            }
+            }  
             
-            if (battle.AttackerRebels)
-            {
-                civColA.color = Color.black;
-            }
-            else
-            {
-                civColA.color = battle.attackerCiv.c;
-            }
-            if (battle.DefenderRebels)
-            {
-                civColD.color = Color.black;
-            }
-            else
-            {
-                civColD.color = battle.defenderCiv.c;
-            }
+            civColA.color = battle.attackerCiv.c;                        
+            civColD.color = battle.defenderCiv.c;
+            
             if (battle.attackingReserves != null && battle.attackingReserves.Count > 0)
             {
                 float armyQ = 0;
@@ -301,30 +288,14 @@ public class BattleUIPanel : MonoBehaviour
             moraleFillD.fillAmount = battle.AverageMorale(false) / battle.AverageMaxMorale(false);
             moraleFillTextD.text = "Morale: " + Mathf.Round(battle.AverageMorale(false) * 100f) / 100f + "/" + Mathf.Round(battle.AverageMaxMorale(false) * 100f) / 100f;
 
-            if (battle.AttackerRebels)
-            {
-                disciplineTextA.text = Mathf.Round(battle.attackerRebelStats.discipline * 100f) + "%";
-                moraleTextA.text = Mathf.Round(battle.attackerRebelStats.morale * 100f) / 100f + "";
-                tacticsTextA.text = Mathf.Round(battle.attackerRebelStats.tactics * battle.attackerRebelStats.discipline * 100f) / 100f + "";
-            }
-            else
-            {
-                disciplineTextA.text = Mathf.Round(battle.attackerCiv.discipline.value * 100f) + "%";
-                moraleTextA.text = Mathf.Round(battle.attackerCiv.moraleMax.value * 100f) / 100f + "";
-                tacticsTextA.text = Mathf.Round(battle.attackerCiv.militaryTactics.value * battle.attackerCiv.discipline.value * 100f) / 100f + "";
-            }
-            if (battle.DefenderRebels)
-            {
-                disciplineTextD.text = Mathf.Round(battle.defenderRebelStats.discipline * 100f) + "%";
-                moraleTextD.text = Mathf.Round(battle.defenderRebelStats.morale * 100f) / 100f + "";
-                tacticsTextD.text = Mathf.Round(battle.defenderRebelStats.tactics * battle.defenderRebelStats.discipline * 100f) / 100f + "";
-            }
-            else
-            {
-                disciplineTextD.text = Mathf.Round(battle.defenderCiv.discipline.value * 100f) + "%";
-                moraleTextD.text = Mathf.Round(battle.defenderCiv.moraleMax.value * 100f) / 100f + "";
-                tacticsTextD.text = Mathf.Round(battle.defenderCiv.militaryTactics.value * battle.defenderCiv.discipline.value * 100f) / 100f + "";
-            }    
+            disciplineTextA.text = Mathf.Round(battle.attackerCiv.discipline.value * 100f) + "%";
+            moraleTextA.text = Mathf.Round(battle.attackerCiv.moraleMax.value * 100f) / 100f + "";
+            tacticsTextA.text = Mathf.Round(battle.attackerCiv.militaryTactics.value * battle.attackerCiv.discipline.value * 100f) / 100f + "";     
+
+            disciplineTextD.text = Mathf.Round(battle.defenderCiv.discipline.value * 100f) + "%";
+            moraleTextD.text = Mathf.Round(battle.defenderCiv.moraleMax.value * 100f) / 100f + "";
+            tacticsTextD.text = Mathf.Round(battle.defenderCiv.militaryTactics.value * battle.defenderCiv.discipline.value * 100f) / 100f + "";
+               
         }
         else
         {

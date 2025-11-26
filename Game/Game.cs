@@ -17,8 +17,6 @@ public class Game : MonoBehaviour
     public List<Battle> ongoingBattles = new List<Battle>();
     public List<NavalBattle> ongoingNavalBattles = new List<NavalBattle>();
     public List<War> ongoingWars = new List<War>();
-    public List<Army> rebelFactions = new List<Army>();
-    public List<RebelArmyStats> rebelStats = new List<RebelArmyStats>();
     public UnityEvent start = new UnityEvent();
     public UnityEvent tenMinTick = new UnityEvent();
     public UnityEvent hourTick = new UnityEvent();
@@ -26,6 +24,7 @@ public class Game : MonoBehaviour
     public UnityEvent monthTick = new UnityEvent();
     public UnityEvent yearTick = new UnityEvent();
     public float tenMinTickTime = 1f;
+    public float AI_MAX_AGGRESSIVENESS = 100f;
     public bool paused = true;
     private float tenMinTickTimer = 0f;
     public bool Started = false;

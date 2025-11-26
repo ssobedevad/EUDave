@@ -1,12 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using TMPro;
-using TreeEditor;
 
 using UnityEngine;
-using UnityEngine.Tilemaps;
-using UnityEngine.WSA;
-using static UnityEngine.RuleTile.TilingRuleOutput;
 
 public class TileData
 {
@@ -480,29 +475,6 @@ public class TileData
         float baseCost = merc.costPerRegiment * (merc.baseRegiments + merc.regimentsPerYearExtra * Game.main.gameTime.years) * (7 + Game.main.gameTime.months + Game.main.gameTime.years * 12);
         baseCost *= (1f + localRecruitmentCost.value + civ.regimentCost.value);
         return Mathf.Max(baseCost, 1f);
-    }
-    public void CreateRebelArmy(int size, RebelArmyStats stats)
-    {
-        if (civID == -1) { return; }
-        if (size > 0)
-        {
-            List<Regiment> regiments = new List<Regiment>();
-            while (size > 0)
-            {
-                int stack = Mathf.Min(1000, size);
-                size -= stack;
-                Regiment regiment = new Regiment(Size: stack, CivID: -1);
-                regiment.maxMorale = stats.morale;
-                regiment.morale = stats.morale;
-                regiment.meleeDamage = stats.units[regiment.type].meleeDamage.value;
-                regiment.flankingDamage = stats.units[regiment.type].flankingDamage.value;
-                regiment.rangedDamage = stats.units[regiment.type].rangedDamage.value;
-                regiment.flankingRange = stats .units[regiment.type].flankingRange;
-                regiments.Add(regiment);
-            }
-            Game.main.rebelFactions.Add(Army.NewArmy(this, -1, regiments));
-            Game.main.rebelStats.Add(stats);
-        }
     }
     public void CreateNewArmy(int type)
     {

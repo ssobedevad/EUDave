@@ -24,30 +24,73 @@ public class AIMoveArmiesWar
 
     public static bool ShouldRecruit(Civilisation civ)
     {
-        if(civ.TotalMaxArmySize() / 1000f < civ.forceLimit.value)
+        float targetVal = civ.forceLimit.value * (0.5f + civ.AIMilitary/100f);
+        if(civ.TotalMaxArmySize() / 1000f < targetVal)
         {
             if (civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f)
             {
                 return true;
             }
-            else if (civ.TotalMaxArmySize() / 1000f < civ.forceLimit.value * 0.9f && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.7f)
+            else if (civ.TotalMaxArmySize() / 1000f < targetVal * 0.9f && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.7f)
             {
                 return true;
             }
-            else if (civ.TotalMaxArmySize() / 1000f < civ.forceLimit.value * 0.8f && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.6f)
+            else if (civ.TotalMaxArmySize() / 1000f < targetVal * 0.8f && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.6f)
             {
                 return true;
             }
-            else if (civ.TotalMaxArmySize() / 1000f < civ.forceLimit.value * 0.7f && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f)
+            else if (civ.TotalMaxArmySize() / 1000f < targetVal * 0.7f && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f)
             {
                 return true;
             }
-            else if (civ.TotalMaxArmySize() / 1000f < civ.forceLimit.value * 0.6f)
+            else if (civ.TotalMaxArmySize() / 1000f < targetVal * 0.6f)
             {
                 return true;
             }
         }
         return false;
+    }
+    public static int GetDesiredUnitType(Civilisation civ)
+    {
+        int numInfantry = 0;
+        int numCavalry = 0;
+        int numArtillery = 0;
+        List<Regiment> regiments = new List<Regiment>();
+        foreach(var army in civ.armies)
+        {
+            regiments.AddRange(army.regiments);
+        }
+        foreach(var regiment in regiments)
+        {
+            if(regiment.type == 0)
+            {
+                numInfantry++;
+            }
+            else if (regiment.type == 1)
+            {
+                numCavalry++;
+            }
+            else if (regiment.type == 2)
+            {
+                numArtillery++;
+            }
+        }
+        if (civ.techUnlocks.Contains("Siege Units")) 
+        {  
+            if(numArtillery < civ.forceLimit.value * 0.1f)
+            {
+                return 2;
+            }
+        }
+        else if (civ.techUnlocks.Contains("Flanking Units")) 
+        {
+            float cavalryRatio = 0.2f + civ.units[1].combatAbility.value;
+            if (numCavalry < civ.forceLimit.value * cavalryRatio)
+            {
+                return 1;
+            }
+        }
+        return 0;
     }
     public static void MoveAtWar(int civID)
     {
@@ -55,8 +98,9 @@ public class AIMoveArmiesWar
         if (ShouldRecruit(civ))
         {
             TileData safeTile = Map.main.GetTile(civ.SafeProvince());
-            if (!safeTile.occupied && !safeTile.underSiege && civ.coins >= safeTile.GetRecruitCost(0) && safeTile.recruitQueue.Count == 0)
+            if (!safeTile.occupied && !safeTile.underSiege)
             {
+                int desiredUnit = GetDesiredUnitType(civ);
                 if (civ.TotalMaxArmySize() / 1000f < civ.forceLimit.value * 0.6f && civ.GetTotalTilePopulation() < civ.GetTotalMaxPopulation() * 0.5f)
                 {
                     List<MercenaryGroup> possibleMercs = civ.GetPossibleMercs();
@@ -77,12 +121,12 @@ public class AIMoveArmiesWar
                     }
                     else
                     {
-                        safeTile.StartRecruiting(0);
+                        safeTile.StartRecruiting(desiredUnit);
                     }
                 }
                 else
                 {
-                    safeTile.StartRecruiting(0);
+                    safeTile.StartRecruiting(desiredUnit);
                 }
             }
         }
@@ -173,10 +217,10 @@ public class AIMoveArmiesWar
     public static void CheckRunAway(int civID)
     {
         Civilisation civ = Game.main.civs[civID];
-        foreach (var army in GetOwnArmies())
+        foreach (var army in civ.armies.ToList())
         {
             bool siege = army.tile.underSiege;
-            List<Army> oArmyTemp = GetOwnArmies().ToList();
+            List<Army> oArmyTemp = civ.armies.ToList();
             oArmyTemp.Remove(army);
             float effectiveStrength = army.ArmyStrength();
             foreach (var oArmy in oArmyTemp)
@@ -255,24 +299,25 @@ public class AIMoveArmiesWar
                 {
                     armiesLowMoraleManpower.Add(army);
                 }
-                else if (ShouldMergeArmy(civ, army))
-                {
-                    if (!army.isMerging)
-                    {
-                        armiesToMerge.Add(army);
-                    }
-                    else if (army.isMerging)
-                    {
-                        armiesMerging.Add(army);
-                    }
-                }
+
                 else if (ShouldSplitArmy(civ, army))
                 {
                     army.Split();                    
                 }
                 else if (army.path.Count == 0)
                 {
-                    if (army.regiments.Count > 0)
+                    if (ShouldMergeArmy(civ, army))
+                    {
+                        if (!army.isMerging)
+                        {
+                            armiesToMerge.Add(army);
+                        }
+                        else if (army.isMerging)
+                        {
+                            armiesMerging.Add(army);
+                        }
+                    }
+                    else if (army.regiments.Count > 0)
                     {
                         armies.Add(army);                                       
                     }
@@ -331,7 +376,7 @@ public class AIMoveArmiesWar
     }
     public static void SupportBattles(Civilisation civ)
     {
-        List<Battle> battles = Game.main.ongoingBattles.FindAll(i =>i!= null&&i.active && !i.AttackerRebels && !i.DefenderRebels && ( civ.atWarWith.Contains(i.attackerCiv.CivID) || civ.atWarWith.Contains(i.defenderCiv.CivID)));
+        List<Battle> battles = Game.main.ongoingBattles.FindAll(i =>i!= null&&i.active && ( civ.atWarWith.Contains(i.attackerCiv.CivID) || civ.atWarWith.Contains(i.defenderCiv.CivID)));
         List<Army> civArmies = GetOwnArmies();
         foreach (var battle in battles)
         {
@@ -372,28 +417,18 @@ public class AIMoveArmiesWar
                 {
                     if (moveArmies.Count > 0)
                     {
-                        int minDist = moveDists.First();
-                        int maxDist = moveDists.Last();
-                        Vector3Int closePos = moveArmies.First().pos;
                         for (int i = 0; i < moveArmies.Count; i++)
                         {
-                            if (moveDists[i] > minDist)
+                            Army army = moveArmies[i];
+                            army.SetPath(battle.pos);
+                            if (armies.Contains(army))
                             {
-                                Army army = moveArmies[i];
-                                army.SetPath(closePos);
-                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
-                                {
-                                    Debug.Log("Move Near Battle: " + closePos + " Battle Province: " + battle.pos);
-                                }
+                                armies.Remove(army);
+                                armiesMoving.Add(army);
                             }
-                            else if (minDist >= maxDist - 1)
+                            if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
                             {
-                                Army army = moveArmies[i];
-                                army.SetPath(battle.pos);
-                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
-                                {
-                                    Debug.Log("Move To Battle: " + battle.pos);
-                                }
+                                Debug.Log("Move To Battle: " + battle.pos);
                             }
                         }
                         moveArmies.Clear();
@@ -441,10 +476,13 @@ public class AIMoveArmiesWar
                 {
                     if ((sieging && GetSiegeStayDesire(selected) < 50) || !sieging )
                     {
-                        moveArmies.Add(civArmiesTemp[bestID]);
-                        moveDists.Add(dists[bestID]);
-                        moveArmies_effectiveSize += civArmiesTemp[bestID].ArmyStrength();
-                        civArmies.Remove(civArmiesTemp[bestID]);
+                        if (civArmiesTemp[bestID].regiments.Count > 1 && civArmiesTemp[bestID].regiments.Sum(i=> i.type == 2 ? 1 : 0) < civArmiesTemp[bestID].regiments.Count * 0.5f)
+                        {
+                            moveArmies.Add(civArmiesTemp[bestID]);
+                            moveDists.Add(dists[bestID]);
+                            moveArmies_effectiveSize += civArmiesTemp[bestID].ArmyStrength();
+                            civArmies.Remove(civArmiesTemp[bestID]);
+                        }
                     }
                 }
                 civArmiesTemp.RemoveAt(bestID);
@@ -453,28 +491,18 @@ public class AIMoveArmiesWar
                 {
                     if (moveArmies.Count > 0)
                     {
-                        int minDist = moveDists.First();
-                        int maxDist = moveDists.Last();
-                        Vector3Int closePos = moveArmies.First().pos;
                         for (int i = 0; i < moveArmies.Count; i++)
-                        {                            
-                            if (moveDists[i] > minDist)
+                        {
+                            Army army = moveArmies[i];
+                            army.SetPath(eArmy.pos);
+                            if (armies.Contains(army))
                             {
-                                Army army = moveArmies[i];
-                                army.SetPath(closePos);
-                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
-                                {
-                                    Debug.Log("Move Near Enemy: " + closePos + " Enemy Province: " + eArmy.pos);
-                                }
+                                armies.Remove(army);
+                                armiesMoving.Add(army);
                             }
-                            else if(minDist >= maxDist - 1) 
+                            if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
                             {
-                                Army army = moveArmies[i];
-                                army.SetPath(eArmy.pos);
-                                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
-                                {
-                                    Debug.Log("Move To Enemy: " + eArmy.pos);
-                                }
+                                Debug.Log("Move To Enemy: " + eArmy.pos);
                             }
                         }
                         moveArmies.Clear();
@@ -526,32 +554,36 @@ public class AIMoveArmiesWar
     }
     public static void MergeArmies(int civID)
     {
-        Army central = armiesToMerge[0];
-        int total = central.regiments.Count;
-        if (total + armiesToMerge[1].regiments.Count < central.tile.supplyLimit)
+        int total = 0;
+        Army central = null;
+        for (int i = 0; i < armiesToMerge.Count; i++)
         {
-            central.isMerging = true;
-            for (int i = 1; i < armiesToMerge.Count; i++)
+            Army army = armiesToMerge[i];
+            if(central == null) { central = army; total = central.regiments.Count; continue; }
+            if(total + army.regiments.Count < central.tile.supplyLimit)
             {
-                Army army = armiesToMerge[i];
-                if (total + army.regiments.Count > central.tile.supplyLimit)
+                if(central.pos == army.pos)
                 {
-                    break;
+                    army.CombineInto(central);
+                    continue;
                 }
+                central.isMerging = true;
                 army.mergeTargets.Add(central);
                 central.mergeTargets.Add(army);
                 army.isMerging = true;
                 army.SetPath(central.pos);
-                if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
-                {
-                    Debug.Log("Move To Merge: " + central.pos + " From Province: " + army.pos);
-                }
                 total += army.regiments.Count;
             }
-        }
-        else
-        {
-            armies.AddRange(armiesToMerge);
+            else
+            {
+                if (!central.isMerging)
+                {
+                    armies.Add(central);
+                }
+                central = army;
+                total = central.regiments.Count; 
+                continue;
+            }
         }
     }
     public static void DeterminePossibleProvinces(Civilisation civ)
@@ -564,7 +596,7 @@ public class AIMoveArmiesWar
         foreach(var province in civ.GetAllCivTiles()) 
         {
             TileData data = Map.main.GetTile(province);
-            if (data.occupied)
+            if (data.occupied && (civ.atWarWith.Contains(data.occupiedByID) || data.occupiedByID == -1))
             {
                 allyProvinces.Add(province);
             }
@@ -613,12 +645,17 @@ public class AIMoveArmiesWar
             int loops = 0;
             while (provs.Count > 0 && loops < 100)
             {
-                if (!army.SetPath(provs[0]))
+                if (army.pos != provs[0] && !army.SetPath(provs[0]))
                 {
                     provs.RemoveAt(0);
                 }
                 else
                 {
+                    if (armies.Contains(army))
+                    {
+                        armies.Remove(army);
+                        armiesMoving.Add(army);
+                    }
                     if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
                     {
                         Debug.Log("Move To Province: " + provs[0] + " From Province: " + army.pos);

@@ -1,13 +1,8 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
-using TreeEditor;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 using UnityEngine.UI;
-using static UnityEditor.PlayerSettings;
-using static UnityEngine.GraphicsBuffer;
 
 public class PeaceDealUI : MonoBehaviour
 {
@@ -303,7 +298,7 @@ public class PeaceDealUI : MonoBehaviour
     public static PeaceDeal Suggested(Civilisation target, War war)
     {
         Civilisation other = war.GetOpposingLeader(target.CivID);
-        float desiredMaxOE = war.attackerCiv == target ? other.AIAggressiveness : 50f;
+        float desiredMaxOE = war.attackerCiv == target ? other.AIAggressiveness + 50f : 50f;
         float currentOE = other.overextension;
         //float desiredMaxAE = war.attackerCiv == target ? other.AIAggressiveness * 0.5f : 25f;
         //float currentAE = other.maxAE;

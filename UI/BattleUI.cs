@@ -21,22 +21,8 @@ public class BattleUI : MonoBehaviour
     {
         if(battle != null && battle.active)
         {
-            if (battle.AttackerRebels)
-            {
-                attackerImage.color = Color.black;
-            }
-            else
-            {
-                attackerImage.color = battle.attackerCiv.c;
-            }
-            if (battle.DefenderRebels)
-            {
-                defenderImage.color = Color.black;
-            }
-            else
-            {
-                defenderImage.color = battle.defenderCiv.c;
-            }
+            attackerImage.color = battle.attackerCiv.c;
+            defenderImage.color = battle.defenderCiv.c;
             float amorale = battle.AverageMorale(true);
             float dmorale = battle.AverageMorale(false);
             float amaxmorale = battle.AverageMaxMorale(true);
