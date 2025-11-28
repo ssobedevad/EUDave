@@ -17,11 +17,21 @@ Here is a quick show of features that I have edited together from ~50 mins of ga
 
 https://github.com/user-attachments/assets/a0882a64-3d6d-41d0-8d26-a73d40463352
 
-The filesize limit is 10MB so it is quite challenging to show more at once.
+The filesize limit is 10MB so it is quite challenging to show more at once on here.
+
+This is a youtube playlist containing some uncut gameplay that I am using as a sort of tutorial/guide:
+
+https://www.youtube.com/playlist?list=PLUTKysaxBObL_jExx7FeMu5fOiSNh7C6f
 
 ### Install
 
 The Game is written for unity.
+
+You can either download from itch.io:
+
+https://dave2923.itch.io/funny-map-game
+
+or
 
 Download a zip file of the project at https://github.com/ssobedevad/EUDave-Builds
 
