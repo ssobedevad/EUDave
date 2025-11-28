@@ -57,6 +57,7 @@ public class AIManager : MonoBehaviour
         if (civ.maxSettlements.value > civ.controlCentres.Count)
         {
             List<TileData> tiles = civ.GetAllCivTileDatas().ToList();
+            tiles.RemoveAll(i => i.civID != civ.CivID);
             if (tiles.Count == 0) { return; }
             tiles.Sort((x, y) => ((100f - y.maxControl) * y.totalDev).CompareTo((100f - x.maxControl) * x.totalDev));
             if (tiles[0].maxControl < 40)
@@ -266,7 +267,8 @@ public class AIManager : MonoBehaviour
                     {
                         if (balance > building.fortLevel && civ.coins >= building.baseCost)
                         {
-                            List<TileData> possible = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
+                            List<TileData> possible = civ.GetAllCivTileDatas();
+                            possible.RemoveAll(i => i.civID != civ.CivID);
                             possible.RemoveAll(i => !i.GetNeighborTiles().Exists(i => i.civID > -1 && i.civID != civ.CivID));
                             possible.RemoveAll(i => i.buildings.Contains(buildingID) || i.buildQueue.Contains(buildingID));
                             if (possible.Count == 0) { continue; }

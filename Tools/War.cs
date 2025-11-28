@@ -213,6 +213,7 @@ public class War
         Game.main.dayTick.AddListener(DayTick);
         WarID = 0;
         active = true;
+        UpdateWarScore();
     }
     void HourTick()
     {

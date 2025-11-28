@@ -71,6 +71,10 @@ public class Civilisation
     public float revanchism;
     public List<string> techUnlocks = new List<string>();
     public List<int> reforms = new List<int>();
+
+    public List<UnitType> units = new List<UnitType>() { new UnitType("Infantry", 0f, 0f, 0f,1,10f), new UnitType("Cavalry", 0f, 0f, 0f,2,20f), new UnitType("Artillery", 0f, 0f, 0f,2,30f) };
+    public List<BoatType> boats = new List<BoatType>() { new BoatType("Transport", 0f, 15f, 10f, 2, 20f,100f,2), new BoatType("Supply Ship", 0f, 25f, 200f, 2, 50f,200f,3), new BoatType("Warship", 3f, 100f, 100f, 2, 200f,400f,5) };
+    
     public Stat governingCapacityMax = new Stat(100f, "Governing Capacity",true);
     public Stat governingCostModifier = new Stat(0f, "Governing Cost Modifer");
     public Stat diplomaticCapacityMax = new Stat(50f, "Diplomatic Capacity", true);
@@ -92,8 +96,6 @@ public class Civilisation
     public Stat moraleMax = new Stat(0f, "Maximum Morale",true);
     public Stat moraleRecovery = new Stat(0f, "Morale Recovery");
     public Stat reinforceSpeed = new Stat(0f, "Reinforce Speed");
-    public List<UnitType> units = new List<UnitType>() { new UnitType("Infantry", 0f, 0f, 0f,1,10f), new UnitType("Cavalry", 0f, 0f, 0f,2,20f), new UnitType("Artillery", 0f, 0f, 0f,2,30f) };
-    public List<BoatType> boats = new List<BoatType>() { new BoatType("Transport", 0f, 15f, 10f, 2, 20f,100f,2), new BoatType("Supply Ship", 0f, 25f, 200f, 2, 50f,200f,3), new BoatType("Warship", 3f, 100f, 100f, 2, 200f,400f,5) };
     public Stat combatWidth = new Stat(15f, "Combat Width", true);
     public Stat flankingSlots = new Stat(2f, "Flanking Slots", true);
     public Stat devCostMod = new Stat(0f, "Development Cost Modifier");
@@ -138,11 +140,11 @@ public class Civilisation
     public Stat infidelIntolerance = new Stat(2f, "Intolerance of Religious Infidels", true);
     public Stat warScoreCost = new Stat(0f, "War Score Cost");
     public Stat dipAnnexCost = new Stat(0f, "Diplomatic Annexation Cost");
-    public Stat libDesireFromDev = new Stat(0f, "Liberty Desire from Subjects Development");
+    public Stat libDesireFromDevForSubjects = new Stat(0f, "Liberty Desire from Subjects Development");
     public Stat battlePrestige = new Stat(0f, "Prestige From Battles");
     public Stat battleTraditon = new Stat(0f, "Army Tradition From Battles");
     public Stat diploRep = new Stat(0f, "Diplomatic Reputation",true);
-    public Stat libDesire = new Stat(0f, "Liberty Desire in Subjects");
+    public Stat libDesireInSubjects = new Stat(0f, "Liberty Desire in Subjects");
     public Stat incomeFromSubjects = new Stat(0f, "Income from Subjects");
     public Stat improveRelations = new Stat(0f, "Improve Relations");
     public Stat aggressiveExpansionImpact = new Stat(0f, "Aggressive Expansion Impact");
@@ -153,6 +155,8 @@ public class Civilisation
     public Stat tradeValue = new Stat(0f, "Trade Value");
     public Stat tradePenalty = new Stat(0.5f, "Trade Penalty");
     public Stat tradeValPerCiv = new Stat(0.1f, "Trade Value per Civ in Node");
+    public Stat[] opinionOfThem;
+
     public bool canHolyWar;
     public List<Vector3Int> civTiles = new List<Vector3Int>();
     public List<Vector3Int> claims = new List<Vector3Int>();
@@ -162,7 +166,6 @@ public class Civilisation
     public List<TileData> civCoastalTiles = new List<TileData>();
     public List<int> civNeighbours = new List<int>();
     public int[] truces;
-    public Stat[] opinionOfThem;
     public bool hasUpdatedStartingResources = false;
     public bool updateBorders;
     public List<WeightedChoice> events = new List<WeightedChoice>();
@@ -175,7 +178,15 @@ public class Civilisation
     public UnityEvent loseSiege = new UnityEvent();
     public int GetIntegrationCost(Civilisation overlord)
     {
-        int baseCost = 8 * GetTotalDev();
+        int baseCost = 0;
+        foreach(var tile in GetAllCivTileDatas())
+        {
+            if(tile.civID != CivID) { continue;}
+            if (!tile.cores.Contains(CivID))
+            {
+                baseCost+= 8 * tile.totalDev;
+            }
+        }
         return (int)(baseCost * (1f + overlord.dipAnnexCost.value));
     }
     public void UpdateDiplomaticCapacity()
@@ -196,7 +207,7 @@ public class Civilisation
             Civilisation ally = Game.main.civs[allyID];
             diplomaticCapacity += ally.governingCapacity * 0.25f;
         }
-        libDesire.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.value ? (diplomaticCapacity - diplomaticCapacityMax.value)/ diplomaticCapacityMax.value * 0.5f : 0, 1);
+        libDesireInSubjects.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.value ? (diplomaticCapacity - diplomaticCapacityMax.value)/ diplomaticCapacityMax.value * 0.5f : 0, 1);
         diploRep.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.value ? (diplomaticCapacity - diplomaticCapacityMax.value) / diplomaticCapacityMax.value * -2f : 0, 1);
         controlDecay.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.value ? (diplomaticCapacity - diplomaticCapacityMax.value) / diplomaticCapacityMax.value * 0.5f : 0, 1);
     }
@@ -227,8 +238,8 @@ public class Civilisation
         ld -= 3f * overlord.diploRep.value;
         ld -= 0.1f * opinionOfThem[overlordID].value;
         ld += Mathf.Max(0, diploTech - overlord.diploTech) * 5f;
-        ld += GetTotalDev() * 0.25f * (1f + libDesireFromDev.value);
-        ld += overlord.libDesire.value * 100f;
+        ld += GetTotalDev() * 0.25f * (1f + libDesireFromDevForSubjects.value);
+        ld += overlord.libDesireInSubjects.value * 100f;
         ld += libertyDesireTemp.value;
         libertyDesire = ld;
     }
@@ -1961,7 +1972,7 @@ public class Civilisation
         if(Game.main.gameTime.totalTicks() < 6 * 24 * 7) { return; }
         if(atWarWith.Contains(targetID) || targetID == -1 || targetID == CivID || truces[targetID] > 0 || allies.Contains(targetID) || militaryAccess.Contains(targetID)) { return; }
         Civilisation target = Game.main.civs[targetID];
-        bool independence = targetID == overlordID;
+        bool independence = targetID == overlordID && libertyDesire >= 50f;
         if(overlordID > -1 && !independence) { return; }
         while (target.overlordID > -1)
         {
@@ -2353,9 +2364,9 @@ public class Civilisation
             case "Diplo Reputation":
                 return diploRep;
             case "Liberty Desire in Subjects":
-                return libDesire;
+                return libDesireInSubjects;
             case "Liberty Desire from Subjects Development":
-                return libDesireFromDev;
+                return libDesireFromDevForSubjects;
             case "Income from Subjects":
                 return incomeFromSubjects;
             case "Diplomatic Annexation Cost":

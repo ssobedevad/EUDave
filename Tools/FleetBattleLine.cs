@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
-using static UnityEngine.UIElements.UxmlAttributeDescription;
 
+[Serializable]
 public class FleetBattleLine
 {
     public int width = 31;
@@ -219,6 +219,7 @@ public class FleetBattleLine
             boats[pos + i - boatData.segmentID] = null;
         }
     }
+    [Serializable]
     public class BoatData
     {
         public Boat boat;

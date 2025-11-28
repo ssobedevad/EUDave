@@ -11,7 +11,6 @@ public class Game : MonoBehaviour
     public Age gameTime;
     [SerializeField] public GameObject civTile;
     [SerializeField] public GameObject civTileSelected;
-    [SerializeField] public Slider gameSpeed;
     [SerializeField] List<CivDataInit> civDatas = new List<CivDataInit>();
     public List<Civilisation> civs = new List<Civilisation>();
     public List<Battle> ongoingBattles = new List<Battle>();
@@ -32,12 +31,15 @@ public class Game : MonoBehaviour
     public int highestDevelopment;
     public float highestIncome;
     public bool refreshMap;
+    public int gameSpeed = 0;
+    public string saveGameName;
     private void Awake()
     {
         main = this;
         gameTime = new Age(0,0, 0, 0, 0,true);
         civs.Clear();
         dayTick.AddListener(RefreshTradeRegions);
+        monthTick.AddListener(AutoSave);
         foreach(var civData in civDatas)
         {
             Civilisation civ = new Civilisation();
@@ -62,6 +64,10 @@ public class Game : MonoBehaviour
         highestDevelopment = 1;
         refreshMap = true;
     }
+    void AutoSave()
+    {
+        SaveGameManager.SaveSave();
+    }
     public void StartGame()
     {
         if (!Started)
@@ -79,7 +85,7 @@ public class Game : MonoBehaviour
     private void Update()
     {
         float[] speedVals = new float[] { 1f/3f, 1f/6f, 1f/12f, 1f/30f, 0f };
-        tenMinTickTime = speedVals[(int)gameSpeed.value];
+        tenMinTickTime = speedVals[(int)gameSpeed];
         if (Input.GetKeyDown(KeyCode.Space) && Game.main.Started)
         { 
             paused = !paused; 

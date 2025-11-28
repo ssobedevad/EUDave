@@ -26,6 +26,28 @@ public class Fleet : MonoBehaviour
     [SerializeField] Transform moveArrowRotatePoint;
     [SerializeField] Image MoveArrowFill;
 
+    public static Fleet NewFleet(SaveGameFleet save)
+    {
+        TileData tile = Map.main.GetTile(save.pos);
+        Fleet a = Instantiate(Map.main.boatPrefab, tile.worldPos(), Quaternion.identity, Map.main.unitTransform).GetComponent<Fleet>();
+        a.civID = save.civID;
+        a.boats.AddRange(save.boats);
+        a.army.AddRange(save.army);
+        tile.fleetsOnTile.Add(a);
+        FleetUIProvince uIProvince = Instantiate(UIManager.main.FleetUIPrefab, tile.worldPos(), Quaternion.identity, UIManager.main.unitCanvas).GetComponent<FleetUIProvince>();
+        uIProvince.fleet = a;
+        UIManager.main.WorldSpaceUI.Add(uIProvince.gameObject);
+        a.inBattle = save.inBattle;
+        a.retreating = save.retreating;
+        a.exiled = save.exiled;
+        a.moveTimer = save.moveTimer;
+        a.moveTime = save.moveTime;
+        a.general = save.general;
+        a.path = save.path;
+        a.lastPos = save.lastPos;
+        a.timeAtSea = save.timeAtSea;
+        return a;
+    }
     public static Fleet NewFleet(TileData tile, int civID, List<Boat> boat, bool merc = false)
     {
         Fleet a = Instantiate(Map.main.boatPrefab, tile.worldPos(), Quaternion.identity, Map.main.unitTransform).GetComponent<Fleet>();       

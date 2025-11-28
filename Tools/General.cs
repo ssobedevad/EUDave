@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
+[Serializable]
 public class General
 {
     public string name;
@@ -13,7 +14,7 @@ public class General
     public int maneuverSkill;
     public Effect[] traits;
     public bool active;
-    public Army army;
+    public bool equipped;
     public Age age;
 
     public General(Age age)

@@ -761,7 +761,7 @@ public class TileUI : MonoBehaviour
         text += "Local Bonuses: "+data.dailyControl.ToString() + "\n";
         text += "Multiplied by Global Bonuses: " + civ.dailyControl.ToString() + "\n\n";
         text += "Up to a maximum of:\n";
-        text += "100 - distance to capital squared (" + Mathf.Pow(TileData.evenr_distance(data.pos, civ.capitalPos),2) + ") * control decay "+Mathf.Round((1f + civ.controlDecay.value)*100f)+"% + development (" +data.totalDev +") = "+data.maxControl + "%\n\n";
+        text += data.maxControl + "%\n\n";
         if (!data.hasCore)
         {
             text += "Cannot be over 25% due to not being a core tile\n\n";

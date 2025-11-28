@@ -16,6 +16,7 @@ public class Army : MonoBehaviour
     public bool exiled;
     public bool isMercenary;
     public General general;
+    public float attrition;
     public Vector3Int pos => Map.main.tileMapManager.tilemap.WorldToCell(transform.position);
     public Vector3Int lastPos;
     public Vector3Int lastPosNoZOC;
@@ -27,11 +28,11 @@ public class Army : MonoBehaviour
 
     public void AssignGeneral(General General)
     {
-        if(general != null && general.army != null)
+        if(general != null && !general.equipped)
         {            
-            general.army = null;
+            general.equipped = false;
         }
-        General.army = this;
+        General.equipped = true;
         general = General;
     }
     public void EnterBattle()
@@ -42,7 +43,7 @@ public class Army : MonoBehaviour
             regiment.inBatle = true;
         }
     }
-    public float GetAttrition()
+    public void SetAttrition()
     {
         float percent = 0f;
         float armysize = ArmySize();
@@ -72,14 +73,14 @@ public class Army : MonoBehaviour
             Civilisation civ = Game.main.civs[civID];
             percent *= (1f + civ.landAttrition.value);
         }
-        return percent;
+       attrition = percent;
     }
     public void DayTick()
     {
-        float percent = GetAttrition();
+        SetAttrition();
         foreach (var regiment in regiments)
         {
-            regiment.size = Mathf.Max((int)(regiment.size * (100f - percent) / 100f), 0);
+            regiment.size = Mathf.Max((int)(regiment.size * (100f - attrition) / 100f), 0);
             if (!regiment.inBatle && regiment.type > -1 && civID > -1)
             {
                 regiment.RecoverMorale();
@@ -89,6 +90,28 @@ public class Army : MonoBehaviour
                 }
             }
         }       
+    }
+    public static Army NewArmy(SaveGameArmy save)
+    {
+        TileData tile = Map.main.GetTile(save.pos);
+        Army a = Instantiate(Map.main.armyPrefab, tile.worldPos(), Quaternion.identity, Map.main.unitTransform).GetComponent<Army>();
+        ArmyUIProvince uIProvince = Instantiate(UIManager.main.ArmyUIPrefab, tile.worldPos(), Quaternion.identity, UIManager.main.unitCanvas).GetComponent<ArmyUIProvince>();
+        uIProvince.army = a;
+        a.civID = save.civID;
+        a.regiments.AddRange(save.regiments);
+        UIManager.main.WorldSpaceUI.Add(uIProvince.gameObject);
+        Game.main.dayTick.AddListener(a.DayTick);
+        tile.armiesOnTile.Add(a);
+        a.inBattle = save.inBattle;
+        a.retreating = save.retreating;
+        a.exiled = save.exiled;
+        a.moveTimer = save.moveTimer;
+        a.moveTime = save.moveTime;
+        a.general = save.general;
+        a.path = save.path;
+        a.lastPos = save.lastPos;
+        a.lastPosNoZOC = save.lastPosNoZOC;
+        return a;
     }
     public static Army NewArmy(TileData tile, int civID, List<Regiment> regiments,bool merc = false)
     {

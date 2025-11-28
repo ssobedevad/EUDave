@@ -71,8 +71,8 @@ public class ArmyUIProvince : MonoBehaviour
                 siegeCanvas.SetActive(false);
             }
             ColorArmyPanel(army);
-            attrition.gameObject.SetActive(army.GetAttrition() > 0);
-            string hoverText = "Attrition: " + Mathf.Round(army.GetAttrition() * 100f) / 100f + "%\n\n";
+            attrition.gameObject.SetActive(army.attrition > 0);
+            string hoverText = "Attrition: " + Mathf.Round(army.attrition * 100f) / 100f + "%\n\n";
             hoverText += AttritionText();
             attrition.GetComponent<HoverText>().text = hoverText;
             exiled.gameObject.SetActive(army.exiled);
@@ -130,11 +130,11 @@ public class ArmyUIProvince : MonoBehaviour
                     siegeCanvas.SetActive(false);
                 }
                 ColorArmyPanel(priority);
-                attrition.gameObject.SetActive(army.GetAttrition() > 0);
-                string hoverText = "Attrition: " + Mathf.Round(army.GetAttrition() * 100f) / 100f + "%\n\n";
+                attrition.gameObject.SetActive(priority.attrition > 0);
+                string hoverText = "Attrition: " + Mathf.Round(priority.attrition * 100f) / 100f + "%\n\n";
                 hoverText += AttritionText();
                 attrition.GetComponent<HoverText>().text = hoverText;
-                exiled.gameObject.SetActive(army.exiled);
+                exiled.gameObject.SetActive(priority.exiled);
             }
             else
             {

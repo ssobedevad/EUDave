@@ -79,13 +79,13 @@ public class AIMoveArmiesPeace
         }
         if(freeArmies.Count > 0)
         {
-            if (civ.generals.Exists(i => i.army == null))
+            if (civ.generals.Exists(i => i.equipped == false))
             {
                 foreach (var army in freeArmies)
                 {
-                    if (civ.generals.Exists(i => i.army == null))
+                    if (civ.generals.Exists(i => i.equipped == false))
                     {
-                        army.AssignGeneral(civ.generals.Find(i => i.army == null));
+                        army.AssignGeneral(civ.generals.Find(i => i.equipped == false));
                     }
                     else
                     {

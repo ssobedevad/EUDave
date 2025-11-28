@@ -60,13 +60,13 @@ public class TileData
     public int populationGrowth => Mathf.Max(0, (int)((1 + developmentC * 6) * (1f + localPopulationGrowth.value) * (civID > -1 ? 1f + civ.populationGrowth.value : 1f)));
     public int maxPopulation => Mathf.Max(0, (int)((totalDev + developmentA * 0.5) * 200 * (1f + localMaxPopulation.value) * (civID > -1 ? 1f + civ.maximumPopulation.value : 1f)));
     public int developmentA, developmentB, developmentC;
+    public float control;
+    public float maxControl;
     public Stat localDevCostMod = new Stat(0f, "Local Development Cost Modifier");
     public Stat localDevCost = new Stat(0f, "Local Development Cost");
     public Stat localProductionValue = new Stat(0f, "Local Production Value");
     public Stat localProductionQuantity = new Stat(0f, "Local Production Quantity");
     public Stat localTaxEfficiency = new Stat(0f, "Local Tax Efficiency");
-    public float control;
-    public float maxControl;
     public Stat localGoverningCost = new Stat(0f, "Local Governing Cost", true);
     public Stat localGoverningCostMod = new Stat(0f, "Local Governing Cost Modifier", false);
     public Stat localAttritionForEnemies = new Stat(0f, "Local Attrition for Enemies");

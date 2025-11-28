@@ -149,13 +149,13 @@ public class AIMoveArmiesWar
         allyProvinces.Clear();
         BuildEnemyArmy(civ);
         ProcessArmyPositions(civ);
-        if (civ.generals.Exists(i => i.army == null))
+        if (civ.generals.Exists(i => i.equipped == false))
         {
             foreach (var army in civ.armies)
             {
-                if (civ.generals.Exists(i => i.army == null))
+                if (civ.generals.Exists(i => i.equipped == false))
                 {
-                    army.AssignGeneral(civ.generals.Find(i => i.army == null));
+                    army.AssignGeneral(civ.generals.Find(i => i.equipped == false));
                 }
                 else
                 {

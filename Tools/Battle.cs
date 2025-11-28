@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using static UnityEditor.PlayerSettings;
 
 public class Battle
 {
@@ -59,6 +60,15 @@ public class Battle
     {
         if(attackerCiv.CivID == civID || defenderCiv.CivID == civID) { return true; }
         return false;
+    }
+    public Battle(SaveGameBattle battle)
+    {
+        active = battle.active;
+        Game.main.ongoingBattles.Add(this);
+        Game.main.hourTick.AddListener(HourTick);
+        bui = GameObject.Instantiate(UIManager.main.BattleUIPrefab, Map.main.tileMapManager.tilemap.CellToWorld(battle.pos), Quaternion.identity, UIManager.main.worldCanvas).GetComponent<BattleUI>();
+        bui.battle = this;
+        UIManager.main.WorldSpaceUI.Add(bui.gameObject);
     }
     public Battle(Vector3Int Pos, Army attacker, Army defender, int warID = -1)
     {

@@ -49,7 +49,7 @@ public static class Pathfinding
                         Civilisation civ = Game.main.civs[army.civID];
                         if (!army.HasAccess(tile.civID)) 
                         {
-                            if (tile.civID > -1 && tile.civ.AccessOffer(civ) && !civ.isPlayer && civ.diplomaticCapacity < civ.diplomaticCapacityMax.value)
+                            if (tile.civID > -1 && tile.civ.AccessOffer(civ) && !civ.isPlayer && civ.atWarWith.Count > 0 && civ.diplomaticCapacity < civ.diplomaticCapacityMax.value)
                             {
                                 civ.AccessRequest(tile.civID);
                             }

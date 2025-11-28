@@ -31,7 +31,7 @@ public class Map : MonoBehaviour
     public Dictionary<string, Terrain> terrainDict = new Dictionary<string, Terrain>();
     public Dictionary<string,ResourceType> resourceDict = new Dictionary<string,ResourceType>();
     public TileData[,] tiles;
-    private int boundsMinX,boundsMinY,boundsMaxX,boundsMaxY;
+    public int boundsMinX,boundsMinY,boundsMaxX,boundsMaxY;
     [SerializeField] Tilemap resources, terrain,civs,religion;
     [SerializeField] public GameObject civBorderPrefab,civNamePrefab;
     [SerializeField] public Trait[] rulerTraits;

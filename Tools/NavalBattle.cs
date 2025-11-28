@@ -60,6 +60,15 @@ public class NavalBattle
         if(attackerCiv.CivID == civID || defenderCiv.CivID == civID) { return true; }
         return false;
     }
+    public NavalBattle(SaveGameNavalBattle battle)
+    {
+        active = battle.active;
+        Game.main.ongoingNavalBattles.Add(this);
+        Game.main.hourTick.AddListener(HourTick);
+        bui = GameObject.Instantiate(UIManager.main.BattleUIPrefab, Map.main.tileMapManager.tilemap.CellToWorld(battle.pos), Quaternion.identity, UIManager.main.worldCanvas).GetComponent<BattleUI>();
+        bui.navalBattle = this;
+        UIManager.main.WorldSpaceUI.Add(bui.gameObject);
+    }
     public NavalBattle(Vector3Int Pos, Fleet attacker, Fleet defender, int warID = -1)
     {
         active = true;

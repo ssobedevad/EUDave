@@ -243,7 +243,7 @@ public class SubjectsUI : MonoBehaviour
     {
         if (subject.overlordID == -1) { return "Not Valid Subject"; }
         Civilisation overlord = Game.main.civs[subject.overlordID];
-        string ld = Mathf.Round(subject.libertyDesire) + "%\n";
+        string ld = "Liberty Desire: " + Mathf.Round(subject.libertyDesire) + "%\n";
         ld += "From Relative Military Strength: " + Mathf.Round((subject.TotalMilStrength() + 1) / (overlord.TotalMilStrength() + 1) * 75f) + "%\n";
         foreach (var ally in subject.allies)
         {
@@ -253,8 +253,8 @@ public class SubjectsUI : MonoBehaviour
         ld += "From Overlord Diplomatic Reputation: " + Mathf.Round(-3f * overlord.diploRep.value) + "%\n";
         ld += "From Opinion of Overlord: " +Mathf.Round(-0.1f * subject.opinionOfThem[subject.overlordID].value) + "%\n";
         ld += (subject.diploTech - overlord.diploTech > 0)? "From Better Diplomatic Technology Than Overlord: " + Mathf.Max(0, subject.diploTech - overlord.diploTech) * 5f + "%\n" : "";
-        ld += "From Total Development: " + Mathf.Round(subject.GetTotalDev() * 0.25f * (1f + overlord.libDesireFromDev.value)) + "%\n";
-        ld += "Overlord Bonuses: " +overlord.libDesire.ToString() + "\n\n";
+        ld += "From Total Development: " + Mathf.Round(subject.GetTotalDev() * 0.25f * (1f + overlord.libDesireFromDevForSubjects.value)) + "%\n";
+        ld += "Overlord Bonuses: " +overlord.libDesireInSubjects.ToString() + "\n\n";
         ld += "Temporary Bonuses: " + Mathf.Round(subject.libertyDesireTemp.value*100f)/100f;
         return ld;
     }

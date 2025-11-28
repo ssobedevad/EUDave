@@ -20,16 +20,12 @@ public class MouseTextPanelManager : MonoBehaviour
     }
     private void OnGUI()
     {
+        RectTransform rectTransform = GetComponent<RectTransform>();
+        rectTransform.sizeDelta = new Vector2(600, text.textBounds.size.y + 40);
         if (!CheckMouseHover())
         {
             gameObject.SetActive(false);
-        }
-        else
-        {
-            RectTransform rectTransform = GetComponent<RectTransform>();
-            rectTransform.sizeDelta = new Vector2(600, text.textBounds.size.y + 40);
-            
-        }       
+        }     
     }
     bool CheckMouseHover()
     {

@@ -25,6 +25,13 @@ public class BattleResultUI : MonoBehaviour
         defenderRemaining.text = "" + (defendersize - defenderlosses);
         battlePos = battlepos;
     }
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Close();
+        }
+    }
     private void Start()
     {
         oK.onClick.AddListener(Close);
