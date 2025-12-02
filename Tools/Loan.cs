@@ -1,9 +1,11 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 
 using UnityEngine;
 
 [Serializable]
+[MessagePackObject(keyAsPropertyName: true)]
 public class Loan
 {
     public float value;
@@ -14,6 +16,6 @@ public class Loan
     }
     public float GetInterestValue(Civilisation civilisation)
     {
-        return value * (civilisation.interestPerMonth.value / 3000f);
+        return value * (civilisation.interestPerMonth.v / 3000f);
     }
 }

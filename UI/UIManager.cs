@@ -14,7 +14,8 @@ public class UIManager : MonoBehaviour
     [SerializeField] public List<GameObject> WorldSpaceUI;
     [SerializeField] public Transform worldCanvas,worldCanvasText,unitCanvas,battleTransform,eventTransform;
     [SerializeField] RectTransform Selector;
-    [SerializeField] public GameObject mouseText;
+    [SerializeField] public GameObject mouseText,startGameButton,settings,saveGames;
+    [SerializeField] public LoadingScreen loadingScreen;
     [SerializeField] public GameObject eventPrefab,battleResultPrefab,playerCTAPrefab;
     [SerializeField] public Sprite[] icons;
 
@@ -93,6 +94,8 @@ public class UIManager : MonoBehaviour
             GameObject.FindGameObjectsWithTag("Debug").ToList().ForEach(i=>Destroy(i));
 
         }
+
+        if (!Game.main.Started) { return; }
         if (Input.GetMouseButtonDown(0) && !Player.myPlayer.isHoveringUI)
         {
             selectStart = Camera.main.ScreenToWorldPoint(Input.mousePosition);

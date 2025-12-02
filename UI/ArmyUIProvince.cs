@@ -167,8 +167,8 @@ public class ArmyUIProvince : MonoBehaviour
             {
                 percent += "Base: 1%\n";
                 percent += army.tile.fortLevel > 0 ? "From Fort Level: " + army.tile.fortLevel + "%\n" : "";
-                percent += army.tile.localAttritionForEnemies.value > 0? "From Local Bonuses: " + army.tile.localAttritionForEnemies.value + "%\n" : "";
-                percent += army.tile.civ.attritionForEnemies.value > 0 ? "From Global Bonuses: " + army.tile.civ.attritionForEnemies.value + "%\n" : "";
+                percent += army.tile.localAttritionForEnemies.v > 0? "From Local Bonuses: " + army.tile.localAttritionForEnemies.v + "%\n" : "";
+                percent += army.tile.civ.attritionForEnemies.v > 0 ? "From Global Bonuses: " + army.tile.civ.attritionForEnemies.v + "%\n" : "";
             }            
         }
         if (armysize / 1000f > army.tile.supplyLimit)
@@ -176,7 +176,7 @@ public class ArmyUIProvince : MonoBehaviour
             percent += "From Supply: " + Mathf.Round(100f * Mathf.Clamp((armysize / 1000f - army.tile.supplyLimit) * (10f / ((float)army.tile.supplyLimit)), 0f, 5f)) / 100f + "%\n";
         }
         if(army.civID > -1) 
-        { Civilisation civ = Game.main.civs[army.civID]; percent += "Multiplied By: " + Mathf.Round(100f * (1f + civ.landAttrition.value)) + "%"; }
+        { Civilisation civ = Game.main.civs[army.civID]; percent += "Multiplied By: " + Mathf.Round(100f * (1f + civ.landAttrition.v)) + "%"; }
         return percent;
     }
     void SetupTabs(int amount)
@@ -346,7 +346,7 @@ public class ArmyUIProvince : MonoBehaviour
     }
     void SelectArmy()
     {
-        if (!Game.main.Started && army.civID == Player.myPlayer.myCivID) { return; }
+        if (!Game.main.Started || Game.main.isSaveLoad) { return; }
         Player.myPlayer.selectedArmies.Clear();
         Player.myPlayer.selectedFleets.Clear();
         Player.myPlayer.selectedArmies.Add(army);
@@ -355,7 +355,7 @@ public class ArmyUIProvince : MonoBehaviour
     }
     void SelectSiege()
     {
-        if (!Game.main.Started) { return; }
+        if (!Game.main.Started || Game.main.isSaveLoad) { return; }
         Player.myPlayer.selectedArmies.Clear();
         Player.myPlayer.selectedFleets.Clear();
         Player.myPlayer.selectedTile = army.tile;

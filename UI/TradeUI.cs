@@ -21,11 +21,11 @@ public class TradeUI : MonoBehaviour
             if (civ.tradeRegions[i])
             {
                 TradeRegion region = Map.main.tradeRegions.Values.ToArray()[i];
-                description.text += region.name + ": " + Mathf.Round(region.GetTradeIncome(civ) * (region.name == capitalRegion ? 1f : 1f - civ.tradePenalty.value) * 100f) / 100f + "<sprite index=0>" + (region.name == capitalRegion ? "\nNo Penalty On Capital Node" : "\nNon Capital Node Penalty:" + Mathf.Round(-civ.tradePenalty.value * 100f) + "%") + "\n";
-                description.text += "Number of Civs (" + region.civs.Count + ") Gives: +" + Mathf.Round(100f + region.civs.Count * civ.tradeValPerCiv.value * 100f) + "%\n\n";
+                description.text += region.name + ": " + Mathf.Round(region.GetTradeIncome(civ) * (region.name == capitalRegion ? 1f : 1f - civ.tradePenalty.v) * 100f) / 100f + "<sprite index=0>" + (region.name == capitalRegion ? "\nNo Penalty On Capital Node" : "\nNon Capital Node Penalty:" + Mathf.Round(-civ.tradePenalty.v * 100f) + "%") + "\n";
+                description.text += "Number of Civs (" + region.civs.Count + ") Gives: +" + Mathf.Round(100f + region.civs.Count * civ.tradeValPerCiv.v * 100f) + "%\n\n";
             }
         }
-        float tradeValue = (1f + civ.tradeValue.value);
+        float tradeValue = (1f + civ.tradeValue.v);
         description.text += "\nMultiplied by: " + Mathf.Round(tradeValue * 100) + "%";
     }
 }

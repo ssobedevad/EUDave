@@ -1,73 +1,103 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 
 [Serializable]
+[MessagePackObject(keyAsPropertyName: true)]
 public class Age
 {
-    public int tenMins = 0;
-    public int hours = 0;
-    public int days = 0;
-    public int months = 0;
-    public int years = 0;
-    public bool MainTime = false;
-    public bool active;
+    public int tm = 0;
+    public int h = 0;
+    public int d = 0;
+    public int m = 0;
+    public int y = 0;
+    public bool mt = false;
+    public bool a;
     public static Age zero => new Age(0,0,0,0,0);
 
+    public Age()
+    {
+
+    }
+    public Age(int totalTicks)
+    {
+        int years = totalTicks / (12 * 30 * 24 * 6);
+        totalTicks -= (years * 12 * 30 * 24 * 6);
+        int months = totalTicks / (30 * 24 * 6);
+        totalTicks -= (months * 30 * 24 * 6);
+        int days = totalTicks / (24 * 6);
+        totalTicks -= (days * 24 * 6);
+        int hours = totalTicks / 6;
+        totalTicks -= (hours * 6);
+        y = years;
+        m = months;
+        d = days;
+        h = hours;
+        tm = totalTicks;
+    }
     public int totalTicks()
     {
-        int total = tenMins;
-        total += hours * 6;
-        total += days * 24 * 6;
-        total += months * 30 * 24 * 6;
-        total += years * 12 * 30 * 24 * 6;
+        int total = tm;
+        total += h * 6;
+        total += d * 24 * 6;
+        total += m * 30 * 24 * 6;
+        total += y * 12 * 30 * 24 * 6;
         return total;
     }
     public void Reset()
     {
-        tenMins = 0;
-        hours = 0;
-        days = 0;
-        months = 0;
-        years = 0;
+        tm = 0;
+        h = 0;
+        d = 0;
+        m = 0;
+        y = 0;
     }
     public void Activate()
     {
-        if (!active)
+        if (!a)
         {
             Game.main.tenMinTick.AddListener(TenMinTick);
         }
     }
     public void DeActivate()
     {
-        if (active)
+        if (a)
         {
             Game.main.tenMinTick.RemoveListener(TenMinTick);
         }
     }
+    public void Set(Age age)
+    {
+        tm = age.tm;
+        h = age.h;
+        d = age.d;
+        m = age.m;
+        y = age.y;
+    }
     public Age(Age clone)
     {        
-        tenMins = clone.tenMins;
-        hours = clone.hours;
-        days = clone.days;
-        months = clone.months;
-        years = clone.years;
-        MainTime = false;
-        if (clone.active)
+        tm = clone.tm;
+        h = clone.h;
+        d = clone.d;
+        m = clone.m;
+        y = clone.y;
+        mt = false;
+        if (clone.a)
         {
             Game.main.tenMinTick.AddListener(TenMinTick);
         }
-        active = clone.active;
+        a = clone.a;
     }
 
     public Age(int TenMins = 0,int Hours = 0,int Days = 0,int Months = 0, int Years = 0, bool mainTime = false)
     {
         Game.main.tenMinTick.AddListener(TenMinTick);
-        tenMins = TenMins;
-        hours = Hours;  
-        days = Days;
-        months = Months;
-        years = Years;
-        MainTime = mainTime;
-        active = true;
+        tm = TenMins;
+        h = Hours;  
+        d = Days;
+        m = Months;
+        y = Years;
+        mt = mainTime;
+        a = true;
     }
     public void TenMinTick()
     {
@@ -78,33 +108,33 @@ public class Age
         string time = "";
         if (includeY)
         {
-            time += years.ToString() + " Years ";
+            time += y.ToString() + " Years ";
         }
         if (includeM)
         {
-            time += months.ToString() + " Months ";
+            time += m.ToString() + " Months ";
         }
         if (includeD)
         {
-            time += days.ToString() + " Days ";
+            time += d.ToString() + " Days ";
         }
         if (includeH)
         {
-            time += hours.ToString() + " Hours ";
+            time += h.ToString() + " Hours ";
         }
         if (includeTM)
         {
-            time += tenMins.ToString() + "0  mins ";
+            time += tm.ToString() + "0  mins ";
         }
         return time;
     }
     public string ToDate()
     {
         string val = "";
-        val += (hours % 12) + 1 + ":"+tenMins+"0" + (hours > 11 ? "PM " : "AM ");
-        val += days + 1 + GetDaySuffix(days + 1) +" ";
-        val += ToMonth(months) + " ";
-        val += years + " AD";
+        val += (h % 12) + 1 + ":"+tm+"0" + (h > 11 ? "PM " : "AM ");
+        val += d + 1 + GetDaySuffix(d + 1) +" ";
+        val += ToMonth(m) + " ";
+        val += y + " AD";
         return val;
     }
     public string GetDaySuffix(int day)
@@ -178,46 +208,46 @@ public class Age
     }
     public void AddTime(int TenMins = 0,int Hours = 0, int Days = 0, int Months = 0, int Years = 0)
     {
-        tenMins += TenMins;
-        if (tenMins >= 6)
+        tm += TenMins;
+        if (tm >= 6)
         {
-            hours++;
-            if (MainTime)
+            h++;
+            if (mt)
             {
                 Game.main.hourTick.Invoke();
             }
-            tenMins -= 6;
+            tm -= 6;
         }
-        hours += Hours;
-        if (hours >= 24)
+        h += Hours;
+        if (h >= 24)
         {
-            days++;
-            if (MainTime)
+            d++;
+            if (mt)
             {
                 Game.main.dayTick.Invoke();
             }
-            hours -= 24;
+            h -= 24;
         }
-        days += Days;
-        if (days >= 30)
+        d += Days;
+        if (d >= 30)
         {
-            months++;
-            if (MainTime)
+            m++;
+            if (mt)
             {
                 Game.main.monthTick.Invoke();
             }
-            days -= 30;
+            d -= 30;
         }
-        months += Months;
-        if (months >= 12)
+        m += Months;
+        if (m >= 12)
         {
-            years++;
-            if (MainTime)
+            y++;
+            if (mt)
             {
                 Game.main.yearTick.Invoke();
             }
-            months -= 12;
+            m -= 12;
         }
-        years += Years;                       
+        y += Years;                       
     }
 }

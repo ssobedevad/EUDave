@@ -43,8 +43,8 @@ public class StabilityUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         overextension.text = Mathf.Round(civ.overextension * 100f)/100f + "%";
         stability.text = Mathf.Round(civ.stability) + "<sprite index=6>";
-        globalUnrest.text = Mathf.Round(civ.globalUnrest.value * 100f) / 100f + "<sprite index=11>";
-        govCap.text = Mathf.Round(civ.governingCapacity * 100f) / 100f + "/" + Mathf.Round(civ.governingCapacityMax.value * 100f) / 100f;
+        globalUnrest.text = Mathf.Round(civ.globalUnrest.v * 100f) / 100f + "<sprite index=11>";
+        govCap.text = Mathf.Round(civ.governingCapacity * 100f) / 100f + "/" + Mathf.Round(civ.governingCapacityMax.v * 100f) / 100f;
         string text = "It will cost " + civ.GetStabilityCost() + "<sprite index=1> to boost stability by 1\n\n";
         text += "This is due to:\n";
         text += "Base 100<sprite index=1>\n";

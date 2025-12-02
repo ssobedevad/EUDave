@@ -1,43 +1,61 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using static UnityEngine.GraphicsBuffer;
 
 public static class SaveGameManager
 {
-    public static void LoadSave()
+    public static async Task LoadSave(string name)
     {
-        SaveGameData data = SaveLoad.LoadData(Game.main.saveGameName);
-        Game.main.gameTime = data.gameTime;
+        UIManager.main.loadingScreen.currentPhase = "Pre-Load";
+        SaveGameData data = await SaveLoadTestMP.LoadData(name);
+        UIManager.main.loadingScreen.currentPhase = "Setup Scenario";
+        Game.main.gameTime.Set(data.combat.gameTime);
+        Player.myPlayer.myCivID = data.combat.civID;
+        Game.main.Started = true;
         LoadCivs(data);
         LoadMap(data.map);
         LoadWars(data);
         LoadBattles(data);
+        if(data.combat.civID > -1 && Game.main.civs[data.combat.civID].isActive())
+        {
+            CameraController.main.rb.position = Map.main.tileMapManager.tilemap.CellToWorld(Game.main.civs[data.combat.civID].capitalPos);
+        }
         Game.main.saveGameName = data.SaveName;
+        UIManager.main.loadingScreen.currentPhase = "Completed";
     }
-    public static void SaveSave()
+    public static async Task SaveSave()
     {
+        UIManager.main.loadingScreen.currentPhase = "Create Save Data";
         SaveGameData data = new SaveGameData();
         SaveCivs(data);
         SaveMap(data.map);
         SaveWars(data);
         SaveBattles(data);
-        Game.main.saveGameName = SaveLoad.SaveData(data);
+        UIManager.main.loadingScreen.currentPhase = "Save Save Data";
+        await SaveLoadTestMP.SaveData(data);
+        if (Game.main.saveGameName.Length > 0 && Game.main.replaceSave)
+        {
+            SaveLoadTestMP.RemoveSave(Game.main.saveGameName);
+        }
+        Game.main.saveGameName = data.SaveName;
+        UIManager.main.loadingScreen.currentPhase = "Completed";
     }
     static void LoadBattles(SaveGameData save)
     {
-        foreach (var battle in save.ongoingBattles)
+        foreach (var battle in save.combat.ongoingBattles)
         {
             battle.LoadToBattle();
         }
-        foreach (var navalBattle in save.ongoingNavalBattles)
+        foreach (var navalBattle in save.combat.ongoingNavalBattles)
         {
             navalBattle.LoadToBattle();
         }
     }
     static void LoadWars(SaveGameData save)
     {
-        foreach (var warData in save.ongoingWars)
+        foreach (var warData in save.combat.ongoingWars)
         {
             warData.LoadToWar();
         }
@@ -61,18 +79,18 @@ public static class SaveGameManager
     {
         foreach (var battle in Game.main.ongoingBattles)
         {
-            save.ongoingBattles.Add(new SaveGameBattle(battle));
+            save.combat.ongoingBattles.Add(new SaveGameBattle(battle));
         }
         foreach (var navalBattle in Game.main.ongoingNavalBattles)
         {
-            save.ongoingNavalBattles.Add(new SaveGameNavalBattle(navalBattle));
+            save.combat.ongoingNavalBattles.Add(new SaveGameNavalBattle(navalBattle));
         }
     }
     static void SaveWars(SaveGameData save)
     {
         foreach (var war in Game.main.ongoingWars)
         {
-            save.ongoingWars.Add(new SaveGameWar(war));
+            save.combat.ongoingWars.Add(new SaveGameWar(war));
         }
     }
     static void SaveMap(SaveGameMap map)
@@ -83,13 +101,14 @@ public static class SaveGameManager
     {
         for (int i = 0; i < Game.main.civs.Count; i++)
         {
-            SaveCiv(save.civs[i],Game.main.civs[i]);
+            save.civs[i] = SaveCiv(Game.main.civs[i]);
         }
     }
 
-    static void SaveCiv(SaveGameCiv saveGameCiv,Civilisation civ)
+    static SaveGameCiv SaveCiv(Civilisation civ)
     {
-        saveGameCiv = new SaveGameCiv();
+        SaveGameCiv saveGameCiv = new SaveGameCiv();
         saveGameCiv.SaveCiv(civ);
+        return saveGameCiv;
     }
 }

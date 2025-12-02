@@ -22,13 +22,13 @@ public class MilitaryUI : MonoBehaviour
     {
         if(Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
-        forceLimit.text = Mathf.Round(civ.TotalMaxArmySize()/1000f) + " / "+ Mathf.Round(civ.forceLimit.value);
-        morale.text = Mathf.Round(civ.moraleMax.value * 100f)/100f + "";
-        discipline.text = Mathf.Round(civ.discipline.value * 100f) + "%";
-        tactics.text = Mathf.Round(civ.militaryTactics.value * 100f) / 100f + "";
+        forceLimit.text = Mathf.Round(civ.TotalMaxArmySize()/1000f) + " / "+ Mathf.Round(civ.forceLimit.v);
+        morale.text = Mathf.Round(civ.moraleMax.v * 100f)/100f + "";
+        discipline.text = Mathf.Round(civ.discipline.v * 100f) + "%";
+        tactics.text = Mathf.Round(civ.militaryTactics.v * 100f) / 100f + "";
         tradition.text = Mathf.Round(civ.armyTradition * 100f) / 100f + "";
-        fortDefence.text = Mathf.Round(civ.fortDefence.value * 100f) / 100f + "";
-        combatWidth.text = Mathf.Round(civ.combatWidth.value) + "";
+        fortDefence.text = Mathf.Round(civ.fortDefence.v * 100f) / 100f + "";
+        combatWidth.text = Mathf.Round(civ.combatWidth.v) + "";
         SetupUnit(0, infantry);
         SetupUnit(1, cavalry);
         SetupUnit(2, artillery);
@@ -83,10 +83,10 @@ public class MilitaryUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         UnitType unit = civ.units[type];
         TextMeshProUGUI[] texts = baseImg.GetComponentsInChildren<TextMeshProUGUI>();
-        texts[0].text = Mathf.Round(unit.meleeDamage.value * 100f) / 100f + "";
-        texts[1].text = Mathf.Round(unit.flankingDamage.value * 100f) / 100f + "";
-        texts[2].text = Mathf.Round(unit.rangedDamage.value * 100f) / 100f + "";
-        texts[3].text = Mathf.Round(unit.combatAbility.value * 100f) / 100f + "";
+        texts[0].text = Mathf.Round(unit.meleeDamage.v * 100f) / 100f + "";
+        texts[1].text = Mathf.Round(unit.flankingDamage.v * 100f) / 100f + "";
+        texts[2].text = Mathf.Round(unit.rangedDamage.v * 100f) / 100f + "";
+        texts[3].text = Mathf.Round(unit.combatAbility.v * 100f) / 100f + "";
         texts[4].text = Mathf.Round(unit.baseCost * 100f) / 100f + "";
     }
     void SetupHoverText()
@@ -94,25 +94,25 @@ public class MilitaryUI : MonoBehaviour
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
         HoverText hoverText = forceLimit.transform.parent.GetComponent<HoverText>();
-        string text = "The maximum number of regiments that can be fielded without penalty is: " + Mathf.Round(civ.forceLimit.value) +"\n\n";
+        string text = "The maximum number of regiments that can be fielded without penalty is: " + Mathf.Round(civ.forceLimit.v) +"\n\n";
         text += "This is due to:\n";
         text += civ.forceLimit.ToString();
         hoverText.text = text;
 
         hoverText = morale.transform.parent.GetComponent<HoverText>();
-        text = "The maximum morale of regiments is: " + Mathf.Round(civ.moraleMax.value * 100f) / 100f + "\n\n";
+        text = "The maximum morale of regiments is: " + Mathf.Round(civ.moraleMax.v * 100f) / 100f + "\n\n";
         text += "This is due to:\n";
         text += civ.moraleMax.ToString();
         hoverText.text = text;
 
         hoverText = discipline.transform.parent.GetComponent<HoverText>();
-        text = "The discipline of regiments is: " + Mathf.Round(civ.discipline.value * 100f) + "%\n\n";
+        text = "The discipline of regiments is: " + Mathf.Round(civ.discipline.v * 100f) + "%\n\n";
         text += "This is due to:\n";
         text += civ.discipline.ToString();
         hoverText.text = text;
 
         hoverText = tactics.transform.parent.GetComponent<HoverText>();
-        text = "The military tactics of regiments is: " + Mathf.Round(civ.militaryTactics.value * 100f) / 100f + "\n\n";
+        text = "The military tactics of regiments is: " + Mathf.Round(civ.militaryTactics.v * 100f) / 100f + "\n\n";
         text += "This is due to:\n";
         text += civ.militaryTactics.ToString();
         hoverText.text = text;
@@ -125,13 +125,13 @@ public class MilitaryUI : MonoBehaviour
         hoverText.text = text;
 
         hoverText = fortDefence.transform.parent.GetComponent<HoverText>();
-        text = "The global fort defence of the country is: " + Mathf.Round(civ.fortDefence.value * 100f) / 100f + "%\n\n";
+        text = "The global fort defence of the country is: " + Mathf.Round(civ.fortDefence.v * 100f) / 100f + "%\n\n";
         text += "This is due to:\n";
         text += civ.fortDefence.ToString();
         hoverText.text = text;
 
         hoverText = combatWidth.transform.parent.GetComponent<HoverText>();
-        text = "The global combat with of the country is: " + Mathf.Round(civ.combatWidth.value) + "\n\n";
+        text = "The global combat with of the country is: " + Mathf.Round(civ.combatWidth.v) + "\n\n";
         text += "This is due to:\n";
         text += civ.combatWidth.ToString();
         hoverText.text = text;

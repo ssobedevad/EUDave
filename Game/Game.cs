@@ -24,6 +24,7 @@ public class Game : MonoBehaviour
     public UnityEvent yearTick = new UnityEvent();
     public float tenMinTickTime = 1f;
     public float AI_MAX_AGGRESSIVENESS = 100f;
+    public bool replaceSave = true;
     public bool paused = true;
     private float tenMinTickTimer = 0f;
     public bool Started = false;
@@ -33,13 +34,14 @@ public class Game : MonoBehaviour
     public bool refreshMap;
     public int gameSpeed = 0;
     public string saveGameName;
+    public bool isSaveLoad;
     private void Awake()
     {
         main = this;
         gameTime = new Age(0,0, 0, 0, 0,true);
         civs.Clear();
         dayTick.AddListener(RefreshTradeRegions);
-        monthTick.AddListener(AutoSave);
+        yearTick.AddListener(AutoSave);
         foreach(var civData in civDatas)
         {
             Civilisation civ = new Civilisation();
@@ -63,10 +65,23 @@ public class Game : MonoBehaviour
         }
         highestDevelopment = 1;
         refreshMap = true;
+        float maxAggro = PlayerPrefs.GetFloat("AIAGGRO");
+        int replaceSaveVal = PlayerPrefs.GetInt("ReplaceSave");
+        if (maxAggro > 0)
+        {
+            AI_MAX_AGGRESSIVENESS = maxAggro;
+        }
+        replaceSave = replaceSaveVal == 0;
     }
-    void AutoSave()
+    async void AutoSave()
     {
-        SaveGameManager.SaveSave();
+        isSaveLoad = true;
+        UIManager.main.loadingScreen.display = "Autosaving";
+        UIManager.main.loadingScreen.currentPhase = "Init";
+        UIManager.main.loadingScreen.gameObject.SetActive(true);
+        await SaveGameManager.SaveSave();
+        UIManager.main.loadingScreen.gameObject.SetActive(false);
+        isSaveLoad = false;
     }
     public void StartGame()
     {
@@ -90,7 +105,7 @@ public class Game : MonoBehaviour
         { 
             paused = !paused; 
         }
-        if (!paused) 
+        if (!paused && !isSaveLoad) 
         {
             tenMinTickTimer += Time.deltaTime;
             if (tenMinTickTimer >= tenMinTickTime)

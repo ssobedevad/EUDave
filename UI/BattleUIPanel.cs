@@ -288,13 +288,13 @@ public class BattleUIPanel : MonoBehaviour
             moraleFillD.fillAmount = battle.AverageMorale(false) / battle.AverageMaxMorale(false);
             moraleFillTextD.text = "Morale: " + Mathf.Round(battle.AverageMorale(false) * 100f) / 100f + "/" + Mathf.Round(battle.AverageMaxMorale(false) * 100f) / 100f;
 
-            disciplineTextA.text = Mathf.Round(battle.attackerCiv.discipline.value * 100f) + "%";
-            moraleTextA.text = Mathf.Round(battle.attackerCiv.moraleMax.value * 100f) / 100f + "";
-            tacticsTextA.text = Mathf.Round(battle.attackerCiv.militaryTactics.value * battle.attackerCiv.discipline.value * 100f) / 100f + "";     
+            disciplineTextA.text = Mathf.Round(battle.attackerCiv.discipline.v * 100f) + "%";
+            moraleTextA.text = Mathf.Round(battle.attackerCiv.moraleMax.v * 100f) / 100f + "";
+            tacticsTextA.text = Mathf.Round(battle.attackerCiv.militaryTactics.v * battle.attackerCiv.discipline.v * 100f) / 100f + "";     
 
-            disciplineTextD.text = Mathf.Round(battle.defenderCiv.discipline.value * 100f) + "%";
-            moraleTextD.text = Mathf.Round(battle.defenderCiv.moraleMax.value * 100f) / 100f + "";
-            tacticsTextD.text = Mathf.Round(battle.defenderCiv.militaryTactics.value * battle.defenderCiv.discipline.value * 100f) / 100f + "";
+            disciplineTextD.text = Mathf.Round(battle.defenderCiv.discipline.v * 100f) + "%";
+            moraleTextD.text = Mathf.Round(battle.defenderCiv.moraleMax.v * 100f) / 100f + "";
+            tacticsTextD.text = Mathf.Round(battle.defenderCiv.militaryTactics.v * battle.defenderCiv.discipline.v * 100f) / 100f + "";
                
         }
         else

@@ -69,11 +69,11 @@ public class GreatProject
     }
     public float GetCost(TileData tileData,Civilisation civ)
     {
-        return Mathf.Max(baseCost * (tier + 1f) * (1f + tileData.localConstructionCost.value + civ.constructionCost.value),1f);
+        return Mathf.Max(baseCost * (tier + 1f) * (1f + tileData.localConstructionCost.v + civ.constructionCost.v),1f);
     }
     public float GetTime(TileData tileData, Civilisation civ)
     {
-        return Mathf.Max(baseTime * (tier + 1f) * (1f + tileData.localConstructionTime.value + civ.constructionTime.value),1f);
+        return Mathf.Max(baseTime * (tier + 1f) * (1f + tileData.localConstructionTime.v + civ.constructionTime.v),1f);
     }
     public string GetHoverTextT1(Civilisation civ)
     {

@@ -54,7 +54,7 @@ public class TradeRegion
             }
         }
         marketPercent = (civInput / total);
-        return civInput * marketPercent * Map.main.resourceDict[resource].Value * (1f + civs.Count * civ.tradeValPerCiv.value);
+        return civInput * marketPercent * Map.main.resourceDict[resource].Value * (1f + civs.Count * civ.tradeValPerCiv.v);
     }
     public float GetTradeIncome(Civilisation civ)
     {

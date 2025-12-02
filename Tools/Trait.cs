@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 
 using UnityEngine;
@@ -10,6 +11,18 @@ public class Trait
     public Sprite icon;
     public Effect[] effects;
     public int traitType;
+
+    public Trait()
+    {
+
+    }
+    public Trait(Trait clone)
+    {
+        name = clone.name;
+        icon = clone.icon;
+        effects = clone.effects;
+        traitType = clone.traitType;
+    }
     public string GetHoverText(Civilisation civ)
     {
         string text = name + ":\n";

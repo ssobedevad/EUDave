@@ -96,7 +96,7 @@ public class GovernmentUI : MonoBehaviour
     {
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
-        reformProgress.text = "Reform Progress: " + Mathf.Round(civ.reformProgress * 100f) / 100f + "\n +" + Mathf.Round(0.5f * civ.GetAverageControl() / 100f * (1f + civ.reformProgressGrowth.value) * 100f)/100f + " Per Day";
+        reformProgress.text = "Reform Progress: " + Mathf.Round(civ.reformProgress * 100f) / 100f + "\n +" + Mathf.Round(0.5f * civ.GetAverageControl() / 100f * (1f + civ.reformProgressGrowth.v) * 100f)/100f + " Per Day";
         icon.sprite = Map.main.governmentTypes[civ.government].sprite;
         effects.text = Map.main.governmentTypes[civ.government].GetHoverText(civ);
         GovernmentType governmentType = Map.main.governmentTypes[civ.government];

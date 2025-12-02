@@ -28,7 +28,8 @@ public class Fleet : MonoBehaviour
 
     public static Fleet NewFleet(SaveGameFleet save)
     {
-        TileData tile = Map.main.GetTile(save.pos);
+        TileData tile = Map.main.GetTile(save.pos.GetVector3Int());
+        if(tile == null) { return null; }
         Fleet a = Instantiate(Map.main.boatPrefab, tile.worldPos(), Quaternion.identity, Map.main.unitTransform).GetComponent<Fleet>();
         a.civID = save.civID;
         a.boats.AddRange(save.boats);
@@ -43,8 +44,8 @@ public class Fleet : MonoBehaviour
         a.moveTimer = save.moveTimer;
         a.moveTime = save.moveTime;
         a.general = save.general;
-        a.path = save.path;
-        a.lastPos = save.lastPos;
+        a.path = save.path.ConvertAll(i=>i.GetVector3Int());
+        a.lastPos = save.lastPos.GetVector3Int();
         a.timeAtSea = save.timeAtSea;
         return a;
     }
@@ -99,7 +100,7 @@ public class Fleet : MonoBehaviour
                 power *= Mathf.Max((1f + ((general != null && general.active) ? general.meleeSkill * 0.1f : 0f))
                     , (1f + ((general != null && general.active) ? general.flankingSkill * 0.1f : 0f))
                     , (1f + ((general != null && general.active) ? general.rangedSkill * 0.1f : 0f)));
-                power *= 1f + civ.units[unit.type].combatAbility.value;
+                power *= 1f + civ.units[unit.type].combatAbility.v;
                 strength += power;
             }
         }
@@ -135,9 +136,9 @@ public class Fleet : MonoBehaviour
             Civilisation civ = Game.main.civs[civID];
             foreach (var boat in boats)
             {
-                boat.cannons = (int)civ.boats[boat.type].cannons.value;
-                boat.supplyMax = civ.boats[boat.type].supply.value;
-                boat.hullStrengthMax = civ.boats[boat.type].hullStrength.value;
+                boat.cannons = (int)civ.boats[boat.type].cannons.v;
+                boat.supplyMax = civ.boats[boat.type].supply.v;
+                boat.hullStrengthMax = civ.boats[boat.type].hullStrength.v;
             }
             if (tile.civID != civID && !tile.terrain.isSea)
             {
@@ -251,8 +252,8 @@ public class Fleet : MonoBehaviour
                 if (civ.atWarWith.Contains(tile.civID))
                 {
                     percent += 1f + tile.fortLevel;
-                    percent += tile.localAttritionForEnemies.value;
-                    percent += tile.civ.attritionForEnemies.value;
+                    percent += tile.localAttritionForEnemies.v;
+                    percent += tile.civ.attritionForEnemies.v;
                 }
             }
             else
@@ -267,7 +268,7 @@ public class Fleet : MonoBehaviour
         if (civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            percent *= (1f + civ.landAttrition.value);
+            percent *= (1f + civ.landAttrition.v);
         }
         return percent;
     }
@@ -418,7 +419,7 @@ public class Fleet : MonoBehaviour
         if (civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            movementSpeed += civ.movementSpeed.value;
+            movementSpeed += civ.movementSpeed.v;
         }
         if (general != null && general.active)
         {

@@ -1,12 +1,14 @@
-﻿using System.Collections;
+﻿using MessagePack;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditor.U2D.Aseprite;
 using UnityEngine;
+[MessagePackObject(keyAsPropertyName: true)]
 [System.Serializable] public class SaveGameWar
 {
     public int attackerCivID;
     public int defenderCivID;
-    public Vector3Int warGoal;
+    public SaveGameVector3Int warGoal;
     public CasusBelli casusBelli;
     public bool attackerControlsWarGoal;
     public int warGoalTimer;
@@ -32,7 +34,7 @@ using UnityEngine;
     {
         attackerCivID = war.attackerCiv.CivID;
         defenderCivID = war.defenderCiv.CivID;
-        warGoal = war.warGoal;
+        warGoal = new SaveGameVector3Int(war.warGoal);
         casusBelli = war.casusBelli;
         attackerControlsWarGoal = war.attackerControlsWarGoal;
         warGoalTimer = war.warGoalTimer;
@@ -53,9 +55,9 @@ using UnityEngine;
     {
         Civilisation attackerCiv = Game.main.civs[attackerCivID];
         Civilisation defenderCiv = Game.main.civs[defenderCivID];
-        War war = new War(attackerCiv, attackerCiv);
+        War war = new War(attackerCiv, defenderCiv);
 
-        war.warGoal = warGoal;
+        war.warGoal = warGoal.GetVector3Int();
         war.casusBelli = casusBelli;
         war.attackerControlsWarGoal = attackerControlsWarGoal;
         war.warGoalTimer = warGoalTimer;

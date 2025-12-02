@@ -1,50 +1,54 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 [Serializable]
+[MessagePackObject(keyAsPropertyName: true)]
 public class Stat
 {
-    public float baseStat;
-    public float value;
-    public string name;
-    public List<Modifier> modifiers = new List<Modifier>();
-    bool tempActive;
-    public bool isFlat;
-    public float decayAmount = 1f;
+    public float bs;
+    public float v;  
+    public List<Modifier> ms = new List<Modifier>();
+    public bool ta;
+    public bool f;
+    public float d = 1f;
     public Stat(float BaseStat,string Name,bool IsFlat = false)
     {
-        baseStat = BaseStat;
-        name = Name;
-        value = baseStat;       
-        isFlat = IsFlat;
+        bs = BaseStat;
+        v = bs;       
+        f = IsFlat;
+    }
+    public Stat()
+    {
+
     }
     public override string ToString()
     {
-        List<Modifier> bases = modifiers.FindAll(i => i.type == ModifierType.Base && i.value != 0);
-        List<Modifier> additive = modifiers.FindAll(i => i.type == ModifierType.Additive && i.value != 0);
-        List<Modifier> flat = modifiers.FindAll(i => i.type == ModifierType.Flat && i.value != 0);
-        List<Modifier> multiplicative = modifiers.FindAll(i => i.type == ModifierType.Multiplicative && i.value != 0);
+        List<Modifier> bases = ms.FindAll(i => i.t == ModifierType.Base && i.v != 0);
+        List<Modifier> additive = ms.FindAll(i => i.t == ModifierType.Additive && i.v != 0);
+        List<Modifier> flat = ms.FindAll(i => i.t == ModifierType.Flat && i.v != 0);
+        List<Modifier> multiplicative = ms.FindAll(i => i.t == ModifierType.Multiplicative && i.v != 0);
         float totalB = 0f;
         if (bases.Count > 0)
         {
             
             foreach (Modifier modifier in bases)
             {
-                totalB += modifier.value;
+                totalB += modifier.v;
                 
             }
         }
-        float baseStatNew = baseStat + totalB;
+        float baseStatNew = bs + totalB;
         string Start = baseStatNew > 0 ? "Base: " + baseStatNew + "\n" : "";
         if (additive.Count > 0)
         {
             float total = 0f;
             foreach(Modifier modifier in additive)
             {
-                total += modifier.value;
-                Start += modifier.name + ":" + Modifier.ToString(modifier.value, this,true) + "\n";
+                total += modifier.v;
+                Start += modifier.n + ":" + Modifier.ToString(modifier.v, this,true) + "\n";
             }
         }
         if (flat.Count > 0)
@@ -52,8 +56,8 @@ public class Stat
             float total = 0f;
             foreach (Modifier modifier in flat)
             {
-                total += modifier.value;
-                Start += modifier.name + ":" + Modifier.ToString(modifier.value,this) + "\n";                
+                total += modifier.v;
+                Start += modifier.n + ":" + Modifier.ToString(modifier.v,this) + "\n";                
             }
         }
         if (multiplicative.Count > 0)
@@ -62,8 +66,8 @@ public class Stat
             float total = 1f;
             foreach (Modifier modifier in multiplicative)
             {
-                total *= modifier.value;
-                Start += modifier.name + ":" + Modifier.ToString(modifier.value, this, true) + "\n";
+                total *= modifier.v;
+                Start += modifier.n + ":" + Modifier.ToString(modifier.v, this, true) + "\n";
             }
         }
         if(Start.Length == 0) { return "None"; }
@@ -71,49 +75,49 @@ public class Stat
     }
     public void SetValue()
     {
-        value = baseStat;
+        v = bs;
         float Add = 0f;
         float Flat = 0f;
         float Mult = 1f;
         float baseBonus = 0f;
-        foreach (var modifier in modifiers)
+        foreach (var modifier in ms)
         {
-            if (modifier.type == ModifierType.Base)
+            if (modifier.t == ModifierType.Base)
             {
-                baseBonus += modifier.value;
+                baseBonus += modifier.v;
             }
-            else if (modifier.type == ModifierType.Flat)
+            else if (modifier.t == ModifierType.Flat)
             {
-                Flat += modifier.value;
+                Flat += modifier.v;
             }
-            else if (modifier.type == ModifierType.Additive)
+            else if (modifier.t == ModifierType.Additive)
             {
-                Add += modifier.value;
+                Add += modifier.v;
             }
-            else if (modifier.type == ModifierType.Multiplicative)
+            else if (modifier.t == ModifierType.Multiplicative)
             {
-                Mult += modifier.value;
+                Mult += modifier.v;
             }
         }
-        value += baseBonus;
-        value += Add * (baseStat + baseBonus) + Flat;
-        value *= Mult;
+        v += baseBonus;
+        v += Add * (bs + baseBonus) + Flat;
+        v *= Mult;
     }
     public void ChangeBaseStat(float NewStat)
     {
-        baseStat = NewStat;
+        bs = NewStat;
         SetValue();
     }
     public void AddModifier(Modifier modifier)
     {
-        if (!modifiers.Exists(i => i.name == modifier.name))
+        if (!ms.Exists(i => i.n == modifier.n))
         {
-            modifiers.Add(modifier);
+            ms.Add(modifier);
             SetValue();
-            if ((modifier.duration != -1 || modifier.decay) && !tempActive)
+            if ((modifier.d != -1 || modifier.dc) && !ta)
             {
                 Game.main.tenMinTick.AddListener(TickTempModifiers);
-                tempActive = true;
+                ta = true;
             }
         }
         else
@@ -124,19 +128,19 @@ public class Stat
     public void IncreaseModifier(string name, float byAmount, int type = 0,bool Decay = true)
     {
         Modifier modifier;
-        if (modifiers.Exists(i => i.name == name))
+        if (ms.Exists(i => i.n == name))
         {
-            modifier = modifiers.Find(i => i.name == name);
-            modifier.value += byAmount;
+            modifier = ms.Find(i => i.n == name);
+            modifier.v += byAmount;
         }
         else
         {
             modifier = new Modifier(byAmount, type, name, decay: Decay);
             AddModifier(modifier);
-            if ((modifier.duration != -1 || modifier.decay) && !tempActive)
+            if ((modifier.d != -1 || modifier.dc) && !ta)
             {
                 Game.main.tenMinTick.AddListener(TickTempModifiers);
-                tempActive = true;
+                ta = true;
             }
         }
         SetValue();
@@ -144,12 +148,12 @@ public class Stat
     void TickTempModifiers()
     {
         bool hasTemp = false;
-        foreach(var modifier in modifiers.ToList())
+        foreach(var modifier in ms.ToList())
         {
-            if(modifier.duration > 0)
+            if(modifier.d > 0)
             {
-                modifier.duration--;
-                if(modifier.duration == 0)
+                modifier.d--;
+                if(modifier.d == 0)
                 {
                     RemoveModifier(modifier);
                 }
@@ -158,20 +162,20 @@ public class Stat
                     hasTemp = true;
                 }
             }
-            if (modifier.decay)
+            if (modifier.dc)
             {
-                if(modifier.value > 0)
+                if(modifier.v > 0)
                 {
-                    modifier.value -= 1f / 1440f;
-                    if(modifier.value < 0)
+                    modifier.v -= 1f / 1440f;
+                    if(modifier.v < 0)
                     {
                         RemoveModifier(modifier);
                     }
                 }
-                else if (modifier.value < 0)
+                else if (modifier.v < 0)
                 {
-                    modifier.value += decayAmount / 1440f;
-                    if (modifier.value > 0)
+                    modifier.v += d / 1440f;
+                    if (modifier.v > 0)
                     {
                         RemoveModifier(modifier);
                     }
@@ -182,29 +186,29 @@ public class Stat
         if (!hasTemp)
         {
             Game.main.tenMinTick.RemoveListener(TickTempModifiers);
-            tempActive = false;
+            ta = false;
         }
     }
     public void RemoveModifier(Modifier modifier)
     {
-        modifiers.Remove(modifier);
+        ms.Remove(modifier);
         SetValue();
     }
     public void TryRemoveModifier(string modifierName)
     {
-        Modifier modifier = modifiers.Find(i => i.name == modifierName);
+        Modifier modifier = ms.Find(i => i.n == modifierName);
         if (modifier != null)
         {
-            modifiers.Remove(modifier);
+            ms.Remove(modifier);
             SetValue();
         }
     }
     public void UpdateModifier(string name,  float value, int type = 0)
     {
-        Modifier modifier = modifiers.Find(i => i.name == name);
+        Modifier modifier = ms.Find(i => i.n == name);
         try
         {
-            modifier.value = value;
+            modifier.v = value;
         }
         catch
         {
@@ -216,20 +220,20 @@ public class Stat
     public void UpdateModifierDuration(string name,float value, int duration, int type = 0)
     {
         Modifier modifier;
-        if (modifiers.Exists(i => i.name == name))
+        if (ms.Exists(i => i.n == name))
         {
-            modifier = modifiers.Find(i => i.name == name);
-            modifier.duration = duration;
-            modifier.value = value;
+            modifier = ms.Find(i => i.n == name);
+            modifier.d = duration;
+            modifier.v = value;
         }
         else
         {
             modifier = new Modifier(value, type, name, duration);
             AddModifier(modifier);
-            if ((modifier.duration != -1 || modifier.decay) && !tempActive)
+            if ((modifier.d != -1 || modifier.dc) && !ta)
             {
                 Game.main.tenMinTick.AddListener(TickTempModifiers);
-                tempActive = true;
+                ta = true;
             }
         }
         SetValue();

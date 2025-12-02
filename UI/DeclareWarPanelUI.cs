@@ -318,19 +318,19 @@ public class DeclareWarPanelUI : MonoBehaviour
     public static string GetPositiveReasons(Civilisation target,Civilisation ally, Civilisation thisCiv,bool defensive = false)
     {
         string reasons = defensive ? "Defensive War: 30\n" : "";
-        reasons += ally.diploRep.value > 0 ? "Diplo Rep: " +ally.diploRep.value * 5f + "\n" : "";
-        reasons += thisCiv.opinionOfThem[target.CivID].value < 0 ? "Opinion of target: " + thisCiv.opinionOfThem[target.CivID].value * -0.25f + "\n" : "";
-        reasons += thisCiv.opinionOfThem[ally.CivID].value > 0 ? "Opinion of us: " + thisCiv.opinionOfThem[ally.CivID].value * 0.25f + "\n" : "";
+        reasons += ally.diploRep.v > 0 ? "Diplo Rep: " +ally.diploRep.v * 5f + "\n" : "";
+        reasons += thisCiv.opinionOfThem[target.CivID].v < 0 ? "Opinion of target: " + thisCiv.opinionOfThem[target.CivID].v * -0.25f + "\n" : "";
+        reasons += thisCiv.opinionOfThem[ally.CivID].v > 0 ? "Opinion of us: " + thisCiv.opinionOfThem[ally.CivID].v * 0.25f + "\n" : "";
         reasons += ((thisCiv.GetTotalTilePopulation() + 1f) / (thisCiv.GetTotalMaxPopulation() + 1f)) > 0.5f ? "High population: " + 20f * ((thisCiv.GetTotalTilePopulation() + 1f) / (thisCiv.GetTotalMaxPopulation() + 1f) - 0.5f) + "\n" : "";
         return reasons;
     }
     public static string GetNegativeReasons(Civilisation target, Civilisation ally, Civilisation thisCiv, bool defensive = false)
     {
         string reasons = "";
-        reasons += ally.diploRep.value < 0 ? "Diplo Rep: " + ally.diploRep.value * 5f + "\n" : "";
+        reasons += ally.diploRep.v < 0 ? "Diplo Rep: " + ally.diploRep.v * 5f + "\n" : "";
         reasons += thisCiv.GetWars().Count > 0 ? "Already in a war: -20\n" : "";
-        reasons += thisCiv.opinionOfThem[target.CivID].value > 0 ? "Opinion of target: " + thisCiv.opinionOfThem[target.CivID].value * -0.25f + "\n" : "";
-        reasons += thisCiv.opinionOfThem[ally.CivID].value < 0 ? "Opinion of us: " + thisCiv.opinionOfThem[ally.CivID].value * 0.25f + "\n" : "";
+        reasons += thisCiv.opinionOfThem[target.CivID].v > 0 ? "Opinion of target: " + thisCiv.opinionOfThem[target.CivID].v * -0.25f + "\n" : "";
+        reasons += thisCiv.opinionOfThem[ally.CivID].v < 0 ? "Opinion of us: " + thisCiv.opinionOfThem[ally.CivID].v * 0.25f + "\n" : "";
         reasons += Mathf.Max(0, thisCiv.MinimumDistTo(target) - 10) > 0 ? "Distance to target: " + Mathf.Max(0, thisCiv.MinimumDistTo(target) - 10) * -1f + "\n" : "";
         reasons += ((thisCiv.GetTotalTilePopulation() + 1f) / (thisCiv.GetTotalMaxPopulation() + 1f)) < 0.5f ? "Low population: " + 20f * ((thisCiv.GetTotalTilePopulation() + 1f) / (thisCiv.GetTotalMaxPopulation() + 1f) - 0.5f) + "\n" : "";
         reasons += thisCiv.loans.Count > 0 ? "Has Loans: " + thisCiv.loans.Count * (defensive ? -0.25f : -1f) + "\n" : "";
@@ -363,10 +363,10 @@ public class DeclareWarPanelUI : MonoBehaviour
         {
             choice += (thisCiv.overlordID > -1 && target.CivID != thisCiv.overlordID) ? -1000f : 0f;
         }
-        choice += 5f * ally.diploRep.value;
+        choice += 5f * ally.diploRep.v;
         choice += thisCiv.GetWars().Count > 0 ? -20f : 0f;
-        choice += thisCiv.opinionOfThem[target.CivID].value * -0.25f;
-        choice += thisCiv.opinionOfThem[ally.CivID].value * 0.25f ;
+        choice += thisCiv.opinionOfThem[target.CivID].v * -0.25f;
+        choice += thisCiv.opinionOfThem[ally.CivID].v * 0.25f ;
         choice += Mathf.Max(0, thisCiv.MinimumDistTo(target) - 10) > 0 ? Mathf.Max(0, thisCiv.MinimumDistTo(target) - 10) * -1f : 0f;
         choice += 20f * ((thisCiv.GetTotalTilePopulation() + 1f) / (thisCiv.GetTotalMaxPopulation() + 1f) - 0.5f);
         choice += thisCiv.loans.Count > 0 ? thisCiv.loans.Count * (defensive ? -0.25f : -1f) : 0f;

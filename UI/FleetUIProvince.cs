@@ -304,7 +304,7 @@ public class FleetUIProvince : MonoBehaviour
     }
     void SelectArmy()
     {
-        if (!Game.main.Started && fleet.civID == Player.myPlayer.myCivID) { return; }
+        if (!Game.main.Started || Game.main.isSaveLoad) { return; }
         Player.myPlayer.selectedArmies.Clear();
         Player.myPlayer.selectedFleets.Clear();
         Player.myPlayer.selectedFleets.Add(fleet);
@@ -313,7 +313,7 @@ public class FleetUIProvince : MonoBehaviour
     }
     void SelectSiege()
     {
-        if (!Game.main.Started) { return; }
+        if (!Game.main.Started || Game.main.isSaveLoad) { return; }
         Player.myPlayer.selectedArmies.Clear();
         Player.myPlayer.selectedFleets.Clear();
         Player.myPlayer.selectedTile = fleet.tile;

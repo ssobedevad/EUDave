@@ -187,7 +187,7 @@ public class Civilisation
                 baseCost+= 8 * tile.totalDev;
             }
         }
-        return (int)(baseCost * (1f + overlord.dipAnnexCost.value));
+        return (int)(baseCost * (1f + overlord.dipAnnexCost.v));
     }
     public void UpdateDiplomaticCapacity()
     {
@@ -207,9 +207,9 @@ public class Civilisation
             Civilisation ally = Game.main.civs[allyID];
             diplomaticCapacity += ally.governingCapacity * 0.25f;
         }
-        libDesireInSubjects.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.value ? (diplomaticCapacity - diplomaticCapacityMax.value)/ diplomaticCapacityMax.value * 0.5f : 0, 1);
-        diploRep.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.value ? (diplomaticCapacity - diplomaticCapacityMax.value) / diplomaticCapacityMax.value * -2f : 0, 1);
-        controlDecay.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.value ? (diplomaticCapacity - diplomaticCapacityMax.value) / diplomaticCapacityMax.value * 0.5f : 0, 1);
+        libDesireInSubjects.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.v ? (diplomaticCapacity - diplomaticCapacityMax.v)/ diplomaticCapacityMax.v * 0.5f : 0, 1);
+        diploRep.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.v ? (diplomaticCapacity - diplomaticCapacityMax.v) / diplomaticCapacityMax.v * -2f : 0, 1);
+        controlDecay.UpdateModifier("Over Diplomatic Capacity", diplomaticCapacity > diplomaticCapacityMax.v ? (diplomaticCapacity - diplomaticCapacityMax.v) / diplomaticCapacityMax.v * 0.5f : 0, 1);
     }
     public List<MercenaryGroup> GetPossibleMercs()
     {
@@ -229,18 +229,22 @@ public class Civilisation
         if (overlordID == -1) { return; }
         Civilisation overlord = Game.main.civs[overlordID];
         float ld = 0;
-        ld +=  (TotalMilStrength() + 1)/(overlord.TotalMilStrength() + 1) * 75f;
+        ld +=  MathF.Min(100f,(TotalMilStrength() + 0.1f)/(overlord.TotalMilStrength() + 0.1f) * 75f);
         foreach(var ally in allies)
         {
-            ld += (Game.main.civs[ally].TotalMilStrength() + 1)/ (overlord.TotalMilStrength() + 1) * 75f;
+            Civilisation allyCiv = Game.main.civs[ally];
+            if (allyCiv.isActive())
+            {
+                ld += MathF.Min(100f, (Game.main.civs[ally].TotalMilStrength() + 0.1f) / (overlord.TotalMilStrength() + 0.1f) * 75f);
+            }
         }
-        ld += (GetTotalIncome() + 1) / (overlord.GetTotalIncome() + 1) * 75f;
-        ld -= 3f * overlord.diploRep.value;
-        ld -= 0.1f * opinionOfThem[overlordID].value;
+        ld += MathF.Min(100f, (GetTotalIncome() + 0.1f) / (overlord.GetTotalIncome() + 0.1f) * 75f);
+        ld -= 3f * overlord.diploRep.v;
+        ld -= 0.1f * opinionOfThem[overlordID].v;
         ld += Mathf.Max(0, diploTech - overlord.diploTech) * 5f;
-        ld += GetTotalDev() * 0.25f * (1f + libDesireFromDevForSubjects.value);
-        ld += overlord.libDesireInSubjects.value * 100f;
-        ld += libertyDesireTemp.value;
+        ld += GetTotalDev() * 0.25f * (1f + libDesireFromDevForSubjects.v);
+        ld += overlord.libDesireInSubjects.v * 100f;
+        ld += libertyDesireTemp.v;
         libertyDesire = ld;
     }
     public bool CanCoreTile(TileData tile)
@@ -252,15 +256,15 @@ public class Civilisation
             if (neighbor.civID == CivID || subjects.Contains(neighbor.civID))
             { return true; }
         }
-        if (tile.isCoastal && MinimumDistBetween(this, tile.pos) <= coringRange.value)
+        if (tile.isCoastal && MinimumDistBetween(this, tile.pos) <= coringRange.v)
         {
             civCoastalTiles.Sort((x, y) => TileData.evenr_distance(x.pos, tile.pos).CompareTo(TileData.evenr_distance(y.pos, tile.pos)));
             foreach (var coastal in civCoastalTiles) 
             {
-                if (TileData.evenr_distance(coastal.pos, tile.pos) > coringRange.value) { return false; }
+                if (TileData.evenr_distance(coastal.pos, tile.pos) > coringRange.v) { return false; }
                 int dist = Pathfinding.CoringDistance(coastal.pos, tile.pos);
                 if(dist == -1) { continue; }
-                return  dist <= coringRange.value;
+                return  dist <= coringRange.v;
             }
         }
         return false;
@@ -343,9 +347,9 @@ public class Civilisation
         }       
         ruler.age.Activate();
         ruler.Activate();
-        float coinsIncome = (1f + taxIncome.value) * (1f + taxEfficiency.value);
+        float coinsIncome = (1f + taxIncome.v) * (1f + taxEfficiency.v);
         float ForceLimit = 0f;
-        for (int i = 0; i < maximumAdvisors.value; i++)
+        for (int i = 0; i < maximumAdvisors.v; i++)
         {
             RefillAdvisors();
         }
@@ -405,7 +409,7 @@ public class Civilisation
         diploPower += 100 + 16 * ruler.diploSkill;
         milPower += 100 + 16 * ruler.milSkill;
         coins += coinsIncome * 16;
-        AddArmyTradition(ruler.milSkill * 5f + monthlyTradition.value * 6);
+        AddArmyTradition(ruler.milSkill * 5f + monthlyTradition.v * 6);
         SetAILevels();
     }
     public void SetAILevels()
@@ -600,11 +604,11 @@ public class Civilisation
         choices.Add(new WeightedChoice(3, 1));
         choices.Add(new WeightedChoice(4, 1));
         int basePoints = points / 5;
-        general.meleeSkill = basePoints + (int)generalMeleeSkill.value;
-        general.flankingSkill = basePoints + (int)generalFlankingSkill.value;
-        general.rangedSkill = basePoints + (int)generalRangedSkill.value;
-        general.siegeSkill = basePoints + (int)generalSiegeSkill.value;
-        general.maneuverSkill = basePoints + (int)generalManeuverSkill.value;
+        general.meleeSkill = basePoints + (int)generalMeleeSkill.v;
+        general.flankingSkill = basePoints + (int)generalFlankingSkill.v;
+        general.rangedSkill = basePoints + (int)generalRangedSkill.v;
+        general.siegeSkill = basePoints + (int)generalSiegeSkill.v;
+        general.maneuverSkill = basePoints + (int)generalManeuverSkill.v;
         points -= (basePoints * 5);
         for (int i = 0; i < points; i++)
         {
@@ -709,7 +713,7 @@ public class Civilisation
         Stat stat = GetStat(advisor.effect);
         if (stat != null)
         {
-            Modifier mod = stat.modifiers.Find(i => i.name == "Advisor");
+            Modifier mod = stat.ms.Find(i => i.n == "Advisor");
             if (mod != null)
             {
                 stat.RemoveModifier(mod);
@@ -763,11 +767,11 @@ public class Civilisation
         for (int i = 0; i < opinionOfThem.Length;i++)
         {
             Civilisation civ = Game.main.civs[i];
-            opinionOfThem[i].decayAmount = (1f + civ.improveRelations.value);
+            opinionOfThem[i].d = (1f + civ.improveRelations.v);
         }
         if (maxAE < 0)
         {
-            maxAE += (1f + improveRelations.value) / 1440f;
+            maxAE += (1f + improveRelations.v) / 1440f;
         }
 
         foreach (var tileData in GetAllCivTileDatas())
@@ -827,7 +831,7 @@ public class Civilisation
                 advisorsA.Remove(advisor);
             }
         }
-        if(advisorsA.Count < maximumAdvisors.value)
+        if(advisorsA.Count < maximumAdvisors.v)
         {
             advisorsA.Add(Advisor.NewRandomAdvisor(0, CivID));
         }
@@ -838,7 +842,7 @@ public class Civilisation
                 advisorsD.Remove(advisor);
             }
         }
-        if (advisorsD.Count < maximumAdvisors.value)
+        if (advisorsD.Count < maximumAdvisors.v)
         {
             advisorsD.Add(Advisor.NewRandomAdvisor(1, CivID));
         }
@@ -849,7 +853,7 @@ public class Civilisation
                 advisorsM.Remove(advisor);
             }
         }
-        if (advisorsM.Count < maximumAdvisors.value)
+        if (advisorsM.Count < maximumAdvisors.v)
         {
             advisorsM.Add(Advisor.NewRandomAdvisor(2, CivID));
         }
@@ -866,7 +870,7 @@ public class Civilisation
     public int GetStabilityCost()
     {
         int baseC = 100;
-        return (int)(baseC * (1f + stabilityCost.value));
+        return (int)(baseC * (1f + stabilityCost.v));
     }
     public float GetAverageControl()
     {
@@ -910,7 +914,7 @@ public class Civilisation
     public int GetMaxLoans()
     {
         float income = (ProductionIncome() + TaxIncome());
-        return (int)(income * 30f / (GetLoanSize() * interestPerMonth.value/100f));
+        return (int)(income * 30f / (GetLoanSize() * interestPerMonth.v/100f));
     }
     public float GetInterestPayment()
     {
@@ -1019,14 +1023,14 @@ public class Civilisation
             if (tradeRegions[i])
             {
                 TradeRegion region = Map.main.tradeRegions.Values.ToArray()[i];
-                tradeIncome += Mathf.Max(0, region.GetTradeIncome(this) * (region.name == capitalRegion ? 1f : 1f - tradePenalty.value));
+                tradeIncome += Mathf.Max(0, region.GetTradeIncome(this) * (region.name == capitalRegion ? 1f : 1f - tradePenalty.v));
             }
         }
-        return tradeIncome * (1f + tradeValue.value);
+        return tradeIncome * (1f + tradeValue.v);
     }
     public float TaxIncome()
     {
-        float coinsIncome = (1f + taxIncome.value) * (1f + taxEfficiency.value);
+        float coinsIncome = (1f + taxIncome.v) * (1f + taxEfficiency.v);
         foreach (var tileData in GetAllCivTileDatas())
         {
             coinsIncome += Mathf.Max(0, tileData.GetDailyTax());
@@ -1040,17 +1044,17 @@ public class Civilisation
         {
             if (tileData.hasFort)
             {
-                fortM += Mathf.Max(0,(tileData.fortLevel - (tileData.pos == capitalPos ? 1 : 0)) * (1f + tileData.localFortMaintenance.value));
+                fortM += Mathf.Max(0,(tileData.fortLevel - (tileData.pos == capitalPos ? 1 : 0)) * (1f + tileData.localFortMaintenance.v));
             }
         }
-        return fortM * (1f + fortMaintenance.value);
+        return fortM * (1f + fortMaintenance.v);
     }
     public float DiplomaticExpenses()
     {
         float expenses = 0f;
         if (overlordID > -1 && libertyDesire < 50f)
         {
-            expenses += Mathf.Max(0, GetTotalIncome() * (0.1f + Game.main.civs[overlordID].incomeFromSubjects.value));
+            expenses += Mathf.Max(0, GetTotalIncome() * (0.1f + Game.main.civs[overlordID].incomeFromSubjects.v));
         }
         return expenses;
     }
@@ -1117,17 +1121,17 @@ public class Civilisation
         {
             foreach(var regiment in army.regiments)
             {
-                float mult = regiment.mercenary ? (0.5f + Game.main.gameTime.years * 0.25f): 1f;
+                float mult = regiment.mercenary ? (0.5f + Game.main.gameTime.y * 0.25f): 1f;
                 armyCosts += mult * units[regiment.type].baseCost * (float)regiment.size / (float)regiment.maxSize * 0.25f / 12f;
             }
         }
-        if (TotalMaxArmySize() / 1000f > forceLimit.value)
+        if (TotalMaxArmySize() / 1000f > forceLimit.v)
         {
-            float increase = (forceLimit.value + (TotalMaxArmySize() / 1000f - forceLimit.value) * 2) / forceLimit.value;
+            float increase = (forceLimit.v + (TotalMaxArmySize() / 1000f - forceLimit.v) * 2) / forceLimit.v;
             armyCosts *= increase;
         }
-        armyCosts *= (1f + regimentCost.value);
-        armyCosts *= (1f + regimentMaintenanceCost.value);
+        armyCosts *= (1f + regimentCost.v);
+        armyCosts *= (1f + regimentMaintenanceCost.v);
         return armyCosts;
     }
     public float AdvisorMaintainance()
@@ -1153,7 +1157,7 @@ public class Civilisation
     }
     public float HungerDaily()
     {
-        float points = 0.1f + (civTiles.Count * 0.01f) + (diplomaticCapacity > diplomaticCapacityMax.value ? (diplomaticCapacity - diplomaticCapacityMax.value)/ diplomaticCapacityMax.value * 1f : 0f);
+        float points = 0.1f + (civTiles.Count * 0.01f) + (diplomaticCapacity > diplomaticCapacityMax.v ? (diplomaticCapacity - diplomaticCapacityMax.v)/ diplomaticCapacityMax.v * 1f : 0f);
         return points;
     }
     public void UpdateReligion()
@@ -1236,14 +1240,14 @@ public class Civilisation
     }
     public float GetMonthlyPrestigeChange()
     {
-        float change = monthlyPrestige.value;
-        change += -prestige * prestigeDecay.value;
+        float change = monthlyPrestige.v;
+        change += -prestige * prestigeDecay.v;
         return change;
     }
     public float GetMonthlyTraditionChange()
     {
-        float change = monthlyTradition.value;
-        change += -armyTradition * armyTraditionDecay.value;
+        float change = monthlyTradition.v;
+        change += -armyTradition * armyTraditionDecay.v;
         return change;
     }
     public void DayTick()
@@ -1340,10 +1344,10 @@ public class Civilisation
             if(integrating && libertyDesire < 50f)
             {
                 Civilisation overlord = Game.main.civs[overlordID];
-                if (overlord.diploPower > 0 && (int)overlord.diploRep.value > -2)
+                if (overlord.diploPower > 0 && (int)overlord.diploRep.v > -2)
                 {
-                    annexationProgress += 2 + (int)overlord.diploRep.value;
-                    overlord.diploPower -= 2 + (int)overlord.diploRep.value;
+                    annexationProgress += 2 + (int)overlord.diploRep.v;
+                    overlord.diploPower -= 2 + (int)overlord.diploRep.v;
                     if(annexationProgress >= GetIntegrationCost(overlord))
                     {
                         foreach(var tileData in GetAllCivTileDatas())
@@ -1368,12 +1372,12 @@ public class Civilisation
         {
             if(tileData.religion == religion)
             {
-                tileData.localUnrest.UpdateModifier("Religion", -trueFaithTolerance.value, 1);
+                tileData.localUnrest.UpdateModifier("Religion", -trueFaithTolerance.v, 1);
                 religiousUnity += tileData.totalDev;
             }
             else
             {
-                tileData.localUnrest.UpdateModifier("Religion", infidelIntolerance.value, 1);
+                tileData.localUnrest.UpdateModifier("Religion", infidelIntolerance.v, 1);
             }
             tileData.SetMaxControl();
             if(tileData.greatProject != null)
@@ -1417,15 +1421,15 @@ public class Civilisation
                     tileData.religion = religion;
                     tileData.religionTimer = -1;
                     tileData.SetMaxControl();
-                    if (tileData.localUnrest.modifiers.Exists(i => i.name == "Converting Religion"))
+                    if (tileData.localUnrest.ms.Exists(i => i.n == "Converting Religion"))
                     {
-                        tileData.localUnrest.RemoveModifier(tileData.localUnrest.modifiers.Find(i => i.name == "Converting Religion"));
+                        tileData.localUnrest.RemoveModifier(tileData.localUnrest.ms.Find(i => i.n == "Converting Religion"));
                     }
                 }
             }
             if(tileData.religion != religion && tileData.religionTimer > -1)
             {               
-                if (!tileData.localUnrest.modifiers.Exists(i => i.name == "Converting Religion"))
+                if (!tileData.localUnrest.ms.Exists(i => i.n == "Converting Religion"))
                 {
                     tileData.localUnrest.AddModifier(new Modifier(6, ModifierType.Flat, "Converting Religion"));
                 }
@@ -1439,16 +1443,16 @@ public class Civilisation
                     tileData.coreTimer = -1;
                     tileData.SetMaxControl();
                     tileData.control = Mathf.Clamp(tileData.control + 15f, 0f, tileData.maxControl);
-                    if (tileData.localUnrest.modifiers.Exists(i => i.name == "Not a core"))
+                    if (tileData.localUnrest.ms.Exists(i => i.n == "Not a core"))
                     {
-                        tileData.localUnrest.RemoveModifier(tileData.localUnrest.modifiers.Find(i => i.name == "Not a core"));
+                        tileData.localUnrest.RemoveModifier(tileData.localUnrest.ms.Find(i => i.n == "Not a core"));
                     }
                 }
             }
             if (!tileData.hasCore)
             {                          
                 overextension += tileData.totalDev * 0.8f;     
-                if(!tileData.localUnrest.modifiers.Exists(i=>i.name == "Not a core"))
+                if(!tileData.localUnrest.ms.Exists(i=>i.n == "Not a core"))
                 {
                     tileData.localUnrest.AddModifier(new Modifier(6, ModifierType.Flat, "Not a core"));
                 }
@@ -1462,9 +1466,9 @@ public class Civilisation
             if (!tileData.occupied)
             {
                 tileData.seperatism = Mathf.Clamp(tileData.seperatism - 1, 0, 360);
-                tileData.control = Mathf.Clamp(tileData.control + tileData.dailyControl.value + dailyControl.value, 0f, tileData.maxControl);
+                tileData.control = Mathf.Clamp(tileData.control + tileData.dailyControl.v + dailyControl.v, 0f, tileData.maxControl);
                 tileData.population = Mathf.Max(0,Mathf.Min(tileData.maxPopulation, tileData.population + tileData.populationGrowth));
-                tileData.avaliablePopulation = Mathf.Max(0, Mathf.Min(tileData.avaliableMaxPopulation, tileData.population, tileData.avaliablePopulation + (int)(tileData.populationGrowth * tileData.control / 100f + tileData.population * (tileData.dailyControl.value + dailyControl.value) / 100f)));
+                tileData.avaliablePopulation = Mathf.Max(0, Mathf.Min(tileData.avaliableMaxPopulation, tileData.population, tileData.avaliablePopulation + (int)(tileData.populationGrowth * tileData.control / 100f + tileData.population * (tileData.dailyControl.v + dailyControl.v) / 100f)));
                 tileData.rebelHeldTime = 0;
             }
             else
@@ -1517,7 +1521,7 @@ public class Civilisation
             diploPower = Mathf.Min(999,diploPower + 3 + ruler.diploSkill + (advisorD.active ? advisorD.skillLevel : 0) + (focus > -1 ? (focus == 1 ? 2 : -1) : 0));
             milPower = Mathf.Min(999,milPower + 3 + ruler.milSkill + (advisorM.active ? advisorM.skillLevel : 0) + (focus > -1 ? (focus == 2 ? 2 : -1) : 0));
         }
-        reformProgress += 0.5f * GetAverageControl() / 100f * (1f + reformProgressGrowth.value);
+        reformProgress += 0.5f * GetAverageControl() / 100f * (1f + reformProgressGrowth.v);
         float income = GetTotalIncome();
 
         coins += income;
@@ -1567,7 +1571,7 @@ public class Civilisation
         {
             if (UnityEngine.Random.Range(0f, 100f) < 5f)
             {
-                heir = Ruler.NewHeir((int)rulerAdminSkill.value, (int)rulerDiploSkill.value, (int)rulerMilSkill.value, CivID);
+                heir = Ruler.NewHeir((int)rulerAdminSkill.v, (int)rulerDiploSkill.v, (int)rulerMilSkill.v, CivID);
             }
             else if (CivID == Player.myPlayer.myCivID)            
             {
@@ -1609,7 +1613,7 @@ public class Civilisation
                 notification.description = "You have " + loans.Count + " loans.";
                 NotificationsUI.AddNotification(notification);
             }
-            if (moraleMax.modifiers.Exists(i => i.name == "Bankruptcy"))
+            if (moraleMax.ms.Exists(i => i.n == "Bankruptcy"))
             {
                 Notification notification = NotificationsUI.main.bankruptcy;
                 notification.description = "You are Bankrupt";
@@ -1722,7 +1726,7 @@ public class Civilisation
     {
         float ae = 0f;
         ae += Mathf.Min(30, province.totalDev) * peaceTermModifier;
-        ae *= (1f + target.aggressiveExpansionImpact.value);
+        ae *= (1f + target.aggressiveExpansionImpact.v);
         ae *= nonCBModifier;
         return ae;
     }
@@ -1738,7 +1742,7 @@ public class Civilisation
             float subjectMod = target.subjects.Contains(civ.CivID) ? 0.1f : 1f;
             float realAE = ae * (1f + religionMod + infidelMod + distMod) * allyMod * subjectMod;
             civ.opinionOfThem[target.CivID].IncreaseModifier("Aggressive Expansion", -realAE, 1,true);
-            float civae = civ.opinionOfThem[target.CivID].modifiers.Find(i => i.name == "Aggressive Expansion").value;
+            float civae = civ.opinionOfThem[target.CivID].ms.Find(i => i.n == "Aggressive Expansion").v;
             if (civae < maxAE)
             {
                 maxAE = civae;
@@ -1785,7 +1789,7 @@ public class Civilisation
             }
             if (!tile.hasCore)
             {
-                tile.seperatism += (int)(30f * civTo.monthsOfSeperatism.value);
+                tile.seperatism += (int)(30f * civTo.monthsOfSeperatism.v);
                 tile.control = Mathf.Min(25f,tile.control);
             }
             else
@@ -1818,6 +1822,24 @@ public class Civilisation
         }
         opinionOfThem[winnerID].AddModifier(new Modifier(-20,1,"Was at war",decay:true));
         DoAE(peaceDeal, mainTarget);     
+    }
+    public void MoveCapitalCapitalTo(Vector3Int pos)
+    {
+        if(Map.main.GetTile(pos) == null) { return; }
+        if(Map.main.GetTile(capitalPos) != null && Map.main.GetTile(capitalPos).civID == CivID)
+        {
+            Map.main.GetTile(capitalPos).fortLevel--;
+            Map.main.GetTile(capitalPos).fortLevel++;
+        }
+        capitalPos = pos;        
+        if (capitalIndicator != null)
+        {
+            capitalIndicator.transform.position = Map.main.GetTile(pos).worldPos();
+        }
+        else
+        {
+            capitalIndicator = GameObject.Instantiate(Map.main.capitalIndicatorPrefab, Map.main.GetTile(pos).worldPos(), Quaternion.identity, Map.main.capitalTransform);
+        }
     }
     public void NewCapital(List<Vector3Int> notAllowed)
     {
@@ -1921,7 +1943,7 @@ public class Civilisation
                 Civilisation sub = Game.main.civs[subject];
                 if (sub.libertyDesire < 50f)
                 {
-                    income += sub.GetTotalIncome() * (0.1f + incomeFromSubjects.value);
+                    income += sub.GetTotalIncome() * (0.1f + incomeFromSubjects.v);
                 }
             }
         }
@@ -2105,15 +2127,15 @@ public class Civilisation
     }
     public bool AllianceOffer(Civilisation fromCiv)
     {
-        float choice = 0.25f * opinionOfThem[fromCiv.CivID].value;
-        choice += 5f * fromCiv.diploRep.value;
+        float choice = 0.25f * opinionOfThem[fromCiv.CivID].v;
+        choice += 5f * fromCiv.diploRep.v;
         choice += Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + TotalMilStrength()) - 1f), -20f, 20f);
         choice -= Mathf.Max(0,MinimumDistTo(fromCiv) - 10);
         choice += fromCiv.atWarWith.Count > 0 ? -1000 : 0;
         choice += (fromCiv.overlordID == CivID) ? -1000 : 0;
         choice += (overlordID == fromCiv.CivID) ? -1000 : 0;
         choice += (overlordID > -1 && libertyDesire < 50f) ? -1000 : 0;
-        choice += ((diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > diplomaticCapacityMax.value? ((diplomaticCapacity +25 + fromCiv.governingCapacity *0.5f - diplomaticCapacityMax.value)/ diplomaticCapacityMax.value) * -100f : 0f);
+        choice += ((diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > diplomaticCapacityMax.v? ((diplomaticCapacity +25 + fromCiv.governingCapacity *0.5f - diplomaticCapacityMax.v)/ diplomaticCapacityMax.v) * -100f : 0f);
         //Debug.Log("Choice Alliance Offer " + choice);
         return choice > 0;
     }
@@ -2136,8 +2158,8 @@ public class Civilisation
     }
     public bool AccessOffer(Civilisation fromCiv)
     {
-        float choice = 0.2f * opinionOfThem[fromCiv.CivID].value;
-        choice += 3f * fromCiv.diploRep.value;
+        float choice = 0.2f * opinionOfThem[fromCiv.CivID].v;
+        choice += 3f * fromCiv.diploRep.v;
         choice += Mathf.Clamp(50f * ((1f+fromCiv.TotalMilStrength()) / (1f+TotalMilStrength()) -1f),-100f,100f);
         choice += fromCiv.allies.Contains(CivID) ? 50f : 0f;
         choice += fromCiv.atWarWith.Exists(i=>rivals.Contains(i)) ? 50f : 0f;
@@ -2447,9 +2469,9 @@ public class Civilisation
         Stat stat = GetStat(statname);
         if (stat != null)
         {
-            if (stat.modifiers.Exists(item => item.name == modname))
+            if (stat.ms.Exists(item => item.n == modname))
             {
-                stat.RemoveModifier(stat.modifiers.Find(item => item.name == modname));
+                stat.RemoveModifier(stat.ms.Find(item => item.n == modname));
             }
         }
     }

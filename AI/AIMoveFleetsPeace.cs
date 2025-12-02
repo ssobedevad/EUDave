@@ -13,7 +13,7 @@ public class AIMoveFleetsPeace
         List<Fleet> freeFleets = new List<Fleet>();
         allyCoastalProvinces.Clear();
         Civilisation civ = Game.main.civs[civID];
-        if(civ.TotalMaxArmySize()/1000f >= civ.forceLimit.value - 1 && civ.fleets.Count < 2)
+        if(civ.TotalMaxArmySize()/1000f >= civ.forceLimit.v - 1 && civ.fleets.Count < 2)
         {
             if(civ.civCoastalTiles.Count > 0)
             {

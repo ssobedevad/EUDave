@@ -34,7 +34,7 @@ public class ReligionUI : MonoBehaviour
         unity.text = "Religious Unity: "+Mathf.Round(civ.religiousUnity * 1000f) / 10f + "%";
         unity.GetComponent<HoverText>().text = RUText();
         effects.text = Map.main.religions[civ.religion].GetHoverText(civ);
-        tolerance.text = "Tolerance of the True Faith: "+civ.trueFaithTolerance.value +"\n" + "Intolerance of Infidels: " + civ.infidelIntolerance.value;
+        tolerance.text = "Tolerance of the True Faith: "+civ.trueFaithTolerance.v +"\n" + "Intolerance of Infidels: " + civ.infidelIntolerance.v;
     }
 
     string RUText()

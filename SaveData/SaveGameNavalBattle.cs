@@ -1,9 +1,11 @@
-﻿using System.Collections;
+﻿using MessagePack;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+[MessagePackObject(keyAsPropertyName: true)]
 [System.Serializable] public class SaveGameNavalBattle
 {
-    public Vector3Int pos;
+    public SaveGameVector3Int pos;
     public int attackerCivID;
     public int defenderCivID;
     public General attackerGeneral;
@@ -40,7 +42,7 @@ using UnityEngine;
 
     public SaveGameNavalBattle(NavalBattle battle)
     {
-        pos = battle.pos;
+        pos = new SaveGameVector3Int(battle.pos);
         attackerCivID = battle.attackerCiv.CivID;
         defenderCivID = battle.defenderCiv.CivID;
         attackerGeneral = battle.attackerGeneral;

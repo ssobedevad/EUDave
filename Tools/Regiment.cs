@@ -1,7 +1,9 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using UnityEngine;
 
 [Serializable]
+[MessagePackObject(keyAsPropertyName: true)]
 public class Regiment
 {
     public int maxSize;
@@ -16,6 +18,10 @@ public class Regiment
     public float rangedDamage;
     public bool inBatle;
     public bool mercenary;
+    public Regiment()
+    {
+
+    }
     public Regiment(int CivID, int MaxSize = 1000, int Size = 1000, int Type = 0, bool merc = false)
     {
         maxSize = MaxSize;
@@ -32,7 +38,7 @@ public class Regiment
         if (civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            maxMorale = civ.moraleMax.value;
+            maxMorale = civ.moraleMax.v;
             morale = 0.51f;           
         }
         inBatle = false;
@@ -70,7 +76,7 @@ public class Regiment
     public void RecoverMorale()
     {
         Civilisation civ = Game.main.civs[civID];
-        float recovery = 0.15f + civ.moraleRecovery.value;
+        float recovery = 0.15f + civ.moraleRecovery.v;
         Army army = civ.armies.Find(i=>i.regiments.Contains(this));
         if(army != null) { if (army.tile.civID == civID) { recovery += 0.05f; } }
         morale = Mathf.Min(maxMorale, morale + maxMorale * recovery);
@@ -78,7 +84,7 @@ public class Regiment
     public void RefillRegiment()
     {
         Civilisation civ = Game.main.civs[civID];
-        int reinforce = (int)(100 * (1f + civ.reinforceSpeed.value));
+        int reinforce = (int)(100 * (1f + civ.reinforceSpeed.v));
         int targetAmount = Mathf.Min(reinforce, maxSize - size);
         int realAmount = civ.RemovePopulation(targetAmount);
         //Debug.Log(targetAmount + " / " + realAmount);

@@ -1,15 +1,20 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
 [Serializable]
+[MessagePackObject(keyAsPropertyName: true)]
 public class FleetBattleLine
 {
     public int width = 31;
     public BoatData[] boats = new BoatData[31];
+    public FleetBattleLine()
+    {
 
+    }
     public FleetBattleLine(int combatWidth = 31)
     {
         boats = new BoatData[combatWidth];
@@ -220,6 +225,7 @@ public class FleetBattleLine
         }
     }
     [Serializable]
+    [MessagePackObject(keyAsPropertyName: true)]
     public class BoatData
     {
         public Boat boat;

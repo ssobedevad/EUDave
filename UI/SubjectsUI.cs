@@ -174,9 +174,9 @@ public class SubjectsUI : MonoBehaviour
             TextMeshProUGUI[] texts = subjects[i].GetComponentsInChildren<TextMeshProUGUI>();
             images[1].color = civ.c;
             texts[0].text = subject.civName;
-            texts[1].text = Mathf.Round(subject.opinionOfThem[civ.CivID].value) + "";
+            texts[1].text = Mathf.Round(subject.opinionOfThem[civ.CivID].v) + "";
             texts[2].text = Mathf.Round(subject.libertyDesire ) + "%";
-            float subjectIncome = subject.libertyDesire < 50f ? subject.GetTotalIncome() * (0.1f + civ.incomeFromSubjects.value) : 0f;
+            float subjectIncome = subject.libertyDesire < 50f ? subject.GetTotalIncome() * (0.1f + civ.incomeFromSubjects.v) : 0f;
             texts[3].text = Mathf.Round(subjectIncome * 100f) /100f + "<sprite index=0>";
             texts[2].GetComponent<HoverText>().text = LibertyDesireText(subject);
         }
@@ -250,12 +250,12 @@ public class SubjectsUI : MonoBehaviour
             ld += "From Relative Military Strength of "+ Game.main.civs[ally].civName + ": " + Mathf.Round((Game.main.civs[ally].TotalMilStrength() + 1) / (overlord.TotalMilStrength() + 1) * 75f) + "%\n";
         }
         ld += "From Relative Economic Strength: " + Mathf.Round((subject.GetTotalIncome() + 1) / (overlord.GetTotalIncome() + 1) * 75f) + "%\n";
-        ld += "From Overlord Diplomatic Reputation: " + Mathf.Round(-3f * overlord.diploRep.value) + "%\n";
-        ld += "From Opinion of Overlord: " +Mathf.Round(-0.1f * subject.opinionOfThem[subject.overlordID].value) + "%\n";
+        ld += "From Overlord Diplomatic Reputation: " + Mathf.Round(-3f * overlord.diploRep.v) + "%\n";
+        ld += "From Opinion of Overlord: " +Mathf.Round(-0.1f * subject.opinionOfThem[subject.overlordID].v) + "%\n";
         ld += (subject.diploTech - overlord.diploTech > 0)? "From Better Diplomatic Technology Than Overlord: " + Mathf.Max(0, subject.diploTech - overlord.diploTech) * 5f + "%\n" : "";
-        ld += "From Total Development: " + Mathf.Round(subject.GetTotalDev() * 0.25f * (1f + overlord.libDesireFromDevForSubjects.value)) + "%\n";
+        ld += "From Total Development: " + Mathf.Round(subject.GetTotalDev() * 0.25f * (1f + overlord.libDesireFromDevForSubjects.v)) + "%\n";
         ld += "Overlord Bonuses: " +overlord.libDesireInSubjects.ToString() + "\n\n";
-        ld += "Temporary Bonuses: " + Mathf.Round(subject.libertyDesireTemp.value*100f)/100f;
+        ld += "Temporary Bonuses: " + Mathf.Round(subject.libertyDesireTemp.v*100f)/100f;
         return ld;
     }
 

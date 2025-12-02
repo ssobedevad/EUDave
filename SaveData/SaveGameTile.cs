@@ -1,53 +1,58 @@
-﻿using System.Collections;
+﻿using MessagePack;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+[MessagePackObject(keyAsPropertyName: true)]
 [System.Serializable] public class SaveGameTile
 {
-    public int civId;
-    public int devA, devB, devC;
-    public float control;
-    public int religion;
-    public int status;
-    public int infrastructureLevel;
-    public int population;
-    public int avaliablePopulation;
-    public int seperatism;
+    public int i;
+    public int a, b, c;
+    public float co;
+    public int r;
+    public int il;
+    public int p;
+    public int ap;
+    public int sm;
 
-    public List<int> buildings;
-    public List<int> cores;
+    public List<int> bs;
+    public List<int> cs;
+    public int cr;
 
-    public List<int> recruitQueue;
-    public List<int> boatQueue;
-    public List<int> mercenaryQueue;
-    public List<int> buildQueue;
+    public List<int> rq;
+    public List<int> fq;
+    public List<int> mq;
+    public List<int> cq;
+    public int rr;
+    public int fr;
+    public int mr;
+    public int br;
 
-    public float siegeProgress;
-    public bool occupied;
-    public int occupiedById;
+    public bool o;
+    public int oi;
 
-    public Stat localDevCostMod;
-    public Stat localDevCost;
-    public Stat localProductionValue;
-    public Stat localProductionQuantity;
-    public Stat localTaxEfficiency;
-    public Stat localGoverningCost;
-    public Stat localGoverningCostMod;
-    public Stat localAttritionForEnemies;
-    public Stat localMinimumControl;
-    public Stat localConstructionCost;
-    public Stat localConstructionTime;
-    public Stat localMovementSpeed;
-    public Stat localRecruitmentCost;
-    public Stat localRecruitmentTime;
-    public Stat dailyControl;
-    public Stat localDefensiveness;
-    public Stat localFortMaintenance;
-    public Stat localPopulationGrowth;
-    public Stat localMaxPopulation;
-    public Stat localForceLimit;
-    public Stat localAttackerDiceRoll;
-    public Stat localUnrest;
+    public Stat dm;
+    public Stat dc;
+    public Stat pv;
+    public Stat pq;
+    public Stat te;
+    public Stat gc;
+    public Stat gm;
+    public Stat ae;
+    public Stat mc;
+    public Stat cc;
+    public Stat ct;
+    public Stat ms;
+    public Stat rc;
+    public Stat rt;
+    public Stat cd;
+    public Stat ld;
+    public Stat fm;
+    public Stat pg;
+    public Stat mp;
+    public Stat fl;
+    public Stat ad;
+    public Stat lu;
 
     public SaveGameTile()
     {
@@ -55,69 +60,72 @@ using UnityEngine;
     }
     public SaveGameTile(TileData tile)
     {
-        civId = tile.civID;
-        devA = tile.developmentA;
-        devB = tile.developmentB;
-        devC = tile.developmentC;
-        control = tile.control;
-        religion = tile.religion;
-        status = tile.status;
-        infrastructureLevel = tile.infrastructureLevel;
-        population = tile.population;
-        avaliablePopulation = tile.avaliablePopulation;
-        seperatism = tile.seperatism;
+        i = tile.civID;
+        a = tile.developmentA;
+        b = tile.developmentB;
+        c = tile.developmentC;
+        co = tile.control;
+        r = tile.religion;
+        il = tile.infrastructureLevel;
+        p = tile.population;
+        ap = tile.avaliablePopulation;
+        sm = tile.seperatism;
 
-        buildings = tile.buildings;
-        cores = tile.cores;
+        bs = tile.buildings;
+        cs = tile.cores;
+        cr = tile.coreTimer;
 
-        recruitQueue = tile.recruitQueue;
-        boatQueue = tile.boatQueue;
-        mercenaryQueue = tile.mercenaryQueue;
-        buildQueue = tile.buildQueue;
+        rq = tile.recruitQueue;
+        fq = tile.boatQueue;
+        mq = tile.mercenaryQueue;
+        cq = tile.buildQueue;
+        rr = tile.recruitTimer;
+        fr = tile.boatTimer;
+        mr = tile.mercenaryTimer;
+        br = tile.buildTimer;
 
-        siegeProgress = tile.underSiege ? tile.siege.progress : 0f;
-        occupied = tile.occupied;
-        occupiedById = tile.occupiedByID;
+        o = tile.occupied;
+        oi = tile.occupiedByID;
 
-        localDevCostMod = tile.localDevCostMod;
-        localDevCost = tile.localDevCost;
-        localProductionValue = tile.localProductionValue;
-        localProductionQuantity = tile.localProductionQuantity;
-        localTaxEfficiency = tile.localTaxEfficiency;
-        localGoverningCost = tile.localGoverningCost;
-        localGoverningCostMod = tile.localGoverningCostMod;
-        localAttritionForEnemies = tile.localAttritionForEnemies;
-        localMinimumControl = tile.localMinimumControl;
-        localConstructionCost = tile.localConstructionCost;
-        localConstructionTime = tile.localConstructionTime;
-        localMovementSpeed = tile.localMovementSpeed;
-        localRecruitmentCost = tile.localRecruitmentCost;
-        localRecruitmentTime = tile.localRecruitmentTime;
-        dailyControl = tile.dailyControl;
-        localDefensiveness = tile.localDefensiveness;
-        localFortMaintenance = tile.localFortMaintenance;
-        localPopulationGrowth = tile.localPopulationGrowth;
-        localMaxPopulation = tile.localMaxPopulation;
-        localForceLimit = tile.localForceLimit;
-        localAttackerDiceRoll = tile.localAttackerDiceRoll;
-        localUnrest = tile.localUnrest;
+        dm = tile.localDevCostMod;
+        dc = tile.localDevCost;
+        pv = tile.localProductionValue;
+        pq = tile.localProductionQuantity;
+        te = tile.localTaxEfficiency;
+        gc = tile.localGoverningCost;
+        gm = tile.localGoverningCostMod;
+        ae = tile.localAttritionForEnemies;
+        mc = tile.localMinimumControl;
+        cc = tile.localConstructionCost;
+        ct = tile.localConstructionTime;
+        ms = tile.localMovementSpeed;
+        rc = tile.localRecruitmentCost;
+        rt = tile.localRecruitmentTime;
+        cd = tile.dailyControl;
+        ld = tile.localDefensiveness;
+        fm = tile.localFortMaintenance;
+        pg = tile.localPopulationGrowth;
+        mp = tile.localMaxPopulation;
+        fl = tile.localForceLimit;
+        ad = tile.localAttackerDiceRoll;
+        lu = tile.localUnrest;
     }
 
     public void LoadToTile(TileData data)
     {
-        data.civID = civId;
-        data.developmentA = devA;
-        data.developmentB = devB;
-        data.developmentC = devC;
-        data.control = control;
-        data.religion = religion;
-        data.status = status;
-        data.infrastructureLevel = infrastructureLevel;
-        data.population = population;
-        data.avaliablePopulation = avaliablePopulation;
-        data.seperatism = seperatism;
+        data.civID = i;
+        data.developmentA = a;
+        data.developmentB = b;
+        data.developmentC = c;
+        data.control = co;
+        data.religion = r;
+        data.infrastructureLevel = il;
+        data.UpdateInfrastructureModifiers();
+        data.population = p;
+        data.avaliablePopulation = ap;
+        data.seperatism = sm;
 
-        foreach(var buildingId in buildings)
+        foreach(var buildingId in bs)
         {
             if (!data.buildings.Contains(buildingId))
             {
@@ -136,42 +144,42 @@ using UnityEngine;
             }
         }
 
-        data.cores = cores;
+        data.cores = cs;
+        data.coreTimer = cr;
 
-        data.recruitQueue = recruitQueue;
-        data.boatQueue = boatQueue;
-        data.mercenaryQueue = mercenaryQueue;
-        data.buildQueue = buildQueue;
+        data.recruitQueue = rq;
+        data.boatQueue = fq;
+        data.mercenaryQueue = mq;
+        data.buildQueue = cq;
+        data.recruitTimer = rr;
+        data.boatTimer = fr;
+        data.mercenaryTimer = mr;
+        data.buildTimer = br;
 
-        if (data.underSiege)
-        {
-            data.siege.progress = siegeProgress;
-        }
+        data.occupied = o;
+        data.occupiedByID = oi;
 
-        data.occupied = occupied;
-        data.occupiedByID = occupiedById;
-
-        data.localDevCostMod = localDevCostMod;
-        data.localDevCost = localDevCost;
-        data.localProductionValue = localProductionValue;
-        data.localProductionQuantity = localProductionQuantity;
-        data.localTaxEfficiency = localTaxEfficiency;
-        data.localGoverningCost = localGoverningCost;
-        data.localGoverningCostMod = localGoverningCostMod;
-        data.localAttritionForEnemies = localAttritionForEnemies;
-        data.localMinimumControl = localMinimumControl;
-        data.localConstructionCost = localConstructionCost;
-        data.localConstructionTime = localConstructionTime;
-        data.localMovementSpeed = localMovementSpeed;
-        data.localRecruitmentCost = localRecruitmentCost;
-        data.localRecruitmentTime = localRecruitmentTime;
-        data.dailyControl = dailyControl;
-        data.localDefensiveness = localDefensiveness;
-        data.localFortMaintenance = localFortMaintenance;
-        data.localPopulationGrowth = localPopulationGrowth;
-        data.localMaxPopulation = localMaxPopulation;
-        data.localForceLimit = localForceLimit;
-        data.localAttackerDiceRoll = localAttackerDiceRoll;
-        data.localUnrest = localUnrest;
+        data.localDevCostMod = dm;
+        data.localDevCost = dc;
+        data.localProductionValue = pv;
+        data.localProductionQuantity = pq;
+        data.localTaxEfficiency = te;
+        data.localGoverningCost = gc;
+        data.localGoverningCostMod = gm;
+        data.localAttritionForEnemies = ae;
+        data.localMinimumControl = mc;
+        data.localConstructionCost = cc;
+        data.localConstructionTime = ct;
+        data.localMovementSpeed = ms;
+        data.localRecruitmentCost = rc;
+        data.localRecruitmentTime = rt;
+        data.dailyControl = cd;
+        data.localDefensiveness = ld;
+        data.localFortMaintenance = fm;
+        data.localPopulationGrowth = pg;
+        data.localMaxPopulation = mp;
+        data.localForceLimit = fl;
+        data.localAttackerDiceRoll = ad;
+        data.localUnrest = lu;
     }
 }

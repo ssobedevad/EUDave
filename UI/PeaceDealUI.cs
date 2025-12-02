@@ -286,7 +286,7 @@ public class PeaceDealUI : MonoBehaviour
         float maximumControl = 10f;
         foreach (var contolCentre in forCiv.controlCentres)
         {
-            float controlDecay = (contolCentre.Value == 0 ? 100f : contolCentre.Value == 1 ? 50f : contolCentre.Value == 2 ? 25f : 10f) * (1f + forCiv.controlDecay.value);
+            float controlDecay = (contolCentre.Value == 0 ? 100f : contolCentre.Value == 1 ? 50f : contolCentre.Value == 2 ? 25f : 10f) * (1f + forCiv.controlDecay.v);
             float possibleMaximumControl = 100f - controlDecay * TileData.evenr_distance(data.pos, contolCentre.Key) + data.totalDev;
             maximumControl = Mathf.Max(possibleMaximumControl, maximumControl);
         }
@@ -322,7 +322,7 @@ public class PeaceDealUI : MonoBehaviour
         int loops = 0;
         if(target.GetTotalWarScore(other.CivID) < 100f)
         {
-            if(other.diplomaticCapacity + target.governingCapacity < other.diplomaticCapacityMax.value && other.subjects.Count < other.GetTotalDev()/200 && target.subjects.Count == 0)
+            if(other.diplomaticCapacity + target.governingCapacity < other.diplomaticCapacityMax.v && other.subjects.Count < other.GetTotalDev()/200 && target.subjects.Count == 0)
             {
                 PeaceDeal temp = new PeaceDeal(PeaceDeal);
                 temp.RequestSubjugation();
@@ -384,7 +384,7 @@ public class PeaceDealUI : MonoBehaviour
         bool isAttacker = (war.attackerCiv == target || war.attackerAllies.Contains(target));
         bool isPrimary = (target == war.attackerCiv || target == war.defenderCiv);
         float LengthOfWar = 45f - war.lengthOfWar / 30f * 0.75f;
-        float relMilStrength = Mathf.Atan(war.attackerCiv.TotalMilStrength()/1000f - war.defenderCiv.TotalMilStrength()/1000f) * 12f * (isAttacker ? 1f : -1f);
+        float relMilStrength = Mathf.Clamp(20f * ((1f + war.attackerCiv.TotalMilStrength()) / (1f + war.defenderCiv.TotalMilStrength()) - 1f), -20f, 20f) * (isAttacker ? 1f : -1f);
         string reasons = "Positive Reasons: \n";
         if (LengthOfWar < 0) { reasons += "Length Of War: " + Mathf.Round(LengthOfWar) + "\n"; }
         if (relMilStrength < 0) { reasons += "Relative Military Strength: " + Mathf.Round(-relMilStrength) + "\n"; }
@@ -418,7 +418,7 @@ public class PeaceDealUI : MonoBehaviour
         bool isPrimary = (target == war.attackerCiv || target == war.defenderCiv);
         bool hasAlly = isAttacker ? war.attackerAllies.Count > 0 : war.defenderAllies.Count > 0;
         float LengthOfWar = 45f - war.lengthOfWar / 30f * 0.75f;
-        float relMilStrength = Mathf.Atan(war.attackerCiv.TotalMilStrength()/1000f - war.defenderCiv.TotalMilStrength()/1000f) * 12f * (isAttacker ? 1f : -1f);
+        float relMilStrength = Mathf.Clamp(20f * ((1f + war.attackerCiv.TotalMilStrength()) / (1f + war.defenderCiv.TotalMilStrength()) - 1f), -20f, 20f) * (isAttacker ? 1f : -1f);
         string reasons = "Negative Reasons: \n";
         if (LengthOfWar > 0) { reasons += "Length Of War: " + Mathf.Round(LengthOfWar) + "\n"; }
         if (relMilStrength > 0) { reasons += "Relative Military Strength: " + Mathf.Round(relMilStrength) + "\n"; }
@@ -452,7 +452,7 @@ public class PeaceDealUI : MonoBehaviour
         bool hasAlly = isAttacker ? war.attackerAllies.Count > 0 : war.defenderAllies.Count > 0;
         bool isPrimary = (target == war.attackerCiv || target == war.defenderCiv);
         float LengthOfWar = 45f - war.lengthOfWar/30f * 0.75f;
-        float relMilStrength = Mathf.Atan(war.attackerCiv.TotalMilStrength() / 1000f - war.defenderCiv.TotalMilStrength() / 1000f) * 12f * (isAttacker ? 1f : -1f);
+        float relMilStrength = Mathf.Clamp(20f * ((1f + war.attackerCiv.TotalMilStrength()) / (1f + war.defenderCiv.TotalMilStrength()) - 1f), -20f, 20f) * (isAttacker ? 1f : -1f);
         float realWarScore = war.warScore * (isAttacker ? -1f : 1f);
         if (!isPrimary)
         {

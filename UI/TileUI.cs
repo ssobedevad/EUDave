@@ -104,6 +104,7 @@ public class TileUI : MonoBehaviour
                     {
                         civ.diploPower -= tile.totalDev;
                         civ.claims.Add(tile.pos);
+                        Game.main.refreshMap = true;
                     }
                 }
             }
@@ -204,7 +205,7 @@ public class TileUI : MonoBehaviour
             moveCapital.GetComponentsInChildren<Image>()[1].color = tile.civ.capitalPos == tile.pos ? Color.white : Color.gray;
             moveCapital.GetComponentInChildren<HoverText>().text = tile.civ.capitalPos == tile.pos ? "Already Capital ":"Move Capital For 200<sprite index=1>" ;
             promoteStatus.GetComponentsInChildren<Image>()[1].color = tile.CanPromoteStatus() ? Color.white : Color.gray;
-            promoteStatus.GetComponentInChildren<HoverText>().text = StatusButtonHover(tile.status) + (tile.status < 3 ?"\nCost: "+ tile.PromoteStatusCost() : "") + (tile.status == 0? "\nPromotion Slots: " + tile.civ.controlCentres.Count + "/" + (int)tile.civ.maxSettlements.value : "");
+            promoteStatus.GetComponentInChildren<HoverText>().text = StatusButtonHover(tile.status) + (tile.status < 3 ?"\nCost: "+ tile.PromoteStatusCost() : "") + (tile.status == 0? "\nPromotion Slots: " + tile.civ.controlCentres.Count + "/" + (int)tile.civ.maxSettlements.v : "");
             govCap.text = "Gov Cap: "+ tile.GetGoverningCost();
             status.text = "Status: " + StatusToString(tile.status);
             status.transform.parent.GetComponent<HoverText>().text = StatusHover(tile.status);
@@ -433,7 +434,7 @@ public class TileUI : MonoBehaviour
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
         if (civ.CivID != data.civID && civ.CivID != data.civ.overlordID) { return; }
-        if (data.localUnrest.modifiers.Exists(i => i.name == "Control Increased" || i.name == "Control Decreased"))
+        if (data.localUnrest.ms.Exists(i => i.n == "Control Increased" || i.n == "Control Decreased"))
         {
             return;
         }
@@ -528,7 +529,7 @@ public class TileUI : MonoBehaviour
             text += "Base: From Total Develoment " + data.totalDev + " * 200\n";
             text += "Local Bonuses: " + data.localMaxPopulation.ToString() + "\n";
             text += "Global Bonuses: " + civ.maximumPopulation.ToString() + "\n\n";
-            text += data.populationGrowth + "<sprite index=4> ("+ (int)(data.populationGrowth * data.control/ 100f + data.population * (data.dailyControl.value + civ.dailyControl.value) / 100f) +") join this tile every day\n";
+            text += data.populationGrowth + "<sprite index=4> ("+ (int)(data.populationGrowth * data.control/ 100f + data.population * (data.dailyControl.v + civ.dailyControl.v) / 100f) +") join this tile every day\n";
             text += "Local Bonuses: " + data.localPopulationGrowth.ToString() + "\n";
             text += "Global Bonuses: " + civ.populationGrowth.ToString() + "\n\n";
             hoverText.text = text;
@@ -715,7 +716,7 @@ public class TileUI : MonoBehaviour
         text = "It will cost " + data.GetDevCost() + " Military Power<sprite index=3> to develop this tile\n\n";
         text += "This will have the following effects: \n";
         text += "Maximum population +200<sprite index=4>\n";
-        text += "Population Growth +" + Mathf.Round(6 * (1f + data.localPopulationGrowth.value + civ.populationGrowth.value) * 100f) / 100f + "<sprite index=4>\n";
+        text += "Population Growth +" + Mathf.Round(6 * (1f + data.localPopulationGrowth.v + civ.populationGrowth.v) * 100f) / 100f + "<sprite index=4>\n";
         text += "Force Limit +" + Mathf.Round(data.GetAnyDevForceLimitIncrease() * 100f) / 100f + "<sprite index=3>\n";
         text += "Max Control +1\n";
         text += "Control +1";
@@ -730,10 +731,10 @@ public class TileUI : MonoBehaviour
         HoverText hoverText = productionIncome.transform.parent.GetComponent<HoverText>();
         string text = "This tile generates " + Mathf.Round(data.GetDailyProductionValue() * 100f) / 100f + "<sprite index=0> per<sprite index=12>\n\n";
         text += "This is due to:\n";
-        text += "Value of the good "+data.tileResource.Value + "<sprite index=0> * " +  Mathf.Round((1f + data.localProductionValue.value )*(1f + civ.productionValue.value) * 100f) /100f+" = "+ data.tileResource.Value * Mathf.Round((1f + data.localProductionValue.value) * (1f + civ.productionValue.value) * 100f) / 100f + "<sprite index=0>\n";
+        text += "Value of the good "+data.tileResource.Value + "<sprite index=0> * " +  Mathf.Round((1f + data.localProductionValue.v )*(1f + civ.productionValue.v) * 100f) /100f+" = "+ data.tileResource.Value * Mathf.Round((1f + data.localProductionValue.v) * (1f + civ.productionValue.v) * 100f) / 100f + "<sprite index=0>\n";
         text += "Local Bonuses: " +  data.localProductionValue.ToString() + "\n";
         text += "Multiplied by Global Bonuses: " + civ.productionValue.ToString() + "\n\n";
-        text += "This good is produced "+Mathf.Round(7.2f * data.developmentB * (1f + data.localProductionQuantity.value) * (1f + civ.productionAmount.value) * 100f) / 100f + " times per year while population is above "+ (200f*data.developmentB) + "<sprite index=4>\n";
+        text += "This good is produced "+Mathf.Round(7.2f * data.developmentB * (1f + data.localProductionQuantity.v) * (1f + civ.productionAmount.v) * 100f) / 100f + " times per year while population is above "+ (200f*data.developmentB) + "<sprite index=4>\n";
         text += "Local Bonuses: " + data.localProductionQuantity.ToString() + "\n";
         text += "Global Bonuses: " + civ.productionAmount.ToString() + "\n\n";
         if (!data.hasCore)
@@ -745,7 +746,7 @@ public class TileUI : MonoBehaviour
         hoverText = taxIncome.transform.parent.GetComponent<HoverText>();
         text = "This tile collects " + Mathf.Round(data.GetDailyTax() * 100f) / 100f + "<sprite index=0> per<sprite index=12>\n\n";
         text += "This is due to:\n";
-        text += Mathf.Round(0.01f * (1f + data.localTaxEfficiency.value) * (1f + civ.taxEfficiency.value) * 100f) / 100f + "<sprite index=0> per population<sprite index=4> every year\n";
+        text += Mathf.Round(0.01f * (1f + data.localTaxEfficiency.v) * (1f + civ.taxEfficiency.v) * 100f) / 100f + "<sprite index=0> per population<sprite index=4> every year\n";
         text += "Local Bonuses: " + data.localTaxEfficiency.ToString() + "\n";
         text += "Multiplied by Global Bonuses: " + civ.taxEfficiency.ToString() + "\n\n";
         if (!data.hasCore)
@@ -757,7 +758,7 @@ public class TileUI : MonoBehaviour
         hoverText = control.transform.parent.GetComponent<HoverText>();
         text = "This tile is " + Mathf.Round(data.control * 100f) / 100f + "% under your control\n\n";
         text += "This changes by:\n";
-        text += Mathf.Round((data.dailyControl.value + civ.dailyControl.value) * 100f)/100f + " per<sprite index=12>\n";
+        text += Mathf.Round((data.dailyControl.v + civ.dailyControl.v) * 100f)/100f + " per<sprite index=12>\n";
         text += "Local Bonuses: "+data.dailyControl.ToString() + "\n";
         text += "Multiplied by Global Bonuses: " + civ.dailyControl.ToString() + "\n\n";
         text += "Up to a maximum of:\n";
@@ -783,7 +784,7 @@ public class TileUI : MonoBehaviour
         HoverText hoverText = devCostText.GetComponent<HoverText>();
         string text = "It will cost " + data.GetDevCost() + " Power<sprite index=1><sprite index=2><sprite index=3> to develop this tile\n\n";
         text += "This is due to the following: \n\n";
-        text += "The Base Cost of developing " + (int)(50 * (1f + data.localDevCostMod.value + civ.devCostMod.value)) + "\n";
+        text += "The Base Cost of developing " + (int)(50 * (1f + data.localDevCostMod.v + civ.devCostMod.v)) + "\n";
         text += "Local Modifiers:" + data.localDevCostMod.ToString() + "\n";
         text += "Global Modifiers:" + civ.devCostMod.ToString() + "\n\n";
         text += "Multiplied by:\n";

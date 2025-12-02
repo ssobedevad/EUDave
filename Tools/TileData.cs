@@ -57,8 +57,8 @@ public class TileData
     public TextMeshProUGUI tileText = null;
     public bool hasCore => cores.Contains(civID);
     public int avaliableMaxPopulation => Mathf.Max(0, (int)(maxPopulation * control / 100f));
-    public int populationGrowth => Mathf.Max(0, (int)((1 + developmentC * 6) * (1f + localPopulationGrowth.value) * (civID > -1 ? 1f + civ.populationGrowth.value : 1f)));
-    public int maxPopulation => Mathf.Max(0, (int)((totalDev + developmentA * 0.5) * 200 * (1f + localMaxPopulation.value) * (civID > -1 ? 1f + civ.maximumPopulation.value : 1f)));
+    public int populationGrowth => Mathf.Max(0, (int)((1 + developmentC * 6) * (1f + localPopulationGrowth.v) * (civID > -1 ? 1f + civ.populationGrowth.v : 1f)));
+    public int maxPopulation => Mathf.Max(0, (int)((totalDev + developmentA * 0.5) * 200 * (1f + localMaxPopulation.v) * (civID > -1 ? 1f + civ.maximumPopulation.v : 1f)));
     public int developmentA, developmentB, developmentC;
     public float control;
     public float maxControl;
@@ -88,7 +88,7 @@ public class TileData
     public int rebelHeldTime = 0;
     public int heldByID = -1;
     public int heldByType = -1;
-    public float unrest => localUnrest.value + (civID > -1 ? civ.globalUnrest.value : 0f);
+    public float unrest => localUnrest.v + (civID > -1 ? civ.globalUnrest.v : 0f);
     public int totalDev => developmentA + developmentB + developmentC;
     public string tileTypeName => Map.main.GetTileName(pos);
 
@@ -96,9 +96,9 @@ public class TileData
 
     public float GetGoverningCost()
     {
-        float cost = totalDev + localGoverningCost.value;
+        float cost = totalDev + localGoverningCost.v;
         cost = Mathf.Max(0, cost * (1f + (status == 0 ? -0.5f : status == 1 ? 0f : status == 2 ? 1f : 2f)) - (civ.capitalPos == pos ? 1f:0));
-        return cost * Mathf.Max(0, (1f + localGoverningCostMod.value + civ.governingCostModifier.value));
+        return cost * Mathf.Max(0, (1f + localGoverningCostMod.v + civ.governingCostModifier.v));
     }
     public void BreakToRebels()
     {
@@ -234,7 +234,7 @@ public class TileData
     }
     public int GetRecruitTime()
     {
-        return (int)Mathf.Max(144 * (1f + localRecruitmentTime.value + civ.recruitmentTime.value), 1);
+        return (int)Mathf.Max(144 * (1f + localRecruitmentTime.v + civ.recruitmentTime.v), 1);
     }
     public void Build(int id)
     {
@@ -292,17 +292,17 @@ public class TileData
     }
     public float GetConvertControl()
     {
-        float baseControl = 90f * (1f + civ.conversionCost.value);
+        float baseControl = 90f * (1f + civ.conversionCost.v);
         return Mathf.Max(baseControl, 0);
     }
     public int GetConvertTime()
     {
-        int baseTime = (int)(totalDev * 12 * (1f + civ.conversionCost.value));
+        int baseTime = (int)(totalDev * 12 * (1f + civ.conversionCost.v));
         return Mathf.Max(baseTime, 1);
     }
     public int GetConvertCost()
     {
-        int baseCost = (int)(totalDev * 5 * (1f + civ.conversionCost.value));
+        int baseCost = (int)(totalDev * 5 * (1f + civ.conversionCost.v));
         return Mathf.Max(baseCost, 1);
     }
     public void StartCore()
@@ -347,26 +347,26 @@ public class TileData
     public int GetCoreTime()
     {
         int baseTime = 90;
-        baseTime = (int)(baseTime * (1f + civ.coreCost.value + (civ.claims.Contains(pos) ? -0.25f : 0f)));
+        baseTime = (int)(baseTime * (1f + civ.coreCost.v + (civ.claims.Contains(pos) ? -0.25f : 0f)));
         return Mathf.Max(baseTime,1);
     }
     public int GetCoreCost()
     {
         int baseCost = totalDev * 10;
-        baseCost = (int)(baseCost * (1f + civ.coreCost.value + (civ.claims.Contains(pos) ? -0.25f : 0f)));
+        baseCost = (int)(baseCost * (1f + civ.coreCost.v + (civ.claims.Contains(pos) ? -0.25f : 0f)));
         return Mathf.Max(baseCost,1);
     }
     public bool CanPromoteStatus()
     {
         if (civID == -1) { return false; }
-        if(civ.maxSettlements.value <= civ.controlCentres.Count && status == 0) { return false; }
+        if(civ.maxSettlements.v <= civ.controlCentres.Count && status == 0) { return false; }
         if (status >= 3) { return false; }
         if(totalDev < status * 10f + 5f) { return false; }
         return civ.adminPower >= PromoteStatusCost();
     }
     public int PromoteStatusCost()
     {
-        return (int)Mathf.Round((status * 50 + 50) * (1f + civ.promoteSettlementCost.value));
+        return (int)Mathf.Round((status * 50 + 50) * (1f + civ.promoteSettlementCost.v));
     }
     public void UpdateInfrastructureModifiers()
     {
@@ -420,18 +420,18 @@ public class TileData
         float maximumControl = 10f;
         foreach (var contolCentre in civ.controlCentres)
         {
-            float controlDecay = (contolCentre.Value == 0 ? 100f : contolCentre.Value == 1 ? 50f : contolCentre.Value == 2 ? 25f : 10f) * (1f + civ.controlDecay.value);
+            float controlDecay = (contolCentre.Value == 0 ? 100f : contolCentre.Value == 1 ? 50f : contolCentre.Value == 2 ? 25f : 10f) * (1f + civ.controlDecay.v);
             float possibleMaximumControl = 100f - controlDecay * evenr_distance(pos,contolCentre.Key) + totalDev;
             maximumControl = Mathf.Max(possibleMaximumControl, maximumControl);
         }
-        float minimumControl = pos == civ.capitalPos ? 100f : localMinimumControl.value + civ.minControl.value;
+        float minimumControl = pos == civ.capitalPos ? 100f : localMinimumControl.v + civ.minControl.v;
         maxControl = Mathf.Clamp(maximumControl, minimumControl, hasCore ? 100f : 25f);
         control = Mathf.Max(minimumControl, Mathf.Min(control, maxControl));
     }
     public float GetDevProdIncrease()
     {
         if (civID == -1) { return 0; }
-        float value = tileResource.Value * (1f + localProductionValue.value) * (1f + civ.productionValue.value) * (1f + localProductionQuantity.value) * (1f + civ.productionAmount.value);
+        float value = tileResource.Value * (1f + localProductionValue.v) * (1f + civ.productionValue.v) * (1f + localProductionQuantity.v) * (1f + civ.productionAmount.v);
         value *= 0.01f;
         if (!hasCore) { value *= 0.25f; }
         return value;
@@ -447,7 +447,7 @@ public class TileData
     public float GetDailyTax()
     {
         if(civID == -1) { return 0; }
-        float value = 0.025f * (1f+ localTaxEfficiency.value )*(1f + civ.taxEfficiency.value);
+        float value = 0.025f * (1f+ localTaxEfficiency.v )*(1f + civ.taxEfficiency.v);
         value *= 1f/360f;
         value *= avaliablePopulation;
         if (!hasCore) { value *= 0.25f; }
@@ -459,21 +459,21 @@ public class TileData
         float value = 0.2f;
         value *= (float)avaliableMaxPopulation/1000f;
         if (!hasCore) { value *= 0.25f; }
-        return value + localForceLimit.value * control/100f;
+        return value + localForceLimit.v * control/100f;
     }
     public float GetRecruitCost(int type)
     {
         if (civID == -1) { return 9999f; }
         float baseCost = civ.units[type].baseCost;
-        baseCost *= (1f + localRecruitmentCost.value + civ.regimentCost.value);
+        baseCost *= (1f + localRecruitmentCost.v + civ.regimentCost.v);
         return Mathf.Max(baseCost,1f);
     }
     public float GetMercRecruitCost(int mercID)
     {
         if (civID == -1) { return 9999f; }
         MercenaryGroup merc = Map.main.mercenaries[mercID];
-        float baseCost = merc.costPerRegiment * (merc.baseRegiments + merc.regimentsPerYearExtra * Game.main.gameTime.years) * (7 + Game.main.gameTime.months + Game.main.gameTime.years * 12);
-        baseCost *= (1f + localRecruitmentCost.value + civ.regimentCost.value);
+        float baseCost = merc.costPerRegiment * (merc.baseRegiments + merc.regimentsPerYearExtra * Game.main.gameTime.y) * (7 + Game.main.gameTime.m + Game.main.gameTime.y * 12);
+        baseCost *= (1f + localRecruitmentCost.v + civ.regimentCost.v);
         return Mathf.Max(baseCost, 1f);
     }
     public void CreateNewArmy(int type)
@@ -509,7 +509,7 @@ public class TileData
         MercenaryGroup merc = Map.main.mercenaries[mercID];
         if (civID == -1) { return; }
         List<Regiment> regiments = new List<Regiment>();
-        int regimentCount = merc.baseRegiments + merc.regimentsPerYearExtra * Game.main.gameTime.years;
+        int regimentCount = merc.baseRegiments + merc.regimentsPerYearExtra * Game.main.gameTime.y;
         int cavCount = (int)(regimentCount * merc.cavalryPercent);
         for(int i = 0; i < regimentCount; i++)
         {
@@ -521,7 +521,7 @@ public class TileData
     {
         if (civID == -1) { return 0; }
         if (tileResource == null) { return 0f; }
-        float amount = (1f + localProductionQuantity.value) *(1f + civ.productionAmount.value) * Mathf.Clamp(avaliablePopulation, 0f, 200f * developmentB) / 10000f;
+        float amount = (1f + localProductionQuantity.v) *(1f + civ.productionAmount.v) * Mathf.Clamp(avaliablePopulation, 0f, 200f * developmentB) / 10000f;
         if (!hasCore) { amount *= 0.25f; }
         return amount;
     }
@@ -529,7 +529,7 @@ public class TileData
     {
         if (civID == -1) { return 0; }
         if (tileResource == null) { return 0f; }
-        float value = tileResource.Value * (1f + localProductionValue.value )*(1f + civ.productionValue.value) * GetDailyProductionAmount();
+        float value = tileResource.Value * (1f + localProductionValue.v )*(1f + civ.productionValue.v) * GetDailyProductionAmount();
         return value;
     }
     public void SetDevCost()
@@ -541,10 +541,10 @@ public class TileData
             val += 0.03f * devCount;
             devCount -= 10;
         }
-        if (localDevCost.modifiers.Exists(i => i.name == "Development"))
+        if (localDevCost.ms.Exists(i => i.n == "Development"))
         {
-            Modifier modifier = localDevCost.modifiers.Find(i => i.name == "Development");
-            modifier.value = val;
+            Modifier modifier = localDevCost.ms.Find(i => i.n == "Development");
+            modifier.v = val;
             localDevCost.RemoveModifier(modifier);
             localDevCost.AddModifier(modifier);
         }
@@ -561,7 +561,7 @@ public class TileData
         cost += Mathf.Min(30f, totalDev);
         if(civ.capitalPos == pos) { cost += 0.2f * cost; }
         cost *= (1f - Mathf.Min((civ.GetTotalDev() * 0.01f)/ 15f, 0.33f));
-        cost *= (1f + civilization.warScoreCost.value);
+        cost *= (1f + civilization.warScoreCost.v);
         return cost;
     }
     public bool canDev(int index)
@@ -704,7 +704,7 @@ public class TileData
         {
             owner = Game.main.civs[FromCiv];
         }
-        float val = 50 * (1f + localDevCostMod.value + owner.devCostMod.value) * Mathf.Max(0.1f,1f + localDevCost.value + owner.devCost.value);
+        float val = 50 * (1f + localDevCostMod.v + owner.devCostMod.v) * Mathf.Max(0.1f,1f + localDevCost.v + owner.devCost.v);
         return Mathf.Max(0, (int)val);
     }
     public Vector3 worldPos()
@@ -913,9 +913,9 @@ public class TileData
         Stat stat = GetStat(statname);
         if (stat != null)
         {
-            if (stat.modifiers.Exists(item => item.name == modname))
+            if (stat.ms.Exists(item => item.n == modname))
             {
-                stat.RemoveModifier(stat.modifiers.Find(item => item.name == modname));
+                stat.RemoveModifier(stat.ms.Find(item => item.n == modname));
             }
         }
     }

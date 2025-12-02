@@ -48,7 +48,7 @@ public class MercenaryMenuUI : MonoBehaviour
         for(int i = 0; i < possiblemercs.Count; i++)
         {
             MercenaryGroup merc = possiblemercs[i];
-            int regimentCount = merc.baseRegiments + merc.regimentsPerYearExtra * Game.main.gameTime.years;
+            int regimentCount = merc.baseRegiments + merc.regimentsPerYearExtra * Game.main.gameTime.y;
             int cavCount = (int)(regimentCount * merc.cavalryPercent);
             float recruitCost = tile.GetMercRecruitCost(Map.main.mercenaries.ToList().IndexOf(merc));
             TextMeshProUGUI[] texts = unitList[i].GetComponentsInChildren<TextMeshProUGUI>();
@@ -118,20 +118,20 @@ public class MercenaryMenuUI : MonoBehaviour
         {
             foreach (var regiment in army.regiments)
             {
-                float mult = regiment.mercenary ? (0.5f + Game.main.gameTime.years * 0.25f) : 1f;
+                float mult = regiment.mercenary ? (0.5f + Game.main.gameTime.y * 0.25f) : 1f;
                 armyCosts += mult * civ.units[regiment.type].baseCost * (float)regiment.size / (float)regiment.maxSize * 0.25f / 12f;
             }
         }
-        armyCosts += infantry * (0.5f + Game.main.gameTime.years * 0.25f) * civ.units[0].baseCost * 0.25f / 12f;
-        armyCosts += cavalry * (0.5f + Game.main.gameTime.years * 0.25f) * civ.units[1].baseCost * 0.25f / 12f;
-        armyCosts += artillery * (0.5f + Game.main.gameTime.years * 0.25f) * civ.units[2].baseCost * 0.25f / 12f;
-        if (civ.TotalMaxArmySize() / 1000f  + infantry + cavalry > civ.forceLimit.value)
+        armyCosts += infantry * (0.5f + Game.main.gameTime.y * 0.25f) * civ.units[0].baseCost * 0.25f / 12f;
+        armyCosts += cavalry * (0.5f + Game.main.gameTime.y * 0.25f) * civ.units[1].baseCost * 0.25f / 12f;
+        armyCosts += artillery * (0.5f + Game.main.gameTime.y * 0.25f) * civ.units[2].baseCost * 0.25f / 12f;
+        if (civ.TotalMaxArmySize() / 1000f  + infantry + cavalry > civ.forceLimit.v)
         {
-            float increase = (civ.forceLimit.value + (civ.TotalMaxArmySize() / 1000f+ infantry + cavalry - civ.forceLimit.value) * 2) / civ.forceLimit.value;
+            float increase = (civ.forceLimit.v + (civ.TotalMaxArmySize() / 1000f+ infantry + cavalry - civ.forceLimit.v) * 2) / civ.forceLimit.v;
             armyCosts *= increase;
         }
-        armyCosts *= (1f + civ.regimentCost.value);
-        armyCosts *= (1f + civ.regimentMaintenanceCost.value);
+        armyCosts *= (1f + civ.regimentCost.v);
+        armyCosts *= (1f + civ.regimentMaintenanceCost.v);
         return armyCosts - original;
     }
 }

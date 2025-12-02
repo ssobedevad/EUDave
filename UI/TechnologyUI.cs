@@ -223,18 +223,18 @@ public class TechnologyUI : MonoBehaviour
             float monthDiff = (tech.expectedDate.totalTicks() - Game.main.gameTime.totalTicks()) / (6 * 24 * 30);
             cost += (int)(baseCost * (monthDiff * 0.1f));
         }
-        cost += (int)(baseCost * (civ.techCosts.value));
+        cost += (int)(baseCost * (civ.techCosts.v));
         if(tech.type == 0)
         {
-            cost += (int)(baseCost * (civ.techCostsA.value));
+            cost += (int)(baseCost * (civ.techCostsA.v));
         }
         if (tech.type == 1)
         {
-            cost += (int)(baseCost * (civ.techCostsD.value));
+            cost += (int)(baseCost * (civ.techCostsD.v));
         }
         if (tech.type == 2)
         {
-            cost += (int)(baseCost * (civ.techCostsM.value));
+            cost += (int)(baseCost * (civ.techCostsM.v));
         }
         return Mathf.Max(1,cost);
     }
@@ -242,18 +242,18 @@ public class TechnologyUI : MonoBehaviour
     {
         int baseCost = 600;
         int cost = baseCost;
-        cost += (int)(baseCost * (civ.techCosts.value));
+        cost += (int)(baseCost * (civ.techCosts.v));
         if (tech.type == 0)
         {
-            cost += (int)(baseCost * (civ.techCostsA.value));
+            cost += (int)(baseCost * (civ.techCostsA.v));
         }
         if (tech.type == 1)
         {
-            cost += (int)(baseCost * (civ.techCostsD.value));
+            cost += (int)(baseCost * (civ.techCostsD.v));
         }
         if (tech.type == 2)
         {
-            cost += (int)(baseCost * (civ.techCostsM.value));
+            cost += (int)(baseCost * (civ.techCostsM.v));
         }
         return Mathf.Max(1, cost);
     }

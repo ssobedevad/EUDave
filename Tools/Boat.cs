@@ -1,6 +1,8 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using UnityEngine;
 
+[MessagePackObject(keyAsPropertyName: true)]
 [Serializable]
 public class Boat
 {
@@ -17,6 +19,10 @@ public class Boat
     public int flankingRange;
     public bool inBatle;
     public bool mercenary;
+    public Boat()
+    {
+
+    }
     public Boat(int CivID, int Type = 0, bool merc = false)
     {
         sailors = 100;
@@ -26,12 +32,12 @@ public class Boat
         if (civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            cannons = (int)civ.boats[type].cannons.value;
-            supplyMax = civ.boats[type].supply.value;
-            hullStrengthMax = civ.boats[type].hullStrength.value;
+            cannons = (int)civ.boats[type].cannons.v;
+            supplyMax = civ.boats[type].supply.v;
+            hullStrengthMax = civ.boats[type].hullStrength.v;
             hullStrength = hullStrengthMax;
             flankingRange = civ.boats[type].flankingRange;
-            maxSailors = (int)civ.boats[type].maxSailors.value;
+            maxSailors = (int)civ.boats[type].maxSailors.v;
             width = civ.boats[type].width;
             sailors = maxSailors/2;
         }
@@ -85,7 +91,7 @@ public class Boat
     public void RefillSailors()
     {
         Civilisation civ = Game.main.civs[civID];
-        int reinforce = (int)(20 * (1f + civ.reinforceSpeed.value));
+        int reinforce = (int)(20 * (1f + civ.reinforceSpeed.v));
         int targetAmount = Mathf.Min(reinforce, maxSailors - sailors);
         int realAmount = civ.RemovePopulation(targetAmount);
         //Debug.Log(targetAmount + " / " + realAmount);

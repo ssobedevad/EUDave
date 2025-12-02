@@ -14,18 +14,34 @@ public class TileMapManager : MonoBehaviour
 
     private void OnMouseOver()
     {
-        if (Player.myPlayer.isHoveringUI) { return; }
+        if (Player.myPlayer.isHoveringUI||Game.main.isSaveLoad) { return; }
         Vector3Int tilemapPos = tilemap.WorldToCell(Camera.main.ScreenToWorldPoint(Input.mousePosition));
         TileData tileData = Map.main.GetTile(tilemapPos);
         if (Input.GetMouseButtonDown(1) && Game.main.Started)
         {          
             if(Player.myPlayer.selectedArmies.Count > 0 && Game.main.Started && Player.myPlayer.myCivID > -1)
             {
-                Player.myPlayer.selectedArmies.ForEach(i=>i.SetPath(tilemapPos));
+                foreach (var army in Player.myPlayer.selectedArmies)
+                {
+                    if(Player.myPlayer.myCivID == -1) { army.SetPath(tilemapPos);continue; }
+                    Civilisation civ = Player.myPlayer.myCiv;
+                    if (army.civID == civ.CivID || (civ.subjects.Contains(army.civID) && Game.main.civs[army.civID].libertyDesire < 50f))
+                    {
+                        army.SetPath(tilemapPos);
+                    }
+                }
             }
             else if (Player.myPlayer.selectedFleets.Count > 0 && Game.main.Started && Player.myPlayer.myCivID > -1)
             {
-                Player.myPlayer.selectedFleets.ForEach(i => i.SetPath(tilemapPos));
+                foreach (var fleet in Player.myPlayer.selectedFleets)
+                {
+                    if (Player.myPlayer.myCivID == -1) { fleet.SetPath(tilemapPos); continue; }
+                    Civilisation civ = Player.myPlayer.myCiv;
+                    if (fleet.civID == civ.CivID || (civ.subjects.Contains(fleet.civID) && Game.main.civs[fleet.civID].libertyDesire < 50f))
+                    {
+                        fleet.SetPath(tilemapPos);
+                    }
+                }
             }
             else
             {             

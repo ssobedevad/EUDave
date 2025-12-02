@@ -24,7 +24,7 @@ public class AIMoveArmiesWar
 
     public static bool ShouldRecruit(Civilisation civ)
     {
-        float targetVal = civ.forceLimit.value * (0.5f + civ.AIMilitary/100f);
+        float targetVal = civ.forceLimit.v * (0.5f + civ.AIMilitary/100f);
         if(civ.TotalMaxArmySize() / 1000f < targetVal)
         {
             if (civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f)
@@ -77,15 +77,15 @@ public class AIMoveArmiesWar
         }
         if (civ.techUnlocks.Contains("Siege Units")) 
         {  
-            if(numArtillery < civ.forceLimit.value * 0.1f)
+            if(numArtillery < civ.forceLimit.v * 0.1f)
             {
                 return 2;
             }
         }
         else if (civ.techUnlocks.Contains("Flanking Units")) 
         {
-            float cavalryRatio = 0.2f + civ.units[1].combatAbility.value;
-            if (numCavalry < civ.forceLimit.value * cavalryRatio)
+            float cavalryRatio = 0.2f + civ.units[1].combatAbility.v;
+            if (numCavalry < civ.forceLimit.v * cavalryRatio)
             {
                 return 1;
             }
@@ -101,7 +101,7 @@ public class AIMoveArmiesWar
             if (!safeTile.occupied && !safeTile.underSiege)
             {
                 int desiredUnit = GetDesiredUnitType(civ);
-                if (civ.TotalMaxArmySize() / 1000f < civ.forceLimit.value * 0.6f && civ.GetTotalTilePopulation() < civ.GetTotalMaxPopulation() * 0.5f)
+                if (civ.TotalMaxArmySize() / 1000f < civ.forceLimit.v * 0.6f && civ.GetTotalTilePopulation() < civ.GetTotalMaxPopulation() * 0.5f)
                 {
                     List<MercenaryGroup> possibleMercs = civ.GetPossibleMercs();
                     if (possibleMercs.Count > 0)

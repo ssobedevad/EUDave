@@ -1,6 +1,8 @@
-﻿using System.Collections;
+﻿using MessagePack;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+[MessagePackObject(keyAsPropertyName: true)]
 [System.Serializable] public class SaveGameFleet
 {
     public int civID;
@@ -13,10 +15,10 @@ using UnityEngine;
 
     public General general;
 
-    public Vector3Int pos;
-    public Vector3Int lastPos;
+    public SaveGameVector3Int pos;
+    public SaveGameVector3Int lastPos;
 
-    public List<Vector3Int> path;
+    public List<SaveGameVector3Int> path;
 
     public List<Regiment> army;
     public List<Boat> boats;
@@ -38,10 +40,10 @@ using UnityEngine;
 
         general = fleet.general;
 
-        pos = fleet.pos;
-        lastPos = fleet.lastPos;
+        pos = new SaveGameVector3Int(fleet.pos);
+        lastPos = new SaveGameVector3Int(fleet.lastPos);
 
-        path = fleet.path;
+        path = fleet.path.ConvertAll(i=>new SaveGameVector3Int(i));
 
         boats = fleet.boats;
         army = fleet.army;
@@ -62,10 +64,10 @@ using UnityEngine;
 
         fleet.general = general;
 
-        fleet.transform.position = Map.main.tileMapManager.tilemap.CellToWorld(pos);
-        fleet.lastPos = lastPos;
+        fleet.transform.position = Map.main.tileMapManager.tilemap.CellToWorld(pos.GetVector3Int());
+        fleet.lastPos = lastPos.GetVector3Int();
 
-        fleet.path = path;
+        fleet.path = path.ConvertAll(i=>i.GetVector3Int());
 
         fleet.boats = boats;
         fleet.army = army;

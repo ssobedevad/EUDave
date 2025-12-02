@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using UnityEngine;
 
 [Serializable]
@@ -18,12 +19,12 @@ public class Advisor
     public float HireCost(Civilisation civ, int increaseLevel = 0) 
     {
         float baseCost = 10 * Mathf.Pow(skillLevel + increaseLevel, 2);
-        return baseCost * (1f + civ.advisorCosts.value + (type == 0? civ.advisorCostsA.value : type == 1? civ.advisorCostsD.value : civ.advisorCostsM.value));
+        return baseCost * (1f + civ.advisorCosts.v + (type == 0? civ.advisorCostsA.v : type == 1? civ.advisorCostsD.v : civ.advisorCostsM.v));
     }
     public float Salary(Civilisation civ,int increaseLevel = 0)
     {
         float baseCost = 1 * Mathf.Pow(skillLevel + increaseLevel, 2);
-        return baseCost * (1f + civ.advisorCosts.value + (type == 0 ? civ.advisorCostsA.value : type == 1 ? civ.advisorCostsD.value : civ.advisorCostsM.value));
+        return baseCost * (1f + civ.advisorCosts.v + (type == 0 ? civ.advisorCostsA.v : type == 1 ? civ.advisorCostsD.v : civ.advisorCostsM.v));
     } 
     public Advisor(int skill,Age Age, int CivID, int Type, string Effect = "", float EffectStrength = 0f, int effetType = 0)
     {
@@ -73,7 +74,7 @@ public class Advisor
         }
         advisor.age = new Age(0, 0, 0, UnityEngine.Random.Range(1, 11));
         advisor.skillLevel = 1;
-        int years = Game.main.gameTime.years;
+        int years = Game.main.gameTime.y;
         if(years > 0)
         {
             advisor.skillLevel += UnityEngine.Random.Range(0, Mathf.Min(years,5));
@@ -95,9 +96,9 @@ public class Advisor
     }
     void CheckDeath()
     {
-        if(age.months > 0 || age.years > 0)
+        if(age.m > 0 || age.y > 0)
         {
-            if(UnityEngine.Random.Range(0f,1000f) < age.months + age.years * 12)
+            if(UnityEngine.Random.Range(0f,1000f) < age.m + age.y * 12)
             {
                 Kill();
             }

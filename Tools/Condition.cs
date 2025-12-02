@@ -23,7 +23,7 @@ public class Condition
         {
             if(conditionID == ConditionID.Stat) 
             {
-                if(civ.GetStat(conditionName).value >= conditionAmount)
+                if(civ.GetStat(conditionName).v >= conditionAmount)
                 {
                     return opposite ? false : true;
                 }
@@ -87,7 +87,7 @@ public class Condition
         {
             if (conditionID == ConditionID.Stat)
             {
-                text = "Requires Stat: " + civ.GetStat(conditionName).name + " >= " + conditionAmount;                
+                text = "Requires Stat: " + conditionName + " >= " + conditionAmount;                
             }
             else if (conditionID == ConditionID.Government)
             {

@@ -96,7 +96,7 @@ public class AIMoveArmiesPeace
             AddHomeProvinces(civ);
             MoveArmiesToProvinces(freeArmies);
         }
-        if(civ.TotalMaxArmySize()/1000f < (civ.forceLimit.value - 1) && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f && Game.main.Started)
+        if(civ.TotalMaxArmySize()/1000f < (civ.forceLimit.v - 1) && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f && Game.main.Started)
         {
             TileData safeProv = Map.main.GetTile(civ.SafeProvince());
             if (safeProv.recruitQueue.Count == 0)

@@ -80,21 +80,21 @@ public class GreatSwampUI : MonoBehaviour
         if (id == 0)
         {
             Effect effect = Map.main.religions[3].religiousMechanicEffects[3];
-            if (civ.GetStat(effect.name).modifiers.Exists(i => i.name == "Administrative Benefits")) { return; }
+            if (civ.GetStat(effect.name).ms.Exists(i => i.n == "Administrative Benefits")) { return; }
             civ.ApplyCivModifier(effect.name, effect.amount, "Administrative Benefits", effect.type, effect.duration);
             civ.religiousPoints = Mathf.Min(100, civ.religiousPoints + 10);
         }
         else if (id == 1)
         {
             Effect effect = Map.main.religions[3].religiousMechanicEffects[4];
-            if (civ.GetStat(effect.name).modifiers.Exists(i => i.name == "Diplomatic Benefits")) { return; }
+            if (civ.GetStat(effect.name).ms.Exists(i => i.n == "Diplomatic Benefits")) { return; }
             civ.ApplyCivModifier(effect.name, effect.amount, "Diplomatic Benefits", effect.type, effect.duration);
             civ.religiousPoints = Mathf.Min(100, civ.religiousPoints + 10);
         }
         else if (id == 2)
         {
             Effect effect = Map.main.religions[3].religiousMechanicEffects[5];
-            if (civ.GetStat(effect.name).modifiers.Exists(i => i.name == "Military Benefits")) { return; }
+            if (civ.GetStat(effect.name).ms.Exists(i => i.n == "Military Benefits")) { return; }
             civ.ApplyCivModifier(effect.name, effect.amount, "Military Benefits", effect.type, effect.duration);
             civ.religiousPoints = Mathf.Min(100, civ.religiousPoints + 10);
         }
@@ -127,7 +127,7 @@ public class GreatSwampUI : MonoBehaviour
         text += "This Increases by " + Mathf.Round(civ.HungerDaily() * 100f) / 100f + " every day\n";
         text += "Base: 0.1\n";
         text += "Provinces: " + Mathf.Round(civ.civTiles.Count) / 100f + "\n";
-        text += civ.diplomaticCapacity > civ.diplomaticCapacityMax.value ? "Over Diplomatic Capacity: " + Mathf.Round((civ.diplomaticCapacity - civ.diplomaticCapacityMax.value)/civ.diplomaticCapacityMax.value * 100f) / 100f + "\n" : "";
+        text += civ.diplomaticCapacity > civ.diplomaticCapacityMax.v ? "Over Diplomatic Capacity: " + Mathf.Round((civ.diplomaticCapacity - civ.diplomaticCapacityMax.v)/civ.diplomaticCapacityMax.v * 100f) / 100f + "\n" : "";
         return text;
     }
 }

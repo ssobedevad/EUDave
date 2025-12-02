@@ -47,14 +47,14 @@ public class Battle
     public int DefenderDiceRollBonus()
     {
         int diceRoll = 0;
-        diceRoll += (int)defenderCiv.defenderDiceRoll.value;
+        diceRoll += (int)defenderCiv.defenderDiceRoll.v;
         return diceRoll;
     }
     public int AttackerDiceRollBonus()
     {
         int diceRoll = 0;
-        diceRoll += (int)attackerCiv.attackerDiceRoll.value;
-        return diceRoll +tile.terrain.attackerDiceRoll + (int)tile.localAttackerDiceRoll.value;
+        diceRoll += (int)attackerCiv.attackerDiceRoll.v;
+        return diceRoll +tile.terrain.attackerDiceRoll + (int)tile.localAttackerDiceRoll.v;
     }
     public bool Involving(int civID)
     {
@@ -63,10 +63,11 @@ public class Battle
     }
     public Battle(SaveGameBattle battle)
     {
-        active = battle.active;
+        pos = battle.p.GetVector3Int();
+        active = battle.a;
         Game.main.ongoingBattles.Add(this);
         Game.main.hourTick.AddListener(HourTick);
-        bui = GameObject.Instantiate(UIManager.main.BattleUIPrefab, Map.main.tileMapManager.tilemap.CellToWorld(battle.pos), Quaternion.identity, UIManager.main.worldCanvas).GetComponent<BattleUI>();
+        bui = GameObject.Instantiate(UIManager.main.BattleUIPrefab, Map.main.tileMapManager.tilemap.CellToWorld(battle.p.GetVector3Int()), Quaternion.identity, UIManager.main.worldCanvas).GetComponent<BattleUI>();
         bui.battle = this;
         UIManager.main.WorldSpaceUI.Add(bui.gameObject);
     }
@@ -97,8 +98,8 @@ public class Battle
         {
             diceRolls.Add(new WeightedChoice(i, (int)Mathf.Pow(6 - Mathf.Abs(i - 5),2)));
         }
-        attackingFrontLine = new BattleLine((int)attackerCiv.combatWidth.value);
-        defendingFrontLine = new BattleLine((int)defenderCiv.combatWidth.value );
+        attackingFrontLine = new BattleLine((int)attackerCiv.combatWidth.v);
+        defendingFrontLine = new BattleLine((int)defenderCiv.combatWidth.v );
         PhaseTick();
         attackingArmies.Add(attacker);
         attackerCount += (int)attacker.ArmySize();
@@ -181,10 +182,10 @@ public class Battle
             }
         }
 
-        winnerCiv.AddPrestige(Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) *(1f + winnerCiv.battlePrestige.value));
-        winnerCiv.AddArmyTradition(Mathf.Min((winnerCasualties + 1f) / (winnerCiv.forceLimit.value * 1000f + 1f) * 12f , 5f) * (1f + winnerCiv.battleTraditon.value));
+        winnerCiv.AddPrestige(Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) *(1f + winnerCiv.battlePrestige.v));
+        winnerCiv.AddArmyTradition(Mathf.Min((winnerCasualties + 1f) / (winnerCiv.forceLimit.v * 1000f + 1f) * 12f , 5f) * (1f + winnerCiv.battleTraditon.v));
         loserCiv.AddPrestige(-Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) / 2f);
-        loserCiv.AddArmyTradition(Mathf.Min((loserCasualties + 1f) / (loserCiv.forceLimit.value * 1000f + 1f) * 12f, 2f) * (1f + loserCiv.battleTraditon.value));
+        loserCiv.AddArmyTradition(Mathf.Min((loserCasualties + 1f) / (loserCiv.forceLimit.v * 1000f + 1f) * 12f, 2f) * (1f + loserCiv.battleTraditon.v));
         
         if (WarID > -1)
         {
@@ -395,11 +396,11 @@ public class Battle
             if (attackingFrontLine.regiments[i] != null && attackingFrontLine.regiments[i].size > 0)
             {
                 Regiment attacker = attackingFrontLine.regiments[i];
-                float tactics = defenderCiv.militaryTactics.value * defenderCiv.discipline.value;
-                float discipline = attackerCiv.discipline.value;
-                float combatAbility = attackerCiv.units[attacker.type].combatAbility.value;
-                float baseDamage = attackerCiv.units[attacker.type].meleeDamage.value;
-                float flankDamage = attackerCiv.units[attacker.type].flankingDamage.value;
+                float tactics = defenderCiv.militaryTactics.v * defenderCiv.discipline.v;
+                float discipline = attackerCiv.discipline.v;
+                float combatAbility = attackerCiv.units[attacker.type].combatAbility.v;
+                float baseDamage = attackerCiv.units[attacker.type].meleeDamage.v;
+                float flankDamage = attackerCiv.units[attacker.type].flankingDamage.v;
                 int flankingRange = attackerCiv.units[attacker.type].flankingRange; 
                 int target = FindTarget(defendingFrontLine, i, flankingRange, attacker.type == 1);
                 if (target > -1)
@@ -427,11 +428,11 @@ public class Battle
             if (attackingBackLine.regiments[i] != null && attackingBackLine.regiments[i].size > 0)
             {
                 Regiment attacker = attackingBackLine.regiments[i];
-                float tactics = defenderCiv.militaryTactics.value * defenderCiv.discipline.value;
-                float discipline = attackerCiv.discipline.value;
-                float combatAbility = attackerCiv.units[attacker.type].combatAbility.value;
-                float baseDamage = attackerCiv.units[attacker.type].rangedDamage.value;
-                float flankDamage = attackerCiv.units[attacker.type].flankingDamage.value;
+                float tactics = defenderCiv.militaryTactics.v * defenderCiv.discipline.v;
+                float discipline = attackerCiv.discipline.v;
+                float combatAbility = attackerCiv.units[attacker.type].combatAbility.v;
+                float baseDamage = attackerCiv.units[attacker.type].rangedDamage.v;
+                float flankDamage = attackerCiv.units[attacker.type].flankingDamage.v;
                 int flankingRange = attackerCiv.units[attacker.type].flankingRange;
                 int target = FindTarget(defendingFrontLine, i, flankingRange,false);
                 if (target > -1)
@@ -500,11 +501,11 @@ public class Battle
             if (DefendingLineClone.regiments[i] != null && DefendingLineClone.regiments[i].size > 0)
             {
                 Regiment attacker = DefendingLineClone.regiments[i];
-                float tactics = attackerCiv.militaryTactics.value * attackerCiv.discipline.value;
-                float discipline = defenderCiv.discipline.value;
-                float combatAbility = defenderCiv.units[attacker.type].combatAbility.value;
-                float baseDamage = defenderCiv.units[attacker.type].meleeDamage.value;
-                float flankDamage = defenderCiv.units[attacker.type].flankingDamage.value;
+                float tactics = attackerCiv.militaryTactics.v * attackerCiv.discipline.v;
+                float discipline = defenderCiv.discipline.v;
+                float combatAbility = defenderCiv.units[attacker.type].combatAbility.v;
+                float baseDamage = defenderCiv.units[attacker.type].meleeDamage.v;
+                float flankDamage = defenderCiv.units[attacker.type].flankingDamage.v;
                 int flankingRange = defenderCiv.units[attacker.type].flankingRange;               
                 int target = FindTarget(attackingFrontLine, i, flankingRange, attacker.type == 1);
                 if (target > -1)
@@ -533,11 +534,11 @@ public class Battle
             if (defendingBackLine.regiments[i] != null && defendingBackLine.regiments[i].size > 0)
             {
                 Regiment attacker = defendingBackLine.regiments[i];
-                float tactics = attackerCiv.militaryTactics.value * attackerCiv.discipline.value;
-                float discipline = defenderCiv.discipline.value;
-                float combatAbility = defenderCiv.units[attacker.type].combatAbility.value;
-                float baseDamage = defenderCiv.units[attacker.type].rangedDamage.value;
-                float flankDamage = defenderCiv.units[attacker.type].flankingDamage.value;
+                float tactics = attackerCiv.militaryTactics.v * attackerCiv.discipline.v;
+                float discipline = defenderCiv.discipline.v;
+                float combatAbility = defenderCiv.units[attacker.type].combatAbility.v;
+                float baseDamage = defenderCiv.units[attacker.type].rangedDamage.v;
+                float flankDamage = defenderCiv.units[attacker.type].flankingDamage.v;
                 int flankingRange = defenderCiv.units[attacker.type].flankingRange;
                 int target = FindTarget(attackingFrontLine, i, flankingRange, false);
                 if (target > -1)

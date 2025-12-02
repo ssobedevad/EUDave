@@ -8,16 +8,16 @@ public static class SaveLoad
     public static string SaveData(SaveGameData data)
     {
         BinaryFormatter formatter = new BinaryFormatter();
-        string path = Application.persistentDataPath + "/Game.EUDave." + data.SaveName;
+        string path = Application.persistentDataPath + "/Save." + data.SaveName;
         FileStream stream = new FileStream(path, FileMode.Create);             
-        formatter.Serialize(stream, data);
+        formatter.Serialize(stream, data.map);
         stream.Close();       
         SaveSaves(data.SaveName);
         return data.SaveName;
     }
     public static SaveGameData LoadData(string saveName)
     {
-        string path = Application.persistentDataPath + "/Game.EUDave." + saveName; if (File.Exists(path))
+        string path = Application.persistentDataPath + "/Save." + saveName; if (File.Exists(path))
         {
             BinaryFormatter formatter = new BinaryFormatter();
 
@@ -35,7 +35,7 @@ public static class SaveLoad
     }
     public static void SaveSaves(string save)
     {
-        string path = Application.persistentDataPath + "/Game.EUDave.SavesData";
+        string path = Application.persistentDataPath + "/Saves.SavesData";
         FileStream stream;
         List<string> data = new List<string>();
         BinaryFormatter formatter;
@@ -61,7 +61,7 @@ public static class SaveLoad
     }
     public static void RemoveSave(string save)
     {
-        string path = Application.persistentDataPath + "/Game.EUDave.SavesData";
+        string path = Application.persistentDataPath + "/Saves.SavesData";
         FileStream stream;
         List<string> data = new List<string>();
         BinaryFormatter formatter;
@@ -94,7 +94,7 @@ public static class SaveLoad
             Debug.LogError("No Saves file found in " + path);
             return; 
         }
-        path = Application.persistentDataPath + "/Game.EUDave." + save; 
+        path = Application.persistentDataPath + "/Save." + save; 
         if (File.Exists(path))
         {
             File.Delete(path);
@@ -106,11 +106,12 @@ public static class SaveLoad
         }
 
     }
-    public static List<SaveGameData> LoadSaves() 
+    public static List<string> LoadSaves() 
     {
         List<SaveGameData> saveFiles = new List<SaveGameData>();
         List<string> saves = new List<string>();
-        string path = Application.persistentDataPath + "/Game.EUDave.SavesData"; if (File.Exists(path))
+        string path = Application.persistentDataPath + "/Saves.SavesData"; 
+        if (File.Exists(path))
         {
             BinaryFormatter formatter = new BinaryFormatter();
 
@@ -120,16 +121,6 @@ public static class SaveLoad
 
             stream.Close();
         }
-        else
-        {
-            Debug.LogError("No Saves file found in " + path); 
-            return saveFiles;
-        }
-        
-        for (int i = 0; i < saves.Count;i++)
-        {
-            saveFiles.Add(LoadData(saves[i]));
-        }
-        return saveFiles;
+        return saves;
     }
 }

@@ -195,15 +195,15 @@ public class DiplomacyUIPanel : MonoBehaviour
             }
         }
         ideas.GetComponent<HoverText>().text = ideasText;
-        diprep.text = "Diplo Rep: " + Mathf.Round(civ.diploRep.value * 10f)/10f + " <sprite index=2>";
+        diprep.text = "Diplo Rep: " + Mathf.Round(civ.diploRep.v * 10f)/10f + " <sprite index=2>";
         diprep.GetComponent<HoverText>().text = civ.diploRep.ToString();
-        diprel.text = "Diplomatic Capacity: "+ Mathf.Round(civ.diplomaticCapacity) +"/"+ Mathf.Round(civ.diplomaticCapacityMax.value) + " <sprite index=2>";
+        diprel.text = "Diplomatic Capacity: "+ Mathf.Round(civ.diplomaticCapacity) +"/"+ Mathf.Round(civ.diplomaticCapacityMax.v) + " <sprite index=2>";
         diprel.GetComponent<HoverText>().text = civ.diplomaticCapacityMax.ToString();
         civReligion.sprite = Map.main.religions[civ.religion].sprite;
         civReligion.GetComponent<HoverText>().text = Map.main.religions[civ.religion].GetHoverText(civ);
         if (Player.myPlayer.myCivID > -1 && Game.main.Started)
         {
-            opinion.text = Mathf.Round(civ.opinionOfThem[Player.myPlayer.myCivID].value) + "";
+            opinion.text = Mathf.Round(civ.opinionOfThem[Player.myPlayer.myCivID].v) + "";
             opinion.GetComponent<HoverText>().text = civ.opinionOfThem[Player.myPlayer.myCivID].ToString();
         }
         adminTech.text = civ.adminTech + "<sprite index=1><sprite index=8>";
@@ -211,7 +211,7 @@ public class DiplomacyUIPanel : MonoBehaviour
         milTech.text = civ.milTech + "<sprite index=3><sprite index=8>";
         if (civ.ruler.active)
         {
-            civRulerName.text = civ.ruler.Name + " ("+civ.ruler.age.years +") " + civ.ruler.adminSkill + "<sprite index=1> " + civ.ruler.diploSkill + "<sprite index=2> " + civ.ruler.milSkill +  "<sprite index=3>";
+            civRulerName.text = civ.ruler.Name + " ("+civ.ruler.age.y +") " + civ.ruler.adminSkill + "<sprite index=1> " + civ.ruler.diploSkill + "<sprite index=2> " + civ.ruler.milSkill +  "<sprite index=3>";
         }
         else
         {
@@ -288,7 +288,7 @@ public class DiplomacyUIPanel : MonoBehaviour
             Civilisation ally = Game.main.civs[civ.allies[i]];
             allies[i].GetComponentInChildren<Image>().color = ally.c;
             TextMeshProUGUI[] texts = allies[i].GetComponentsInChildren<TextMeshProUGUI>();
-            texts[0].text = Mathf.Round(ally.opinionOfThem[civ.CivID].value) + "";        
+            texts[0].text = Mathf.Round(ally.opinionOfThem[civ.CivID].v) + "";        
         }
         while (subjects.Count != civ.subjects.Count)
         {
@@ -371,37 +371,37 @@ public class DiplomacyUIPanel : MonoBehaviour
 
     public static string GetPositiveReasons(Civilisation target, Civilisation fromCiv)
     {
-        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].value > 0? "Opinion: " + 0.25f * target.opinionOfThem[fromCiv.CivID].value +"\n": "";
-        reasons += fromCiv.diploRep.value > 0 ? "Diplo Rep: " + fromCiv.diploRep.value * 5f  + "\n": "";
-        reasons += Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) > 0f ? "Relative Military Strength: " + Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) : "";       
+        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].v > 0? "Opinion: " + 0.25f * target.opinionOfThem[fromCiv.CivID].v +"\n": "";
+        reasons += fromCiv.diploRep.v > 0 ? "Diplo Rep: " + fromCiv.diploRep.v * 5f  + "\n": "";
+        reasons += Mathf.Clamp(20f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) > 0f ? "Relative Military Strength: " + Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) : "";       
         return reasons;
     }
     public static string GetNegativeReasons(Civilisation target, Civilisation fromCiv)
     {
-        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].value < 0 ? "Opinion: " + -0.25f * target.opinionOfThem[fromCiv.CivID].value + "\n" : "";
-        reasons += fromCiv.diploRep.value < 0 ? "Diplo Rep: " + fromCiv.diploRep.value * -5f + "\n": "";
-        reasons += Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) < 0f ? "Relative Military Strength: " + Mathf.Clamp(-50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) + "\n" : "";
+        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].v < 0 ? "Opinion: " + -0.25f * target.opinionOfThem[fromCiv.CivID].v + "\n" : "";
+        reasons += fromCiv.diploRep.v < 0 ? "Diplo Rep: " + fromCiv.diploRep.v * -5f + "\n": "";
+        reasons += Mathf.Clamp(20f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) < 0f ? "Relative Military Strength: " + Mathf.Clamp(-50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) + "\n" : "";
         reasons += Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) > 0 ? "Distance Between Borders: " + Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) + "\n" : "";
         reasons += fromCiv.atWarWith.Count > 0 ? "You are at War: 1000\n" : "";
         reasons += (fromCiv.CivID == target.overlordID) ? "They are a your subject: 1000\n" : "";
         reasons += (fromCiv.overlordID == target.CivID) ? "They are a your overlord: 1000\n" : "";
         reasons += (target.overlordID > -1 && target.libertyDesire < 50f) ? "They are a Loyal Subject: 1000\n" : "";
         reasons += (fromCiv.overlordID > -1 && fromCiv.libertyDesire < 50f) ? "You are a Loyal Subject: 1000\n" : "";
-        reasons += (target.diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > target.diplomaticCapacityMax.value ? "Target Would Be Over Diplomatic Capacity: " + (target.diplomaticCapacity + 25 +fromCiv.governingCapacity * 0.5f - target.diplomaticCapacityMax.value) / target.diplomaticCapacityMax.value * -100f + "\n" : "";
+        reasons += (target.diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > target.diplomaticCapacityMax.v ? "Target Would Be Over Diplomatic Capacity: " + (target.diplomaticCapacity + 25 +fromCiv.governingCapacity * 0.5f - target.diplomaticCapacityMax.v) / target.diplomaticCapacityMax.v * -100f + "\n" : "";
         return reasons;
     }
     public float AllianceOffer(Civilisation target, Civilisation fromCiv)
     {
-        float choice = 0.25f * target.opinionOfThem[fromCiv.CivID].value;
-        choice += 5f * fromCiv.diploRep.value;
-        choice += Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f);
+        float choice = 0.25f * target.opinionOfThem[fromCiv.CivID].v;
+        choice += 5f * fromCiv.diploRep.v;
+        choice += Mathf.Clamp(20f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f);
         choice -= Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10);
         choice += fromCiv.atWarWith.Count > 0 ? -1000 : 0;
         choice += (target.overlordID == fromCiv.CivID) ? -1000 : 0;
         choice += (fromCiv.overlordID == target.CivID) ? -1000 : 0;
         choice += (target.overlordID > -1 && target.libertyDesire < 50f) ? -1000 : 0;
         choice += (fromCiv.overlordID > -1 && fromCiv.libertyDesire < 50f) ? -1000 : 0;
-        choice += ((target.diplomaticCapacity +25f+ fromCiv.governingCapacity * 0.5f) > target.diplomaticCapacityMax.value ? (target.diplomaticCapacity +25f+ fromCiv.governingCapacity * 0.5f - target.diplomaticCapacityMax.value) / target.diplomaticCapacityMax.value * -100f : 0f);
+        choice += ((target.diplomaticCapacity +25f+ fromCiv.governingCapacity * 0.5f) > target.diplomaticCapacityMax.v ? (target.diplomaticCapacity +25f+ fromCiv.governingCapacity * 0.5f - target.diplomaticCapacityMax.v) / target.diplomaticCapacityMax.v * -100f : 0f);
         return choice;
     }
 }

@@ -17,6 +17,7 @@ public class Army : MonoBehaviour
     public bool isMercenary;
     public General general;
     public float attrition;
+    float savedSiegeProgress;
     public Vector3Int pos => Map.main.tileMapManager.tilemap.WorldToCell(transform.position);
     public Vector3Int lastPos;
     public Vector3Int lastPosNoZOC;
@@ -60,8 +61,8 @@ public class Army : MonoBehaviour
             if (civ.atWarWith.Contains(tile.civID))
             {
                 percent += 1f + tile.fortLevel;
-                percent += tile.localAttritionForEnemies.value;
-                percent += tile.civ.attritionForEnemies.value;
+                percent += tile.localAttritionForEnemies.v;
+                percent += tile.civ.attritionForEnemies.v;
             }           
         }
         if (armysize / 1000f > tile.supplyLimit)
@@ -71,7 +72,7 @@ public class Army : MonoBehaviour
         if(civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            percent *= (1f + civ.landAttrition.value);
+            percent *= (1f + civ.landAttrition.v);
         }
        attrition = percent;
     }
@@ -93,24 +94,26 @@ public class Army : MonoBehaviour
     }
     public static Army NewArmy(SaveGameArmy save)
     {
-        TileData tile = Map.main.GetTile(save.pos);
+        TileData tile = Map.main.GetTile(save.p.GetVector3Int());
+        if(tile == null) { return null; }
         Army a = Instantiate(Map.main.armyPrefab, tile.worldPos(), Quaternion.identity, Map.main.unitTransform).GetComponent<Army>();
         ArmyUIProvince uIProvince = Instantiate(UIManager.main.ArmyUIPrefab, tile.worldPos(), Quaternion.identity, UIManager.main.unitCanvas).GetComponent<ArmyUIProvince>();
         uIProvince.army = a;
-        a.civID = save.civID;
-        a.regiments.AddRange(save.regiments);
+        a.civID = save.id;
+        a.regiments.AddRange(save.rs);
         UIManager.main.WorldSpaceUI.Add(uIProvince.gameObject);
         Game.main.dayTick.AddListener(a.DayTick);
         tile.armiesOnTile.Add(a);
-        a.inBattle = save.inBattle;
-        a.retreating = save.retreating;
-        a.exiled = save.exiled;
-        a.moveTimer = save.moveTimer;
-        a.moveTime = save.moveTime;
-        a.general = save.general;
-        a.path = save.path;
-        a.lastPos = save.lastPos;
-        a.lastPosNoZOC = save.lastPosNoZOC;
+        a.inBattle = save.b;
+        a.retreating = save.r;
+        a.exiled = save.e;
+        a.moveTimer = save.tr;
+        a.moveTime = save.t;
+        a.general = save.g;
+        a.path = save.pt.ConvertAll(i=>i.GetVector3Int());
+        a.lastPos = save.lp.GetVector3Int();
+        a.lastPosNoZOC = save.nz.GetVector3Int();
+        a.savedSiegeProgress = save.s;
         return a;
     }
     public static Army NewArmy(TileData tile, int civID, List<Regiment> regiments,bool merc = false)
@@ -169,10 +172,10 @@ public class Army : MonoBehaviour
             Civilisation civ = Game.main.civs[civID];
             foreach (var regiment in regiments)
             {
-                regiment.maxMorale = civ.moraleMax.value;
-                regiment.meleeDamage = civ.units[regiment.type].meleeDamage.value;
-                regiment.flankingDamage = civ.units[regiment.type].flankingDamage.value;
-                regiment.rangedDamage = civ.units[regiment.type].rangedDamage.value;
+                regiment.maxMorale = civ.moraleMax.v;
+                regiment.meleeDamage = civ.units[regiment.type].meleeDamage.v;
+                regiment.flankingDamage = civ.units[regiment.type].flankingDamage.v;
+                regiment.rangedDamage = civ.units[regiment.type].rangedDamage.v;
                 regiment.flankingRange = civ.units[regiment.type].flankingRange;
             }
             if (tile.civID != civID)
@@ -189,6 +192,10 @@ public class Army : MonoBehaviour
                     exiled = false;
                     path.Clear();
                 }
+            }
+            if(savedSiegeProgress > 0 && path.Count > 0)
+            {
+                savedSiegeProgress = 0;
             }
         }       
         if (inBattle)
@@ -357,10 +364,10 @@ public class Army : MonoBehaviour
                 if(unit.type < 0 || unit.type >= civ.units.Count) { continue; }
                 float power = (float)unit.size/(float)unit.maxSize;
                 power *= unit.morale;
-                power *= Mathf.Max(civ.units[unit.type].meleeDamage.value * (1f + ((general != null &&general.active) ? general.meleeSkill * 0.1f : 0f))
-                    , civ.units[unit.type].flankingDamage.value * (1f + ((general != null && general.active) ? general.flankingSkill * 0.1f : 0f))
-                    , civ.units[unit.type].rangedDamage.value * (1f + ((general != null && general.active) ? general.rangedSkill * 0.1f : 0f)));
-                power *= 1f + civ.units[unit.type].combatAbility.value;
+                power *= Mathf.Max(civ.units[unit.type].meleeDamage.v * (1f + ((general != null &&general.active) ? general.meleeSkill * 0.1f : 0f))
+                    , civ.units[unit.type].flankingDamage.v * (1f + ((general != null && general.active) ? general.flankingSkill * 0.1f : 0f))
+                    , civ.units[unit.type].rangedDamage.v * (1f + ((general != null && general.active) ? general.rangedSkill * 0.1f : 0f)));
+                power *= 1f + civ.units[unit.type].combatAbility.v;
 
                 strength += power;
             }            
@@ -423,7 +430,7 @@ public class Army : MonoBehaviour
         if(civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            movementSpeed += civ.movementSpeed.value;
+            movementSpeed += civ.movementSpeed.v;
         }
         if(general != null && general.active)
         {
@@ -591,6 +598,7 @@ public class Army : MonoBehaviour
                 if (!tile.underSiege)
                 {
                     tile.siege = new Siege(tile, civID);
+                    tile.siege.progress = savedSiegeProgress;
                     tile.siege.armiesSieging.Add(this);
                 }
                 else if (tile.underSiege && !tile.siege.armiesSieging.Contains(this))
@@ -604,6 +612,7 @@ public class Army : MonoBehaviour
             if (!tile.underSiege && !(tile.occupied && tile.occupiedByID == -1))
             {
                 tile.siege = new Siege(tile, civID);
+                tile.siege.progress = savedSiegeProgress;
                 tile.siege.armiesSieging.Add(this);
             }
             else if (tile.underSiege && !tile.siege.armiesSieging.Contains(this))

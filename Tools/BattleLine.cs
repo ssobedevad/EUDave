@@ -1,14 +1,20 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 [Serializable]
+[MessagePackObject(keyAsPropertyName: true)]
 public class BattleLine
 {
     public int width = 15;
     public Regiment[] regiments = new Regiment[15];
 
+    public BattleLine()
+    {
+
+    }
     public BattleLine(int combatWidth = 15)
     {
         regiments = new Regiment[combatWidth];

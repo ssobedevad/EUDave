@@ -1,8 +1,9 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 
 using UnityEngine;
-
+[MessagePackObject(keyAsPropertyName: true)]
 [Serializable]
 public class General
 {
@@ -38,9 +39,9 @@ public class General
     }
     void CheckDeath()
     {
-        if (age.months > 0 || age.years > 0)
+        if (age.m > 0 || age.y > 0)
         {
-            if (UnityEngine.Random.Range(0f, 50f) < age.months + age.years * 12)
+            if (UnityEngine.Random.Range(0f, 50f) < age.m + age.y * 12)
             {
                 Kill();
             }

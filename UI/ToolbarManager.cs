@@ -117,8 +117,8 @@ public class ToolbarManager : MonoBehaviour
             mil.text = civ.milPower + "<sprite index=0>";
             hoverText = "Prestige: " + Mathf.Round(civ.prestige * 100f) / 100f + "<sprite index=5>\n\n";
             hoverText += "This Changes By: " + Mathf.Round(civ.GetMonthlyPrestigeChange() * 100f) / 100f + "<sprite index=5> every 30<sprite index=12>\n";
-            hoverText += "Monthly Prestige: " + Mathf.Round(civ.monthlyPrestige.value * 100f) / 100f + "<sprite index=5>\n";
-            hoverText += "Prestige Decay: " + Mathf.Round(civ.prestigeDecay.value * 100f) + "%\n\n";
+            hoverText += "Monthly Prestige: " + Mathf.Round(civ.monthlyPrestige.v * 100f) / 100f + "<sprite index=5>\n";
+            hoverText += "Prestige Decay: " + Mathf.Round(civ.prestigeDecay.v * 100f) + "%\n\n";
             hoverText += "This Level of Prestige<sprite index=5> Gives the Following:\n\n";
             hoverText += (civ.prestige >= 0 ? "<#00ff00>" : "<#ff0000>") + "Tax Efficiency: " +(civ.prestige >= 0? "+" : "")+ Mathf.Round(civ.prestige * 0.1f) + "%\n";
             hoverText += "Morale: " + (civ.prestige >= 0 ? "+" : "") + Mathf.Round(civ.prestige * 0.1f) + "%\n";

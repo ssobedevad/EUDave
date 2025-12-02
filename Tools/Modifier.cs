@@ -1,28 +1,34 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using UnityEngine;
 
 [Serializable]
+[MessagePackObject(keyAsPropertyName: true)]
 public class Modifier
 {
-    public float value;
-    public int type;
-    public int duration;
-    public string name;
-    public bool isPercentage;
-    public bool decay;
+    public float v;
+    public int t;
+    public int d;
+    public string n;
+    public bool p;
+    public bool dc;
+    public Modifier()
+    {
+
+    }
     public Modifier(float Value,int Type, string Name, int Duration = -1, bool isPercentage = false,bool decay = false)
     {
-        value = Value;
-        type = Type;
-        name = Name;
-        duration = Duration;
-        this.isPercentage = isPercentage;
-        this.decay = decay;
+        v = Value;
+        t = Type;
+        n = Name;
+        d = Duration;
+        this.p = isPercentage;
+        this.dc = decay;
     }
     public static string ToString(float effect,Stat stat,bool forcePercentage = false,bool forceFlat = false)
     {
         string val = "";
-        string effectString = ((forceFlat && !forcePercentage) || (forceFlat == false && forcePercentage == false && stat != null && stat.isFlat)) ? Mathf.Round(effect * 100f)/100f + "" : Mathf.Round(effect * 100f) + "%";
+        string effectString = ((forceFlat && !forcePercentage) || (forceFlat == false && forcePercentage == false && stat != null && stat.f)) ? Mathf.Round(effect * 100f)/100f + "" : Mathf.Round(effect * 100f) + "%";
         if (effect > 0)
         {     
             val += " +" + effectString;

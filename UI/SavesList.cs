@@ -10,11 +10,11 @@ public class SavesList : MonoBehaviour
     [SerializeField] GameObject civListItemPrefab;
     [SerializeField] Transform civListBack;
     List<GameObject> civList = new List<GameObject>();
-    List<SaveGameData> saves = new List<SaveGameData>();
+    List<string> saves = new List<string>();
 
     private void Awake()
     {
-        saves = SaveLoad.LoadSaves();
+        saves = SaveLoadTestMP.LoadSaves();
     }
     private void Update()
     {
@@ -22,6 +22,7 @@ public class SavesList : MonoBehaviour
         {
             gameObject.SetActive(false);
         }
+        saves = SaveLoadTestMP.LoadSaves();
         int amount = Mathf.Max(1, saves.Count);
         
         while (civList.Count != amount)
@@ -35,26 +36,32 @@ public class SavesList : MonoBehaviour
             else
             {
                 GameObject item = Instantiate(civListItemPrefab, civListBack);
+                int index = civList.Count;
                 civList.Add(item);
+
+                Button[] buttons = item.GetComponentsInChildren<Button>();
+                buttons[0].onClick.AddListener(delegate { OpenSave(index); });
+                buttons[1].onClick.AddListener(delegate { RemoveSave(index); });
             }
         }
         for (int i = 0; i < saves.Count; i++)
         {
-            SaveGameData save = saves[i];
             Image[] images = civList[i].GetComponentsInChildren<Image>();
             TextMeshProUGUI[] texts = civList[i].GetComponentsInChildren<TextMeshProUGUI>();
-            if (save.civID > -1)
+            string saveText = saves[i].Split("(")[1];
+            string saveDate = saves[i].Split("{")[1];
+            int civid = -1;
+            int totalTicks = -1;
+            if (int.TryParse(saveText.Split(")")[0], out civid) && civid > -1 && int.TryParse(saveDate.Split("}")[0], out totalTicks) && totalTicks > -1)
             {
-                Civilisation civ = Game.main.civs[save.civID];             
-                images[1].color = civ.c;
-                texts[0].text = civ.civName;                
+                images[1].color = Game.main.civs[civid].c;
+                texts[0].text = Game.main.civs[civid].civName + " " + new Age(totalTicks).ToDate();
             }
-            else
-            {
+            else 
+            { 
                 images[1].color = Color.black;
-                texts[0].text = "Spectator";
+                texts[0].text = "UNKNOWN";
             }
-            texts[1].text = save.gameTime.ToString(true, true);
 
         }
         if(saves.Count == 0)
@@ -63,7 +70,25 @@ public class SavesList : MonoBehaviour
             TextMeshProUGUI[] texts = civList[0].GetComponentsInChildren<TextMeshProUGUI>();
             images[1].color = Color.black;
             texts[0].text = "No Saves";
-            texts[1].text = "N/A";
+        }
+    }
+    async void OpenSave(int i)
+    {
+        if (saves.Count > i)
+        {
+            UIManager.main.loadingScreen.display = "Loading Save File";
+            UIManager.main.loadingScreen.currentPhase = "Init";
+            UIManager.main.loadingScreen.gameObject.SetActive(true);
+            await SaveGameManager.LoadSave(saves[i]);
+            UIManager.main.startGameButton.SetActive(false);
+            UIManager.main.loadingScreen.gameObject.SetActive(false);
+        }
+    }
+    void RemoveSave(int i)
+    {
+        if (saves.Count > i)
+        {
+            SaveLoadTestMP.RemoveSave(saves[i]);
         }
     }
 }

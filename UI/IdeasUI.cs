@@ -47,7 +47,7 @@ public class IdeasUI : MonoBehaviour
     {
         int baseCost = 400;
         int cost = baseCost;        
-        cost += (int)(baseCost * (civ.ideaCosts.value));        
+        cost += (int)(baseCost * (civ.ideaCosts.v));        
         return Mathf.Max(1, cost);
     }
     void BuyIdeaLocal(int index, int level)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -85,14 +86,14 @@ public class Ruler
     }
     void CheckDeath()
     {
-        if (age.years > 0)
+        if (age.y > 0)
         {
-            if (UnityEngine.Random.Range(0f, 1000f) < (float)age.months/12f + age.years)
+            if (UnityEngine.Random.Range(0f, 1000f) < (float)age.m/12f + age.y)
             {
                 Kill();
             }
         }
-        if(traits.Count < Mathf.Min(3, age.years + 1))
+        if(traits.Count < Mathf.Min(3, age.y + 1))
         {
             AddTrait();
         }

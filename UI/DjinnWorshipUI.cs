@@ -29,7 +29,7 @@ public class DjinnWorshipUI : MonoBehaviour
         if (civ.religiousPoints > 50)
         {
             Effect[] effects = Map.main.religions[1].religiousMechanicEffects;
-            if(civ.GetStat(effects[index].name).modifiers.Exists(i=>i.name == "Djinn Favor")){ return; }
+            if(civ.GetStat(effects[index].name).ms.Exists(i=>i.n == "Djinn Favor")){ return; }
             civ.ApplyCivModifier(effects[index].name, effects[index].amount,"Djinn Favor", effects[index].type,4320);
             civ.religiousPoints -= 50;
         }

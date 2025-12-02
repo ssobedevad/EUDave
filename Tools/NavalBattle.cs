@@ -46,14 +46,14 @@ public class NavalBattle
     public int DefenderDiceRollBonus()
     {
         int diceRoll = 0;
-        diceRoll += (int)defenderCiv.defenderDiceRoll.value;
+        diceRoll += (int)defenderCiv.defenderDiceRoll.v;
         return diceRoll;
     }
     public int AttackerDiceRollBonus()
     {
         int diceRoll = 0;
-        diceRoll += (int)attackerCiv.attackerDiceRoll.value;
-        return diceRoll +tile.terrain.attackerDiceRoll + (int)tile.localAttackerDiceRoll.value;
+        diceRoll += (int)attackerCiv.attackerDiceRoll.v;
+        return diceRoll +tile.terrain.attackerDiceRoll + (int)tile.localAttackerDiceRoll.v;
     }
     public bool Involving(int civID)
     {
@@ -65,7 +65,7 @@ public class NavalBattle
         active = battle.active;
         Game.main.ongoingNavalBattles.Add(this);
         Game.main.hourTick.AddListener(HourTick);
-        bui = GameObject.Instantiate(UIManager.main.BattleUIPrefab, Map.main.tileMapManager.tilemap.CellToWorld(battle.pos), Quaternion.identity, UIManager.main.worldCanvas).GetComponent<BattleUI>();
+        bui = GameObject.Instantiate(UIManager.main.BattleUIPrefab, Map.main.tileMapManager.tilemap.CellToWorld(battle.pos.GetVector3Int()), Quaternion.identity, UIManager.main.worldCanvas).GetComponent<BattleUI>();
         bui.navalBattle = this;
         UIManager.main.WorldSpaceUI.Add(bui.gameObject);
     }
@@ -182,10 +182,10 @@ public class NavalBattle
             }
         }
 
-        winnerCiv.AddPrestige(Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) *(1f + winnerCiv.battlePrestige.value));
-        winnerCiv.AddArmyTradition(Mathf.Min((winnerCasualties + 1f) / (winnerCiv.forceLimit.value * 1000f + 1f) * 12f , 5f) * (1f + winnerCiv.battleTraditon.value));
+        winnerCiv.AddPrestige(Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) *(1f + winnerCiv.battlePrestige.v));
+        winnerCiv.AddArmyTradition(Mathf.Min((winnerCasualties + 1f) / (winnerCiv.forceLimit.v * 1000f + 1f) * 12f , 5f) * (1f + winnerCiv.battleTraditon.v));
         loserCiv.AddPrestige(-Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) / 2f);
-        loserCiv.AddArmyTradition(Mathf.Min((loserCasualties + 1f) / (loserCiv.forceLimit.value * 1000f + 1f) * 12f, 2f) * (1f + loserCiv.battleTraditon.value));
+        loserCiv.AddArmyTradition(Mathf.Min((loserCasualties + 1f) / (loserCiv.forceLimit.v * 1000f + 1f) * 12f, 2f) * (1f + loserCiv.battleTraditon.v));
         
         if (WarID > -1)
         {
@@ -400,9 +400,9 @@ public class NavalBattle
                     Boat defender = defendingFrontLine.boats[target].boat;
                     if (defender.sailors > 0 && defender.hullStrength > 0 && defender.type > -1)
                     {
-                        float attackerMods = Modifiers((float)(Mathf.Max(attacker.sailors - 20, 1)) /(float)defender.sailors, battleLength, disciplineDiff: attackerCiv.discipline.value - defenderCiv.discipline.value, combatAbilityDiff: attackerCiv.boats[attacker.type].combatAbility.value - defenderCiv.boats[defender.type].combatAbility.value);
+                        float attackerMods = Modifiers((float)(Mathf.Max(attacker.sailors - 20, 1)) /(float)defender.sailors, battleLength, disciplineDiff: attackerCiv.discipline.v - defenderCiv.discipline.v, combatAbilityDiff: attackerCiv.boats[attacker.type].combatAbility.v - defenderCiv.boats[defender.type].combatAbility.v);
                         float attackerDamage = BaseCasualties(attackerDiceRoll + generalBonus, AttackerDiceRollBonus()) * attackerMods;
-                        float defenderMods = Modifiers((float)defender.sailors / (float)(Mathf.Max(attacker.sailors-20,1)), battleLength, disciplineDiff: defenderCiv.discipline.value - attackerCiv.discipline.value, combatAbilityDiff: defenderCiv.boats[attacker.type].combatAbility.value - attackerCiv.boats[defender.type].combatAbility.value);
+                        float defenderMods = Modifiers((float)defender.sailors / (float)(Mathf.Max(attacker.sailors-20,1)), battleLength, disciplineDiff: defenderCiv.discipline.v - attackerCiv.discipline.v, combatAbilityDiff: defenderCiv.boats[attacker.type].combatAbility.v - attackerCiv.boats[defender.type].combatAbility.v);
                         float defenderDamage = BaseCasualties(defenderDiceRoll + defenderGeneralBonus, DefenderDiceRollBonus()) * defenderMods;
 
                         defender.TakeSailorDamage((int)attackerDamage);

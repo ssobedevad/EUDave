@@ -135,9 +135,9 @@ public class Siege
         float siegeAbility = 0f;
         if(leaderCivID > -1)
         {
-            siegeAbility = Game.main.civs[leaderCivID].siegeAbility.value;
+            siegeAbility = Game.main.civs[leaderCivID].siegeAbility.v;
         }
-        tickTime = (int)(24 * (1f + target.localDefensiveness.value + target.civ.fortDefence.value - siegeAbility));
+        tickTime = (int)(24 * (1f + target.localDefensiveness.v + target.civ.fortDefence.v - siegeAbility));
     }
     void Complete()
     {

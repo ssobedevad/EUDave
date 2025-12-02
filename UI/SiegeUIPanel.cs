@@ -17,10 +17,10 @@ public class SiegeUIPanel : MonoBehaviour
             
             Siege siege = Player.myPlayer.selectedTile.siege;
             siegeProgress.text = "Siege Progress: " + Mathf.Round(siege.progress * 100f) + "%";
-            float fortDefence = (siege.target.localDefensiveness.value + siege.target.civ.fortDefence.value);
+            float fortDefence = (siege.target.localDefensiveness.v + siege.target.civ.fortDefence.v);
             if(siege.leaderCivID > -1)
             {
-                fortDefence -= Game.main.civs[siege.leaderCivID].siegeAbility.value;
+                fortDefence -= Game.main.civs[siege.leaderCivID].siegeAbility.v;
             }
             siegeAbility.text = Mathf.Round(fortDefence * 100f) + "%";
             fortLevel.text = "Level: " + siege.target.fortLevel;

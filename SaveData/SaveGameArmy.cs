@@ -1,26 +1,28 @@
-﻿using System.Collections;
+﻿using MessagePack;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using static UnityEngine.RuleTile.TilingRuleOutput;
-
+[MessagePackObject(keyAsPropertyName: true)]
 [System.Serializable] public class SaveGameArmy
 {
-    public int civID;
-    public bool inBattle;
-    public bool retreating;
-    public bool exiled;
-    public float moveTimer;
-    public float moveTime;
+    public int id;
+    public bool b;
+    public bool r;
+    public bool e;
+    public float tr;
+    public float t;
+    public float s;
 
-    public General general;
+    public General g;
 
-    public Vector3Int pos;
-    public Vector3Int lastPos;
-    public Vector3Int lastPosNoZOC;
+    public SaveGameVector3Int p;
+    public SaveGameVector3Int lp;
+    public SaveGameVector3Int nz;
 
-    public List<Vector3Int> path;
+    public List<SaveGameVector3Int> pt;
 
-    public List<Regiment> regiments;
+    public List<Regiment> rs;
 
     public SaveGameArmy()
     {
@@ -29,22 +31,28 @@ using static UnityEngine.RuleTile.TilingRuleOutput;
 
     public SaveGameArmy(Army army)
     {
-        civID = army.civID;
-        inBattle = army.inBattle;
-        retreating = army.retreating;
-        exiled = army.exiled;
-        moveTimer = army.moveTimer;
-        moveTime = army.moveTime;
+        id = army.civID;
+        b = army.inBattle;
+        r = army.retreating;
+        e = army.exiled;
+        tr = army.moveTimer;
+        t = army.moveTime;
+        if (army.tile.underSiege)
+        {
+            if (army.tile.siege.armiesSieging.Contains(army))
+            {
+                s = army.tile.siege.progress;
+            }
+        }
+        g = army.general;
 
-        general = army.general;
+        p = new SaveGameVector3Int(army.pos);
+        lp = new SaveGameVector3Int(army.lastPos);
+        nz = new SaveGameVector3Int(army.lastPosNoZOC)    ;
 
-        pos = army.pos;
-        lastPos = army.lastPos;
-        lastPosNoZOC = army.lastPosNoZOC;
+        pt = army.path.ConvertAll(i=>new SaveGameVector3Int(i));
 
-        path = army.path;
-
-        regiments = army.regiments;
+        rs = army.regiments;
     }
     public Army NewArmy()
     {
@@ -52,20 +60,20 @@ using static UnityEngine.RuleTile.TilingRuleOutput;
     }
     public void LoadToArmy(Army army)
     {
-        army.civID = civID;
-        army.inBattle = inBattle;
-        army.retreating = retreating;
-        army.exiled = exiled;
-        army.moveTimer = moveTimer;
-        army.moveTime = moveTime;
-        army.general = general;
+        army.civID = id;
+        army.inBattle = b;
+        army.retreating = r;
+        army.exiled = e;
+        army.moveTimer = tr;
+        army.moveTime = t;
+        army.general = g;
 
-        army.transform.position = Map.main.tileMapManager.tilemap.CellToWorld(pos);
-        army.lastPos = lastPos;
-        army.lastPosNoZOC = lastPosNoZOC;
+        army.transform.position = Map.main.tileMapManager.tilemap.CellToWorld(p.GetVector3Int());
+        army.lastPos = lp.GetVector3Int();
+        army.lastPosNoZOC = nz.GetVector3Int();
 
-        army.path = path;
+        army.path = pt.ConvertAll(i=>i.GetVector3Int());
 
-        army.regiments = regiments;
+        army.regiments = rs;
     }
 }

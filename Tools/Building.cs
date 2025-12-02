@@ -12,10 +12,10 @@ public class Building
 
     public float GetCost(TileData tileData,Civilisation civ)
     {
-        return Mathf.Max(baseCost * (1f + tileData.localConstructionCost.value + civ.constructionCost.value),1f);
+        return Mathf.Max(baseCost * (1f + tileData.localConstructionCost.v + civ.constructionCost.v),1f);
     }
     public float GetTime(TileData tileData, Civilisation civ)
     {
-        return Mathf.Max(baseTime * (1f + tileData.localConstructionTime.value + civ.constructionTime.value),1f);
+        return Mathf.Max(baseTime * (1f + tileData.localConstructionTime.v + civ.constructionTime.v),1f);
     }
 }
