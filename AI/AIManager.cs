@@ -24,7 +24,6 @@ public class AIManager : MonoBehaviour
     public void TenMinTick()
     {
         if (Game.main.gameTime.totalTicks() < 6 * 25) { return; }
-        OfferAlliances();
         for (int i = Game.main.gameTime.totalTicks() % armyMoveUpdateTime; i < Game.main.civs.Count; i += armyMoveUpdateTime)
         {
             if (i < Game.main.civs.Count)
@@ -44,6 +43,7 @@ public class AIManager : MonoBehaviour
     }
     public void HourTick()
     {
+        OfferAlliances();
         if (Game.main.gameTime.totalTicks() < 6 * 24 * 7) { return; }
         DeclareCivWars();
     }
@@ -775,26 +775,23 @@ public class AIManager : MonoBehaviour
     
     public void OfferAlliances()
     {
-        for (int i = Time.frameCount % armyMoveUpdateTime; i < Game.main.civs.Count; i += armyMoveUpdateTime)
+        int i = Game.main.gameTime.totalTicks() / 6 % Game.main.civs.Count;
+        Civilisation civ = Game.main.civs[i];
+        if (civ.isPlayer || !civ.isActive() || (civ.overlordID > -1 && civ.libertyDesire < 50f)) { return; }
+        if (civ.diplomaticCapacity < civ.diplomaticCapacityMax.v)
         {
-            if (i < Game.main.civs.Count)
+            for (int j = UnityEngine.Random.Range(0,10); j < Game.main.civs.Count; j+= 10)
             {
-                Civilisation civ = Game.main.civs[i];
-                if (civ.isPlayer || !civ.isActive() || (civ.overlordID > -1 && civ.libertyDesire < 50f)) { continue; }
-                if (civ.diplomaticCapacity < civ.diplomaticCapacityMax.v)
+                if (j == i || j == Player.myPlayer.myCivID) { continue; }
+                Civilisation target = Game.main.civs[j];
+                if (civ.diplomaticCapacity + target.governingCapacity * 1.5f <= civ.diplomaticCapacityMax.v && civ.opinionOfThem[j].v > 0 && target.opinionOfThem[i].v > 0 && civ.religion == target.religion)
                 {
-                    for (int j = UnityEngine.Random.Range(0,10); j < Game.main.civs.Count; j+= 10)
-                    {
-                        if (j == i || j == Player.myPlayer.myCivID) { continue; }
-                        Civilisation target = Game.main.civs[j];
-                        if (civ.diplomaticCapacity + target.governingCapacity * 1.5f <= civ.diplomaticCapacityMax.v && civ.opinionOfThem[j].v > 0 && target.opinionOfThem[i].v > 0 && civ.religion == target.religion)
-                        {
-                            civ.OfferAlliance(j);
-                        }
-                    }
+                    civ.OfferAlliance(j);
                 }
             }
         }
+            
+        
     }
     public void UpdateCivWars() 
     {
