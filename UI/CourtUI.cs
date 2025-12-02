@@ -133,6 +133,10 @@ public class CourtUI : MonoBehaviour
         else
         {
             rulerName.text = "No Ruler";
+            rulerSkills.text = "N/A";
+            admin.text = "0";
+            diplo.text = "0";
+            mil.text = "0";
         }
         if (civ.heir.active)
         {
@@ -143,6 +147,8 @@ public class CourtUI : MonoBehaviour
         else
         {
             heirName.text = "No Heir";
+            heirAge.text = "N/A";
+            heirSkills.text = "N/A";
         }
         if (civ.advisorA.active)
         {

@@ -45,6 +45,7 @@ public class Civilisation
     public float diplomaticCapacity;
     public float coins;
     public float prestige;
+    public float governmentPower;
     public int stability;
     public int adminPower, diploPower, milPower;
     public Ruler ruler;
@@ -705,6 +706,44 @@ public class Civilisation
             if (evt.CanFire(this))
             {
                 events.Add(new WeightedChoice(i, 100));
+            }
+        }
+    }
+    public void AddRulerTraits()
+    {
+        if (!ruler.active) { return; }
+        List<Trait> traits = ruler.traits.ToList();
+        foreach (var trait in traits)
+        {
+            List<Effect> effects = trait.effects.ToList();
+            foreach (var effect in effects)
+            {
+                Stat stat = GetStat(effect.name);
+                if (stat != null)
+                {
+                    Modifier mod = new Modifier(effect.amount,effect.type,effect.name);
+                    stat.AddModifier(mod);
+                }
+            }
+        }
+    }
+    public void RemoveRulerTraits(Ruler dead)
+    {
+        List<Trait> traits = dead.traits.ToList();
+        foreach (var trait in traits)
+        {
+            List<Effect> effects = trait.effects.ToList();
+            foreach (var effect in effects)
+            {
+                Stat stat = GetStat(effect.name);
+                if (stat != null)
+                {
+                    Modifier mod = stat.ms.Find(i => i.n == "Ruler Trait");
+                    if (mod != null)
+                    {
+                        stat.RemoveModifier(mod);
+                    }
+                } 
             }
         }
     }
@@ -1582,6 +1621,7 @@ public class Civilisation
         }
         else if (!ruler.active)
         {
+            
             ruler = new Ruler(heir);
             SetAILevels();
             AddStability(-1);

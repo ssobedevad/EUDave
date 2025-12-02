@@ -75,6 +75,10 @@ public class Ruler
     }
     public void Kill()
     {
+        if (civID > -1 && Game.main.civs[civID].ruler == this)
+        {
+            Game.main.civs[civID].RemoveRulerTraits(this);
+        }
         age.DeActivate();
         active = false;
         if (Player.myPlayer.myCivID == civID)
@@ -108,6 +112,9 @@ public class Ruler
         }
         Trait chosen = Map.main.rulerTraits[WeightedChoiceManager.getChoice(traitList).choiceID];
         traits.Add(chosen);
-        //Debug.Log("ADD Trait:" + chosen.name);
+        if(civID > -1 && Game.main.civs[civID].ruler == this)
+        {
+            Game.main.civs[civID].AddRulerTraits();
+        }
     }
 }

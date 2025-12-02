@@ -11,7 +11,7 @@ public class ToolbarManager : MonoBehaviour
     [SerializeField] Image color;
     [SerializeField] TextMeshProUGUI civName;
     [SerializeField] TextMeshProUGUI coins, manpower, admin, diplo, mil;
-    [SerializeField] TextMeshProUGUI prestige,stability;
+    [SerializeField] TextMeshProUGUI prestige,stability,government;
     [SerializeField] TextMeshProUGUI Age;
     [SerializeField] Button openCivMenu;
 
@@ -140,6 +140,7 @@ public class ToolbarManager : MonoBehaviour
             hoverText += "Tax Efficiency: " + (civ.stability >= 0 ? "+" : "") + Mathf.Round(civ.stability * 5f) + "%\n";
             stability.GetComponent<HoverText>().text = hoverText;
             stability.text = Mathf.Round(civ.stability) + "<sprite index=6>";
+            government.text = Mathf.Round(civ.governmentPower) + "<sprite index=0>";
         }
     }
 }

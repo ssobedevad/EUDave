@@ -24,9 +24,9 @@ public class PeaceDeal
         taker = clone.taker;
         warScore = clone.warScore;
         subjugation = clone.subjugation;
-        provinces = clone.provinces;
-        civTo = clone.civTo; 
-        possible = clone.possible;
+        provinces = clone.provinces.ToList();
+        civTo = clone.civTo.ToList(); 
+        possible = clone.possible.ToList();
         numLoans = clone.numLoans;
         fullAnnexation = clone.fullAnnexation;
     }
@@ -87,10 +87,11 @@ public class PeaceDeal
         overextension = 0f;
         aggressiveExpansion = 0f;
         bool isPrimary = (target == war.attackerCiv || target == war.defenderCiv);
-        foreach (var item in provinces)
+        for (int i = 0; i < provinces.Count;i++)
         {
-            TileData prov = Map.main.GetTile(item);
-            warScore += prov.GetWarScore(taker.CivID);
+            TileData prov = Map.main.GetTile(provinces[i]);
+            int to = civTo[i];
+            warScore += prov.GetWarScore(to);
             overextension += prov.totalDev * 0.8f;
             aggressiveExpansion += taker.GetBaseAE(prov, target, 0.6f, isPrimary ? 1f : 1.5f);
         }
