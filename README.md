@@ -187,6 +187,8 @@ In the image above the color Red(zero morale) -> Green(maximum morale) and the h
 The symbol on each square shows the unit type.
 There are no units in the back row as there are no ranged units in this combat.
 
+### Asynchronous Saving and Loading
+The Game has a lot of data associated with it and due to it's chaotic nature it cannot be recreated with a small amount of data. This mean that I had save files of around 600-700Mb to serialize and deserialize which took about a minute initally. I found a very well documented C# Package called messagepack which allowed me to cut down the size to ~180Mb and the speed down to a few seconds. However, the game still became unresponsive during this time and this lead me to research asynchronous tasks. As the creation of the data could easily happen in 1 frame the serialization could be placed in an asynchronous task and then this would let me display a loading screen and maintain functionality in the game while waiting for the task to complete. The same was applied to deserialization and this creates a very smooth save file loading that was necessary to allow for minially invasive autosaving in the game.
 ## References
 RedBlobGames Hexagonal Grids https://www.redblobgames.com/grids/hexagons/
 
