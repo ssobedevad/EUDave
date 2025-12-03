@@ -123,6 +123,7 @@ using UnityEngine;
         data.avaliablePopulation = ap;
         data.seperatism = sm;
 
+        data.fortLevel = 0;
         foreach(var buildingId in bs)
         {
             if (!data.buildings.Contains(buildingId))

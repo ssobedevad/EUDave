@@ -152,7 +152,7 @@ public class CourtUI : MonoBehaviour
         }
         if (civ.advisorA.active)
         {
-            advisorA.text = civ.advisorA.Name + " " + civ.advisorA.age.ToString(true,true) + civ.advisorA.skillLevel + "<sprite index=1> "  + civ.advisorA.effect + " " + Modifier.ToString(civ.advisorA.effectStrength, civ.GetStat(civ.advisorA.effect)) ;
+            advisorA.text = civ.advisorA.Name + " " + civ.advisorA.age.ToString(true,true) + civ.advisorA.skillLevel + "<sprite index=1> "  + civ.advisorA.effect + " " + Modifier.ToString(civ.advisorA.effectStrength, civ.GetStat(civ.advisorA.effect), civ.advisorA.effectType == 2 || civ.advisorA.effectType == 0, civ.advisorA.effectType == 3) ;
             advisorAB.GetComponentsInChildren<Image>()[0].sprite = civ.advisorA.icon;
             string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorA.HireCost(civ) * 1000f)/100f + "<sprite index=0>\n";
             hoverText += "Salary Will Increase To: " + Mathf.Round(civ.advisorA.Salary(civ, 1) * 100f) / 100f + "<sprite index=0>\n";
@@ -168,7 +168,7 @@ public class CourtUI : MonoBehaviour
         }
         if (civ.advisorD.active)
         {
-            advisorD.text = civ.advisorD.Name + " " + civ.advisorD.age.ToString(true, true) + civ.advisorD.skillLevel + "<sprite index=2> "  + civ.advisorD.effect + " " + Modifier.ToString(civ.advisorD.effectStrength, civ.GetStat(civ.advisorD.effect));
+            advisorD.text = civ.advisorD.Name + " " + civ.advisorD.age.ToString(true, true) + civ.advisorD.skillLevel + "<sprite index=2> "  + civ.advisorD.effect + " " + Modifier.ToString(civ.advisorD.effectStrength, civ.GetStat(civ.advisorD.effect),civ.advisorD.effectType == 2 || civ.advisorD.effectType == 0, civ.advisorD.effectType == 3);
             advisorDB.GetComponentsInChildren<Image>()[0].sprite = civ.advisorD.icon;
             string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorD.HireCost(civ) * 1000f) / 100f + "<sprite index=0>\n";
             hoverText += "Salary Will Increase To: " + Mathf.Round(civ.advisorD.Salary(civ, 1) * 100f) / 100f + "<sprite index=0>\n";
@@ -184,7 +184,7 @@ public class CourtUI : MonoBehaviour
         }
         if (civ.advisorM.active)
         {
-            advisorM.text = civ.advisorM.Name + " " + civ.advisorM.age.ToString(true, true) + civ.advisorM.skillLevel + "<sprite index=3> " + civ.advisorM.effect + " " + Modifier.ToString(civ.advisorM.effectStrength, civ.GetStat(civ.advisorM.effect));
+            advisorM.text = civ.advisorM.Name + " " + civ.advisorM.age.ToString(true, true) + civ.advisorM.skillLevel + "<sprite index=3> " + civ.advisorM.effect + " " + Modifier.ToString(civ.advisorM.effectStrength, civ.GetStat(civ.advisorM.effect), civ.advisorM.effectType == 2 || civ.advisorM.effectType == 0, civ.advisorM.effectType == 3);
             advisorMB.GetComponentsInChildren<Image>()[0].sprite = civ.advisorM.icon;
             string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorM.HireCost(civ) * 1000f) / 100f + "<sprite index=0>\n";
             hoverText += "Salary Will Increase To: " + Mathf.Round(civ.advisorM.Salary(civ, 1) * 100f) / 100f + "<sprite index=0>\n";
@@ -223,7 +223,7 @@ public class CourtUI : MonoBehaviour
             for (int i = 0; i < advisors.Count; i++)
             {
                 Advisor advisor = advisors[i];
-                advisorList[i].GetComponentsInChildren<TextMeshProUGUI>()[0].text = advisor.age.ToString() + " "+ type+" " + advisor.skillLevel + " " + advisor.effect + " " + Modifier.ToString(advisor.effectStrength, civ.GetStat(advisor.effect));
+                advisorList[i].GetComponentsInChildren<TextMeshProUGUI>()[0].text = advisor.age.ToString() + " "+ type+" " + advisor.skillLevel + " " + advisor.effect + " " + Modifier.ToString(advisor.effectStrength, civ.GetStat(advisor.effect), advisor.effectType == 2 || advisor.effectType == 0, advisor.effectType == 3);
                 advisorList[i].GetComponentsInChildren<TextMeshProUGUI>()[1].text = "Hire Cost: " +Mathf.Round(advisor.HireCost(civ)*100f)/100f + "<sprite index=0>. Salary: " + Mathf.Round(advisor.Salary(civ) * 100f) / 100f + "<sprite index=0> per day.";
                 advisorList[i].GetComponentsInChildren<Image>()[2].sprite = advisor.active ?advisor.icon : blank;
             }

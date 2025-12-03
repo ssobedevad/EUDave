@@ -53,7 +53,7 @@ public class Ruler
             Game.main.dayTick.AddListener(CheckDeath);
         }
     }
-    public static Ruler NewHeir(int BonusAdminSkill, int BonusDiploSkill, int BonusMilSkill,int CivID)
+    public static Ruler NewHeir(int BonusAdminSkill, int BonusDiploSkill, int BonusMilSkill,int CivID,int dynastyId = -1)
     {
         Civilisation civ = Game.main.civs[CivID];
         List<WeightedChoice> skillWeights = new List<WeightedChoice>();
@@ -64,7 +64,8 @@ public class Ruler
         int admin = WeightedChoiceManager.getChoice(skillWeights).choiceID + WeightedChoiceManager.getChoice(skillWeights).choiceID;
         int diplo = WeightedChoiceManager.getChoice(skillWeights).choiceID + WeightedChoiceManager.getChoice(skillWeights).choiceID;
         int mil = WeightedChoiceManager.getChoice(skillWeights).choiceID + WeightedChoiceManager.getChoice(skillWeights).choiceID;
-        return new Ruler(admin + BonusAdminSkill,diplo+BonusDiploSkill,mil+BonusMilSkill,Age.zero, CivID, GenerateName(civ));
+        string name = GenerateName(dynastyId == -1 ? civ : Game.main.civs[dynastyId]);
+        return new Ruler(Mathf.Max(0,admin + BonusAdminSkill), Mathf.Max(0, diplo +BonusDiploSkill), Mathf.Max(0, mil +BonusMilSkill),Age.zero, CivID, name);
     }
     static string GenerateName(Civilisation civ)
     {

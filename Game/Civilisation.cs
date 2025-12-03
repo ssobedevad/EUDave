@@ -348,6 +348,8 @@ public class Civilisation
         }       
         ruler.age.Activate();
         ruler.Activate();
+        ruler.civID = CivID;
+        heir.civID = CivID;
         float coinsIncome = (1f + taxIncome.v) * (1f + taxEfficiency.v);
         float ForceLimit = 0f;
         for (int i = 0; i < maximumAdvisors.v; i++)
@@ -1618,11 +1620,58 @@ public class Civilisation
                 notification.description = "If your ruler dies now then your country will descend into madness";
                 NotificationsUI.AddNotification(notification);
             }
+            if(!heir.active && !ruler.active)
+            {
+                List<Civilisation> possibleOverlords = new List<Civilisation>();
+                if (subjects.Count > 0)
+                {
+                    foreach(var subject in subjects.ToList())
+                    {
+                        Civilisation subCiv = Game.main.civs[subject];
+                        subCiv.RemoveSubjugation();
+                        if (!possibleOverlords.Contains(subCiv))
+                        {
+                            possibleOverlords.Add(subCiv);
+                        }
+                    }
+                }
+                if (allies.Count > 0)
+                {
+                    foreach (var ally in allies.ToList())
+                    {
+                        Civilisation allyCiv = Game.main.civs[ally];
+                        BreakAlliance(ally);
+                        if (!possibleOverlords.Contains(allyCiv))
+                        {
+                            possibleOverlords.Add(allyCiv);
+                        }
+                    }
+                }
+                foreach( var neighbour in civNeighbours)
+                {
+                    Civilisation neighbourCiv = Game.main.civs[neighbour];
+                    if (!possibleOverlords.Contains(neighbourCiv))
+                    {
+                        possibleOverlords.Add(neighbourCiv);
+                    }
+                }
+                if (possibleOverlords.Count > 0)
+                {
+                    possibleOverlords.Sort((x, y) => y.GetTotalDev().CompareTo(x.GetTotalDev()));
+                    possibleOverlords[0].Subjugate(this);
+                    heir = Ruler.NewHeir((int)rulerAdminSkill.v -1, (int)rulerDiploSkill.v -1, (int)rulerMilSkill.v -1, CivID, possibleOverlords[0].CivID);
+                }
+                else
+                {
+                    heir = Ruler.NewHeir(-6, -6, -6, CivID);
+                }
+            }
         }
         else if (!ruler.active)
         {
             
             ruler = new Ruler(heir);
+            AddRulerTraits();
             SetAILevels();
             AddStability(-1);
             if (religion == 2 && religiousPoints > -1)
@@ -1863,15 +1912,11 @@ public class Civilisation
         opinionOfThem[winnerID].AddModifier(new Modifier(-20,1,"Was at war",decay:true));
         DoAE(peaceDeal, mainTarget);     
     }
-    public void MoveCapitalCapitalTo(Vector3Int pos)
+    public void MoveCapitalToSaveGame(Vector3Int pos)
     {
         if(Map.main.GetTile(pos) == null) { return; }
-        if(Map.main.GetTile(capitalPos) != null && Map.main.GetTile(capitalPos).civID == CivID)
-        {
-            Map.main.GetTile(capitalPos).fortLevel--;
-            Map.main.GetTile(capitalPos).fortLevel++;
-        }
-        capitalPos = pos;        
+        capitalPos = pos;
+        Map.main.GetTile(capitalPos).fortLevel++;
         if (capitalIndicator != null)
         {
             capitalIndicator.transform.position = Map.main.GetTile(pos).worldPos();

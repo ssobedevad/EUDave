@@ -14,8 +14,8 @@ public static class SaveGameManager
         Game.main.gameTime.Set(data.combat.gameTime);
         Player.myPlayer.myCivID = data.combat.civID;
         Game.main.Started = true;
-        LoadCivs(data);
         LoadMap(data.map);
+        LoadCivs(data);
         LoadWars(data);
         LoadBattles(data);
         if(data.combat.civID > -1 && Game.main.civs[data.combat.civID].isActive())
@@ -29,8 +29,8 @@ public static class SaveGameManager
     {
         UIManager.main.loadingScreen.currentPhase = "Create Save Data";
         SaveGameData data = new SaveGameData();
-        SaveCivs(data);
         SaveMap(data.map);
+        SaveCivs(data);
         SaveWars(data);
         SaveBattles(data);
         UIManager.main.loadingScreen.currentPhase = "Save Save Data";

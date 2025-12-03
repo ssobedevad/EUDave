@@ -2,7 +2,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using static Unity.Collections.AllocatorManager;
+
 [MessagePackObject(keyAsPropertyName: true)]
 [System.Serializable] public class SaveGameCiv
 {
@@ -326,14 +329,28 @@ using UnityEngine;
         civ.AIDiplomatic = AIdp;
         civ.AIMilitary = AIml;
 
-        civ.MoveCapitalCapitalTo(cpos.GetVector3Int());
-
-        civ.controlCentres.Clear();
-        for(int i = 0; i < ccp.Count;i++)
+        if (Map.main.GetTile(cpos.GetVector3Int()).civID == civ.CivID)
         {
-            civ.controlCentres.Add(ccp[i].GetVector3Int(), ccl[i]);
-            Map.main.GetTile(ccp[i].GetVector3Int()).status = ccl[i];
-            Map.main.GetTile(ccp[i].GetVector3Int()).UpdateStatusModifiers();
+            civ.MoveCapitalToSaveGame(cpos.GetVector3Int());
+        }
+        else
+        {
+            GameObject.Destroy(civ.capitalIndicator);
+        }
+        foreach (var controlcentre in civ.controlCentres) 
+        {
+            Map.main.GetTile(controlcentre.Key).status = 0;
+            Map.main.GetTile(controlcentre.Key).UpdateStatusModifiers();
+        }
+        civ.controlCentres.Clear();
+        if (civ.isActive())
+        {
+            for (int i = 0; i < ccp.Count; i++)
+            {
+                civ.controlCentres.Add(ccp[i].GetVector3Int(), ccl[i]);
+                Map.main.GetTile(ccp[i].GetVector3Int()).status = ccl[i];
+                Map.main.GetTile(ccp[i].GetVector3Int()).UpdateStatusModifiers();
+            }
         }
 
         civ.isPlayer = ip;
@@ -401,7 +418,7 @@ using UnityEngine;
         civ.advisorsD = asM.ConvertAll(i => i.AsAdvisor());
         civ.advisorsM = asD.ConvertAll(i => i.AsAdvisor());
 
-        civ.adminTech = aT;
+        civ.adminTech = aT;        
         civ.diploTech = dT;
         civ.milTech = mT;
         civ.focus = fc;
@@ -409,6 +426,22 @@ using UnityEngine;
         civ.religion = rel;
         civ.government = gv;
         civ.governmentRank = gvR;
+
+        civ.unlockedIdeaGroupSlots = 0;
+        civ.techUnlocks.Clear();
+        civ.unlockedBuildings.Clear();
+        for (int i = 0; i < civ.adminTech + 1; i++)
+        {
+            Map.main.TechA[i].TakeTech(civ.CivID);
+        }
+        for (int i = 0; i < civ.diploTech + 1; i++)
+        {
+            Map.main.TechD[i].TakeTech(civ.CivID);
+        }
+        for (int i = 0; i < civ.milTech + 1; i++)
+        {
+            Map.main.TechM[i].TakeTech(civ.CivID);
+        }
 
         civ.ideaGroups = igs;
 
