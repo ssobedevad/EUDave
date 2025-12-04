@@ -411,6 +411,7 @@ public class Civilisation
         adminPower += 100 + 16 * ruler.adminSkill;
         diploPower += 100 + 16 * ruler.diploSkill;
         milPower += 100 + 16 * ruler.milSkill;
+        governmentPower = 100f;
         coins += coinsIncome * 16;
         AddArmyTradition(ruler.milSkill * 5f + monthlyTradition.v * 6);
         SetAILevels();
@@ -723,7 +724,7 @@ public class Civilisation
                 Stat stat = GetStat(effect.name);
                 if (stat != null)
                 {
-                    Modifier mod = new Modifier(effect.amount,effect.type,effect.name);
+                    Modifier mod = new Modifier(effect.amount,effect.type,trait.name);
                     stat.AddModifier(mod);
                 }
             }
@@ -740,7 +741,7 @@ public class Civilisation
                 Stat stat = GetStat(effect.name);
                 if (stat != null)
                 {
-                    Modifier mod = stat.ms.Find(i => i.n == "Ruler Trait");
+                    Modifier mod = stat.ms.Find(i => i.n == trait.name);
                     if (mod != null)
                     {
                         stat.RemoveModifier(mod);
@@ -2179,9 +2180,6 @@ public class Civilisation
         float choice = DeclareWarPanelUI.CallToArms(target, ally, this, defensive);
         if(ally.CivID == Player.myPlayer.myCivID || target.CivID == Player.myPlayer.myCivID)
         {
-            //Debug.Log(civName + " Choice " + choice);
-            //Debug.Log(DeclareWarPanelUI.GetPositiveReasons(target, ally, this, defensive));
-            //Debug.Log(DeclareWarPanelUI.GetNegativeReasons(target, ally, this, defensive));
         }
         return choice > 0;
     }
@@ -2221,7 +2219,6 @@ public class Civilisation
         choice += (overlordID == fromCiv.CivID) ? -1000 : 0;
         choice += (overlordID > -1 && libertyDesire < 50f) ? -1000 : 0;
         choice += ((diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > diplomaticCapacityMax.v? ((diplomaticCapacity +25 + fromCiv.governingCapacity *0.5f - diplomaticCapacityMax.v)/ diplomaticCapacityMax.v) * -100f : 0f);
-        //Debug.Log("Choice Alliance Offer " + choice);
         return choice > 0;
     }
     public void RemoveAccess(int targetID)
@@ -2576,7 +2573,6 @@ public class Civilisation
             reformProgress = 120;
         }
         reforms = new List<int>();
-        Debug.Log(reforms.Count);
     }
     public void ApplyCivBonusNonModifier(string modfierName)
     {

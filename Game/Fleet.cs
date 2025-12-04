@@ -360,14 +360,12 @@ public class Fleet : MonoBehaviour
                     defenders = tileData.fleetsOnTile.FindAll(i => civ.atWarWith.Contains(i.civID) && !i.retreating && !i.exiled);
                     attackers = tileData.fleetsOnTile.FindAll(i => i.civID == civID && !i.retreating && !i.exiled);
                     StartBattle(attackers, defenders, isAttacker);
-                    //Debug.Log("Start Naval Battle Attacker");
                 }
                 else
                 {
                     attackers = tileData.fleetsOnTile.FindAll(i => civ.atWarWith.Contains(i.civID) && !i.retreating && !i.exiled);
                     defenders = tileData.fleetsOnTile.FindAll(i => i.civID == civID && !i.retreating && !i.exiled);
                     StartBattle(attackers, defenders, isAttacker);
-                    //Debug.Log("Start Naval Battle Defender");
                 }
             }
         }

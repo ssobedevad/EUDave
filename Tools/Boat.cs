@@ -94,7 +94,6 @@ public class Boat
         int reinforce = (int)(20 * (1f + civ.reinforceSpeed.v));
         int targetAmount = Mathf.Min(reinforce, maxSailors - sailors);
         int realAmount = civ.RemovePopulation(targetAmount);
-        //Debug.Log(targetAmount + " / " + realAmount);
         sailors += realAmount;
     }
 }

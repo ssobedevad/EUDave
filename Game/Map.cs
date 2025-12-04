@@ -142,7 +142,7 @@ public class Map : MonoBehaviour
 
     public string GetTileName(Vector3Int pos)
     {
-        if (tileMapManager.tilemap.GetTile(pos) == null) { Debug.Log(pos + " Not Valid"); return ""; }
+        if (tileMapManager.tilemap.GetTile(pos) == null) { return ""; }
         return tileMapManager.tilemap.GetTile(pos).name;
     }
 

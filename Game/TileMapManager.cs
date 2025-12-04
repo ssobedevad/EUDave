@@ -110,7 +110,6 @@ public class TileMapManager : MonoBehaviour
             Player.myPlayer.selectedFleets.Clear();
             MoveSelector(tilemapPos);
         }
-        //Debug.Log("On Tile " + tileData.armiesOnTile.Count);
         
         if (!Game.main.Started || Player.myPlayer.spectator)
         {

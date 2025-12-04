@@ -753,7 +753,7 @@ public class AIManager : MonoBehaviour
             return;
         }
         Civilisation targetCiv = Game.main.civs[target];
-        Debug.Log("Declaring war " + civ.civName + " on " + targetCiv.civName + " desire: " + score);
+        
         if (civ.truces[targetCiv.CivID] == 0)
         {
             List<WarGoal> goals = DeclareWarPanelUI.GetPossibleWarGoals(civ, targetCiv);
@@ -802,7 +802,7 @@ public class AIManager : MonoBehaviour
                 War war = Game.main.ongoingWars[i];
                 if (war.warScore == 100 && !war.attackerCiv.isPlayer) 
                 {
-                    //Debug.Log("Peace Out Defender By 100% " + war.GetName());
+                    
                     PeaceDeal peaceDeal = PeaceDealUI.Suggested(war.defenderCiv, war);
                     war.EndWar();
                     war.defenderCiv.AcceptPeaceDeal(peaceDeal,true);
@@ -811,7 +811,7 @@ public class AIManager : MonoBehaviour
                 if (war.warScore == -100 && !war.defenderCiv.isPlayer) 
                 {
 
-                    //Debug.Log("Peace Out Attacker By 100% " + war.GetName());
+                    
                     PeaceDeal peaceDeal = PeaceDealUI.Suggested(war.attackerCiv, war);
                     war.EndWar();
                     war.attackerCiv.AcceptPeaceDeal(peaceDeal, true);
@@ -825,7 +825,7 @@ public class AIManager : MonoBehaviour
                         if (PeaceDealUI.WillAccept(peaceDeal,war.defenderCiv,war))
                         {
                             
-                            //Debug.Log("Peace Out Defender By Time " + war.GetName());
+                            
                             war.EndWar();
                             war.defenderCiv.AcceptPeaceDeal(peaceDeal, true);
                             continue;
@@ -837,7 +837,7 @@ public class AIManager : MonoBehaviour
                         if (PeaceDealUI.WillAccept(peaceDeal, war.attackerCiv, war))
                         {
                             
-                            //Debug.Log("Peace Out Attacker By Time " + war.GetName());
+                            
                             war.EndWar();
                             war.attackerCiv.AcceptPeaceDeal(peaceDeal, true);
                             continue;
@@ -854,7 +854,7 @@ public class AIManager : MonoBehaviour
                             PeaceDeal peaceDeal = PeaceDealUI.Suggested(ally, war);
                             if (PeaceDealUI.WillAccept(peaceDeal, ally, war))
                             {                                
-                                //Debug.Log("Peace Out Defender Ally By Time " + war.GetName());
+                                
                                 war.LeaveWar(ally.CivID);
                                 ally.AcceptPeaceDeal(peaceDeal, false);
                             }
@@ -868,7 +868,7 @@ public class AIManager : MonoBehaviour
                             PeaceDeal peaceDeal = PeaceDealUI.Suggested(ally, war);
                             if (PeaceDealUI.WillAccept(peaceDeal, ally, war))
                             {                                
-                                //Debug.Log("Peace Out Attacker Ally By Time " + war.GetName());
+                                
                                 war.LeaveWar(ally.CivID);
                                 ally.AcceptPeaceDeal(peaceDeal, false);
                             }

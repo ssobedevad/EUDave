@@ -111,12 +111,12 @@ public class AIMoveArmiesWar
                         if(civ.coins < cost && civ.loans.Count < civ.GetMaxLoans())
                         {
                             civ.TakeLoan();
-                            //Debug.Log("AI Take Loan for Mercs " + civ.civName);
+                            
                         }
                         if (civ.coins >= cost)
                         {
                             safeTile.StartRecruitingMercenary(first);
-                            //Debug.Log("AI Hire mercs " + civ.civName);
+                            
                         }
                     }
                     else
@@ -173,13 +173,13 @@ public class AIMoveArmiesWar
         }
         SupportBattles(civ);
         CheckRunAway(civID);
-        //Debug.Log("Processing...");
+        
         if (armies.Count > 0 || armiesMoving.Count > 0 || armiesSieging.Count > 0)
         {
-            //Debug.Log("Looking For Enemies");          
+            
             if(enemyArmies.Count > 0)
             {
-                //Debug.Log("Enemies found " + enemyArmies.Count);
+                
                 MoveToEnemyArmies(civID);
             }
         }

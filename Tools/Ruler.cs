@@ -84,7 +84,6 @@ public class Ruler
         active = false;
         if (Player.myPlayer.myCivID == civID)
         {
-            Debug.Log("Ruler Death");
         }
         Game.main.dayTick.RemoveListener(CheckDeath);
 

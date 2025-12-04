@@ -178,13 +178,11 @@ public class PerimeterHelper
     {
         area.Sort((x, y) => NeigborsSameCiv(Map.main.GetTile(x)).CompareTo(NeigborsSameCiv(Map.main.GetTile(y))));
         int minNeighbors = NeigborsSameCiv(Map.main.GetTile(area[0]));
-        //Debug.Log(minNeighbors);
         List<Vector3Int> possibleStartPos = area.FindAll(i => NeigborsSameCiv(Map.main.GetTile(i)) == minNeighbors);
         possibleStartPos.Sort((x, y) => y.y.CompareTo(x.y));
         int maxY = possibleStartPos[0].y;
         possibleStartPos = possibleStartPos.FindAll(i => i.y == maxY);
         possibleStartPos.Sort((x, y) => x.x.CompareTo(y.x));
-        //Debug.Log(possibleStartPos[0]);
         return possibleStartPos[0];
     }
     public static int NeigborsInArea(Vector3Int pos, List<Vector3Int> area)

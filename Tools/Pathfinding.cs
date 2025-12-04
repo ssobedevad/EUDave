@@ -86,7 +86,7 @@ public static class Pathfinding
         }
         if (!found) 
         { 
-            //Debug.Log("Could not find after " + loops + " loops. From: " + startPos + " To: " + destination); 
+            
             return new Vector3Int[0];
         }
         Vector3Int currentPos = destination;

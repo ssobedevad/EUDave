@@ -90,7 +90,6 @@ public class Advisor
         active = false;
         if (Player.myPlayer.myCivID == civID)
         {
-            //Debug.Log("Advisor Death");
         }
         Game.main.monthTick.RemoveListener(CheckDeath);
     }

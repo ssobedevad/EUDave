@@ -418,7 +418,7 @@ public class Battle
                 }
                 else if (attacker.civID == Player.myPlayer.myCivID)
                 {
-                    //Debug.Log("Cannot hit from index " + i + " fr: " + flankingRange);
+                   
                 }
             }
         }
@@ -450,7 +450,7 @@ public class Battle
                 }
                 else if (attacker.civID == Player.myPlayer.myCivID)
                 {
-                    //Debug.Log("Cannot hit from index " + i + " fr: " + flankingRange);
+                    
                 }
             }
         }
@@ -519,12 +519,12 @@ public class Battle
                         float damage = BaseCasualties(defenderDiceRoll + generalBonus, DefenderDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(false));
                         casualties += (int)damage;
-                        //if (target != i) { Debug.Log("flanking damage "+ flankDamage+" modifiers "+ modifiers + " damage " + damage); }
+                        
                     }
                 }
                 else if (attacker.civID == Player.myPlayer.myCivID)
                 {
-                    //Debug.Log("Cannot hit from index " + i + " fr: " + flankingRange);
+                   
                 }
             }
         }
@@ -552,12 +552,12 @@ public class Battle
                         float damage = BaseCasualties(defenderDiceRoll + generalBonus, DefenderDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(false));
                         casualties += (int)damage;
-                        //if (target != i) { Debug.Log("flanking damage "+ flankDamage+" modifiers "+ modifiers + " damage " + damage); }
+                        
                     }
                 }
                 else if (attacker.civID == Player.myPlayer.myCivID)
                 {
-                    //Debug.Log("Cannot hit from index " + i + " fr: " + flankingRange);
+                   
                 }
             }
         }

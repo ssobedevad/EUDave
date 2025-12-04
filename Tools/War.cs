@@ -474,6 +474,5 @@ public class War
         warScore = Mathf.Clamp(warScore, -99f, 99f);
         if (attackerSurrender) { warScore = -100f; }
         else if (defenderSurrender) { warScore = 100f; }
-        //Debug.Log(warScore);
     }
 }

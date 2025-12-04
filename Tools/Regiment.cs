@@ -87,7 +87,7 @@ public class Regiment
         int reinforce = (int)(100 * (1f + civ.reinforceSpeed.v));
         int targetAmount = Mathf.Min(reinforce, maxSize - size);
         int realAmount = civ.RemovePopulation(targetAmount);
-        //Debug.Log(targetAmount + " / " + realAmount);
+        
         size += realAmount;
     }
     public void TakeCasualties(int casualties,float averageEnemyMaxMorale)

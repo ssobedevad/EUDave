@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 [MessagePackObject(keyAsPropertyName: true)]
 [System.Serializable] public class SaveGameTile
@@ -124,23 +125,26 @@ using UnityEngine;
         data.seperatism = sm;
 
         data.fortLevel = 0;
+        if(data.fort != null)
+        {
+            GameObject.Destroy(data.fort);
+            data.hasFort = false;
+        }       
+        data.buildings.Clear();
         foreach(var buildingId in bs)
         {
-            if (!data.buildings.Contains(buildingId))
+            Building building = Map.main.Buildings[buildingId];
+            if (building.fortLevel > 0)
             {
-                Building building = Map.main.Buildings[buildingId];
-                if (building.fortLevel > 0)
+                data.fortLevel += building.fortLevel;
+                if (!data.hasFort)
                 {
-                    data.fortLevel += building.fortLevel;
-                    if (!data.hasFort)
-                    {
-                        data.fort = GameObject.Instantiate(Map.main.fortPrefab, data.worldPos(), Quaternion.identity, Map.main.fortTransform);
-                        data.hasFort = true;
-                        data.ApplyZOC();
-                    }
+                    data.fort = GameObject.Instantiate(Map.main.fortPrefab, data.worldPos(), Quaternion.identity, Map.main.fortTransform);
+                    data.hasFort = true;
+                    data.ApplyZOC();
                 }
-                data.buildings.Add(buildingId);
             }
+            data.buildings.Add(buildingId);
         }
 
         data.cores = cs;

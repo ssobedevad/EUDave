@@ -196,11 +196,11 @@ public class FleetUIPanel : MonoBehaviour
     }
     void Split()
     {
-        //Debug.Log(Player.myPlayer.selectedArmies.Count + "selected");
+        
         if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
         {
             Army army = Player.myPlayer.selectedArmies[0];
-            //Debug.Log(army.regiments.Count + "regiments");
+           
             army.Split();
         }
     }
