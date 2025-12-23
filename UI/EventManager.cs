@@ -9,13 +9,20 @@ public class EventManager : MonoBehaviour
     [SerializeField] TextMeshProUGUI Title, Description;
     [SerializeField] Transform target;
     [SerializeField] GameObject optionPrefab;
+    [SerializeField] Button GoTO;
 
     public EventData eventData;
 
     private void Start()
     {
         UIManager.main.UI.Add(gameObject);
-        for(int i = 0; i < eventData.options.Length;i++)
+        Title.text = eventData.Name;
+        if(eventData.province != null)
+        {
+            Title.text += " (" + eventData.province.Name + ")";
+        }
+        Description.text = eventData.Desc;
+        for (int i = 0; i < eventData.options.Length;i++)
         {
             string option = eventData.options[i];
             int index = i;
@@ -23,18 +30,35 @@ public class EventManager : MonoBehaviour
             button.GetComponentInChildren<TextMeshProUGUI>().text = option;
             button.GetComponent<Button>().onClick.AddListener(delegate { ButtonClick(index); });
             button.GetComponent<HoverText>().text = eventData.optionDescription(i);
+            
+        }
+        GoTO.gameObject.SetActive(eventData.province != null);
+        GoTO.onClick.AddListener(GoToCLick);
+    }
+    void GoToCLick()
+    {
+        if(eventData.province != null)
+        {
+            CameraController.main.rb.position = Map.main.tileMapManager.tilemap.CellToWorld(eventData.province.pos);
+            Map.main.tileMapManager.SelectTile(eventData.province.pos);
         }
     }
     private void OnGUI()
     {
-        Title.text = eventData.Name;
-        Description.text = eventData.Desc;
+        
     }
     void ButtonClick(int id)
     {
         if(Player.myPlayer.myCivID == -1) { return; }
         EventOption selected = eventData.optionEffects[id];
-        TakeOption(eventData,selected,Player.myPlayer.myCiv);
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivActionRpc(Player.myPlayer.myCivID, MultiplayerManager.CivActions.RecieveEvent, id);
+        }
+        else
+        {
+            TakeOption(eventData, selected, Player.myPlayer.myCiv);
+        }
         Game.main.paused = false;
         UIManager.main.UI.Remove(gameObject);
         Destroy(gameObject);
@@ -45,7 +69,7 @@ public class EventManager : MonoBehaviour
         {
             for (int i = 0; i < option.effects.Length; i++)
             {
-                eventData.province.ApplyTileLocalModifier(option.effects[i].name, option.effects[i].amount, option.effects[i].type, eventData.Name, option.effects[i].duration);
+                eventData.province.ApplyTileLocalModifier(option.effects[i].name, option.effects[i].amount, (int)option.effects[i].type, eventData.Name, option.effects[i].duration);
             }
             if (option.devA != 0)
             {
@@ -58,6 +82,17 @@ public class EventManager : MonoBehaviour
             if (option.devC != 0)
             {
                 eventData.province.developmentC += option.devC;
+            }
+            if (option.buildingID > -1)
+            {
+                if (!eventData.province.buildings.Contains(option.buildingID))
+                {
+                    if (eventData.province.buildQueue.Contains(option.buildingID))
+                    {
+                        eventData.province.buildQueue.Remove(option.buildingID);
+                    }
+                    eventData.province.Build(option.buildingID);
+                }
             }
             if (option.population != 0)
             {

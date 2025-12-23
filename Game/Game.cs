@@ -1,5 +1,9 @@
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -9,9 +13,13 @@ public class Game : MonoBehaviour
 {
     public static Game main;
     public Age gameTime;
+    [SerializeField] public NetworkObject multiplayerManagerObject;
     [SerializeField] public GameObject civTile;
     [SerializeField] public GameObject civTileSelected;
     [SerializeField] List<CivDataInit> civDatas = new List<CivDataInit>();
+    [SerializeField] public StatData[] civStats;
+    [SerializeField] NationalIdeas[] defaultIdeaSets;
+    [SerializeField] Mission[] defaultMissions;
     public List<Civilisation> civs = new List<Civilisation>();
     public List<Battle> ongoingBattles = new List<Battle>();
     public List<NavalBattle> ongoingNavalBattles = new List<NavalBattle>();
@@ -35,19 +43,127 @@ public class Game : MonoBehaviour
     public int gameSpeed = 0;
     public string saveGameName;
     public bool isSaveLoad;
+    public bool isMultiplayer;
+    public bool canFrame;
+    public MultiplayerManager multiplayerManager;
+
+    //[EditorButton]
+    //void CivsToJson()
+    //{
+    //    string gamePath = "Assets/Assets/Data/CivData.json";
+    //    string jsonData = JsonHelper.ToJson<CivDataInit>(civDatas.ToArray(), true);
+    //    File.WriteAllText(gamePath, jsonData);
+    //}
+
+    //[EditorButton]
+    //void CivsFromJson()
+    //{
+    //    string gamePath = "Assets/Assets/Data/CivData.json";
+    //    string jsonData = File.ReadAllText(gamePath);
+    //    CivDataInit[] data = JsonHelper.FromJson<CivDataInit>(jsonData);
+    //    civDatas = data.ToList();
+    //}
+    [EditorButton]
+    void CivStatsAsEnum()
+    {
+        string gamePath = "Assets/Assets/Data/CivStats.txt";
+        string data = "";
+        List<StatData> statData = civStats.ToList();
+        statData.Sort((x,y) => x.name.CompareTo(y.name));
+        foreach(var stat in statData)
+        {
+            string statName = stat.name;
+            data += "" + statName.Replace(" ","") + ",\n";
+        }
+        File.WriteAllText(gamePath, data);
+    }
+    [EditorButton]
+    void CheckAllCivEffects()
+    {
+        foreach(var civ in civDatas)
+        {
+            NationalIdeas ideas = civ.ideas;
+            foreach(var trad in ideas.traditions)
+            {
+                try
+                {
+                    Enum.Parse<EffectName>(trad.name.Replace(" ", ""));
+                }
+                catch
+                {
+                    Debug.Log(civ.Name + ": Tradition " + trad.name + " Not Found");
+                }
+            }
+            foreach (var idea in ideas.ideas)
+            {
+                foreach (var effect in idea.effects)
+                {
+                    try
+                    {
+                        Enum.Parse<EffectName>(effect.name.Replace(" ", ""));
+                    }
+                    catch
+                    {
+                        Debug.Log(civ.Name + ": Idea "+idea.name + " Effect: " + effect.name + " Not Found");
+                    }
+                }
+            }
+        }
+        foreach(var defaultIdea in defaultIdeaSets)
+        {
+            foreach (var idea in defaultIdea.ideas)
+            {
+                foreach (var effect in idea.effects)
+                {
+                    try
+                    {
+                        Enum.Parse<EffectName>(effect.name.Replace(" ", ""));
+                    }
+                    catch
+                    {
+                        Debug.Log(defaultIdea.name + ": Idea " + idea.name + " Effect: " + effect.name + " Not Found");
+                    }
+                }
+            }
+        }
+    }
+
     private void Awake()
     {
         main = this;
-        gameTime = new Age(0,0, 0, 0, 0,true);
+        gameTime = new Age(0, 0, 0, 0, 0, true);
         civs.Clear();
         dayTick.AddListener(RefreshTradeRegions);
         yearTick.AddListener(AutoSave);
-        foreach(var civData in civDatas)
+        foreach (var civData in civDatas)
         {
             Civilisation civ = new Civilisation();
             civ.civName = civData.Name;
             civ.c = civData.c;
             civ.nationalIdeas = civData.ideas;
+            if (civData.ideas.style == IdeaStyle.Default1)
+            {
+                civ.nationalIdeas.ideas = defaultIdeaSets[0].ideas;
+            }
+            else if (civData.ideas.style == IdeaStyle.Default2)
+            {
+                civ.nationalIdeas.ideas = defaultIdeaSets[1].ideas;                
+            }
+            else if (civData.ideas.style == IdeaStyle.Default3)
+            {
+                civ.nationalIdeas.ideas = defaultIdeaSets[2].ideas;
+            }
+
+            if(civData.missionStyle == MissionStyle.Custom)
+            {
+                civ.missions = civData.missions;
+                civ.missionProgress = new bool[civData.missions.Length];
+            }
+            else
+            {
+                civ.missions = defaultMissions;
+                civ.missionProgress = new bool[defaultMissions.Length];
+            }
             civ.ruler = civData.ruler;
             civ.heir = civData.heir;
             civ.adminTech = civData.techLevel;
@@ -56,15 +172,21 @@ public class Game : MonoBehaviour
             civ.religion = civData.religion;
             civ.government = civData.government;
             civ.overlordID = civData.overlordID;
+            civ.subjectType = civData.subjectType;
             civ.reforms.Add(civData.startReform);
+            civ.InitCivStats(civStats);
             civs.Add(civ);
         }
-        for (int i = 0; i < civs.Count;i++)
+        for (int i = 0; i < civs.Count; i++)
         {
-            civs[i].CivID = i;            
+            civs[i].CivID = i;
         }
         highestDevelopment = 1;
         refreshMap = true;
+        if (PlayerPrefs.GetString("Gamemode") == "Multiplayer" && NetworkManager.Singleton != null)
+        {
+            isMultiplayer = true;
+        }
         float maxAggro = PlayerPrefs.GetFloat("AIAGGRO");
         int replaceSaveVal = PlayerPrefs.GetInt("ReplaceSave");
         if (maxAggro > 0)
@@ -72,6 +194,7 @@ public class Game : MonoBehaviour
             AI_MAX_AGGRESSIVENESS = maxAggro;
         }
         replaceSave = replaceSaveVal == 0;
+        canFrame = true;
     }
     async void AutoSave()
     {
@@ -99,27 +222,50 @@ public class Game : MonoBehaviour
     }
     private void Update()
     {
-        float[] speedVals = new float[] { 1f/3f, 1f/6f, 1f/12f, 1f/30f, 0f };
+        float[] speedVals = new float[] { 1f / 3f, 1f / 6f, 1f / 12f, 1f / 30f, 0f };
         tenMinTickTime = speedVals[(int)gameSpeed];
         if (Input.GetKeyDown(KeyCode.Space) && Game.main.Started)
-        { 
-            paused = !paused; 
+        {
+            if (isMultiplayer)
+            {
+                multiplayerManager.TogglePauseRpc();
+            }
+            else
+            {
+                paused = !paused;
+            }
         }
-        if (!paused && !isSaveLoad) 
+        if (!paused && !isSaveLoad && canFrame)
         {
             tenMinTickTimer += Time.deltaTime;
             if (tenMinTickTimer >= tenMinTickTime)
             {
                 tenMinTick.Invoke();
-                
+
                 tenMinTickTimer = 0f;
+                if (isMultiplayer)
+                { 
+                    if(gameTime.h == 11 && gameTime.tm == 5)
+                    {                        
+                        canFrame = false;
+                        multiplayerManager.CompletedFrameRpc();
+                    }
+                }
+            }
+        }
+        if (isMultiplayer && !canFrame && gameTime.h == 11 && gameTime.tm == 5)
+        {
+            if (multiplayerManager.currentFrame.Value > gameTime.NumDays())
+            {                
+                canFrame = true;
             }
         }
         ColorTiles();
     }
     void RefreshTradeRegions()
     {
-        foreach(var tradeRegion in Map.main.tradeRegions.Values)
+        
+        foreach (var tradeRegion in Map.main.tradeRegions.Values)
         {
             tradeRegion.Refresh();
         }

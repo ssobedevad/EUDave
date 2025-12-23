@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -28,8 +29,15 @@ public class LocalDeitiesUI : MonoBehaviour
     public static void DeityClick(int id)
     {
         if (Player.myPlayer.myCivID == -1) { return; }
-        Civilisation civ = Player.myPlayer.myCiv;
-        SelectDeity(civ, id);
+        Civilisation civ = Player.myPlayer.myCiv;       
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivExtraActionRpc(civ.CivID, MultiplayerManager.CivExtraActions.ReligiousMechanic, id);
+        }
+        else
+        {
+            SelectDeity(civ, id);
+        }
     }
     private void OnGUI()
     {

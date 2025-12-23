@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Unity.Netcode;
 using UnityEngine;
 
 public class NavalBattle
@@ -11,8 +12,8 @@ public class NavalBattle
     public Civilisation defenderCiv;
     public General attackerGeneral;
     public General defenderGeneral;
-    public List<Fleet> attackingArmies = new List<Fleet>();
-    public List<Fleet> defendingArmies = new List<Fleet>();
+    public List<Fleet> attackingFleets = new List<Fleet>();
+    public List<Fleet> defendingFleets = new List<Fleet>();
     public List<Boat> attackingReserves = new List<Boat>();
     public List<Boat> attackingRetreated = new List<Boat>();
     public FleetBattleLine attackingFrontLine = new FleetBattleLine();
@@ -29,6 +30,7 @@ public class NavalBattle
     public bool active = false;
     public int battleLength;
     public int attackPhases;
+    public NetworkNavalBattle networkBattle;
     BattleUI bui;
 
     public static int GetEstimatedBattleLength(float attackerStrength,float defenderStrength)
@@ -39,8 +41,8 @@ public class NavalBattle
     public List<Fleet> GetInvolvedFleets()
     {
         List<Fleet> involved = new List<Fleet>(); 
-        involved.AddRange(attackingArmies); 
-        involved.AddRange(defendingArmies);
+        involved.AddRange(attackingFleets); 
+        involved.AddRange(defendingFleets);
         return involved;
     }
     public int DefenderDiceRollBonus()
@@ -62,6 +64,7 @@ public class NavalBattle
     }
     public NavalBattle(SaveGameNavalBattle battle)
     {
+        pos = battle.pos.GetVector3Int();
         active = battle.active;
         Game.main.ongoingNavalBattles.Add(this);
         Game.main.hourTick.AddListener(HourTick);
@@ -99,9 +102,9 @@ public class NavalBattle
         attackingFrontLine = new FleetBattleLine(31);
         defendingFrontLine = new FleetBattleLine(31);
         PhaseTick();
-        attackingArmies.Add(attacker);
+        attackingFleets.Add(attacker);
         attackerCount += attacker.boats.Count;
-        defendingArmies.Add(defender);
+        defendingFleets.Add(defender);
         defenderCount += defender.boats.Count;
         battleLength = 0;
         attackPhases = 0;
@@ -139,7 +142,7 @@ public class NavalBattle
     {
         if (isAttacker)
         {
-            attackingArmies.Add(fleet);
+            attackingFleets.Add(fleet);
             attackerCount += fleet.boats.Count;
             attackingReserves.AddRange(fleet.boats);
             fleet.EnterBattle();
@@ -147,41 +150,64 @@ public class NavalBattle
         }
         else
         {
-            defendingArmies.Add(fleet);
+            defendingFleets.Add(fleet);
             defenderCount += fleet.boats.Count;
             defendingReserves.AddRange(fleet.boats);
             fleet.EnterBattle();
             CheckGeneral(false, fleet);
         }
+        if (Game.main.isMultiplayer && networkBattle != null)
+        {
+            networkBattle.SendBattleDataRpc();
+        }
     }
-    void BattleEnd(bool attackerWin = true, bool wipe = false)
+    public void DoBattleEnd(bool attackerWin = true, bool wipe = false, int winnerCasualties = -1, int loserCasualties = -1)
     {
         UIManager.main.WorldSpaceUI.Remove(bui.gameObject);
         Civilisation winnerCiv = attackerWin ? attackerCiv : defenderCiv;
-        Civilisation loserCiv = attackerWin ? defenderCiv : attackerCiv;
-        int winnerCasualties = attackerWin ? attackerCasualties : defenderCasualties;
-        int loserCasualties = attackerWin ? defenderCasualties : attackerCasualties;        
-        List<Fleet> winners = attackerWin ? attackingArmies : defendingArmies;
-        List<Fleet> losers = attackerWin ? defendingArmies : attackingArmies;
-        foreach (var winner in winners)
+        Civilisation loserCiv = attackerWin ? defenderCiv : attackerCiv;    
+        List<Fleet> winners = attackerWin ? attackingFleets : defendingFleets;
+        List<Fleet> losers = attackerWin ? defendingFleets : attackingFleets;
+        if (!Game.main.isMultiplayer || NetworkManager.Singleton.IsServer)
         {
-            winner.ExitBattle();
-            //winner.WinBattleMorale();
-            winner.boats.RemoveAll(i => i.hullStrength <= 0);
-        }
-        if (!wipe)
-        {
-            foreach (var loser in losers)
+            foreach (var winner in winners)
             {
-                loser.ExitBattle();
-                if (loser != null)
+                if (winner != null)
                 {
-                    loser.SetRetreat(loser.RetreatProvince());
+                    winner.ExitBattle();
                 }
-                loser.boats.RemoveAll(i => i.hullStrength <= 0);
+            }
+            if (!wipe)
+            {
+                foreach (var loser in losers)
+                {
+                    if (loser != null)
+                    {
+                        loser.SetRetreat(loser.RetreatProvince());
+                        loser.ExitBattle();
+                    }
+                }
+            }
+            else
+            {
+                foreach (var loser in losers)
+                {
+                    if (loser != null)
+                    {
+                        if (Game.main.isMultiplayer)
+                        {
+                            loser.GetComponent<NetworkFleet>().ExitEnterRpc(false, loser.pos);
+                        }
+                        else
+                        {
+                            loser.OnExitTile(loser.tile);
+                        }
+                        loser.ExitBattle();
+                        GameObject.Destroy(loser.gameObject);
+                    }
+                }
             }
         }
-
         winnerCiv.AddPrestige(Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) *(1f + winnerCiv.battlePrestige.v));
         winnerCiv.AddArmyTradition(Mathf.Min((winnerCasualties + 1f) / (winnerCiv.forceLimit.v * 1000f + 1f) * 12f , 5f) * (1f + winnerCiv.battleTraditon.v));
         loserCiv.AddPrestige(-Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) / 2f);
@@ -210,6 +236,22 @@ public class NavalBattle
         }
         active = false;
     }
+    void BattleEnd(bool attackerWin = true, bool wipe = false)
+    {
+        int winnerCasualties = attackerWin ? attackerCasualties : defenderCasualties;
+        int loserCasualties = attackerWin ? defenderCasualties : attackerCasualties;
+        if (Game.main.isMultiplayer)
+        {
+            if (NetworkManager.Singleton.IsServer && networkBattle != null)
+            {
+               networkBattle.EndBattleRpc(attackerWin, wipe, winnerCasualties, loserCasualties);
+            }
+        }
+        else
+        {
+            DoBattleEnd(attackerWin, wipe, winnerCasualties, loserCasualties);
+        }
+    }
     void UpdateWar(float warScoreForAttacker)
     {
         Game.main.ongoingWars[WarID].AddBattle(warScoreForAttacker);
@@ -221,12 +263,11 @@ public class NavalBattle
         int sideB = GetSideSize(!attacker);
         if (morale <= 0.5 || sideB >= sideA * 10)
         {
-            List<Fleet> losers = attacker ? attackingArmies : defendingArmies;
+            List<Fleet> losers = attacker ? attackingFleets : defendingFleets;
             foreach (var loser in losers)
             {
                 if (loser != null)
                 {
-                    loser.OnExitTile();
                     if (attacker)
                     {
                         attackerCasualties += loser.boats.Count;
@@ -235,7 +276,6 @@ public class NavalBattle
                     {
                         defenderCasualties += loser.boats.Count;
                     }
-                    GameObject.Destroy(loser.gameObject);
                 }
             }
             BattleEnd(!attacker, true);
@@ -260,10 +300,9 @@ public class NavalBattle
         int sideB = GetSideSize(!attacker);
         if(morale <= 0 && sideB >= sideA * 2)
         {
-            List<Fleet> losers = attacker ? attackingArmies : defendingArmies;
+            List<Fleet> losers = attacker ? attackingFleets : defendingFleets;
             foreach (var loser in losers)
             {
-                loser.OnExitTile();
                 if (attacker)
                 {
                     attackerCasualties += loser.boats.Count;
@@ -271,9 +310,7 @@ public class NavalBattle
                 else
                 {
                     defenderCasualties += loser.boats.Count;
-                }
-                GameObject.Destroy(loser.gameObject);    
-                
+                }                                  
             }
             BattleEnd(!attacker, true);
             return true;
@@ -290,9 +327,10 @@ public class NavalBattle
     {
         if (attackingFrontLine == null) { return; }
         battleLength++;
-        if(battleLength % 3 == 0)
+        if(battleLength % 3 == 1)
         {
             PhaseTick();
+            return;
         }
         if (attackingReserves.Count > defendingReserves.Count)
         {
@@ -321,6 +359,10 @@ public class NavalBattle
         defenderCasualties += dCasualties;
         UIManager.main.NewCombatText("-" + aCasualties, tile.worldPos() + new Vector3(-0.5f,-0.5f), 2f, true);
         UIManager.main.NewCombatText("-" + dCasualties, tile.worldPos() + new Vector3(0.5f, -0.5f), 2f, true);
+        if (Player.myPlayer.selectedNavalBattle == this)
+        {
+            Debug.Log("Casualties: " + aCasualties + " " + dCasualties + " Battle Length: " + battleLength + " battlePhase: " + attackPhases);
+        }
         if (attackPhases < 4)
         {
             if (CheckWipe(false)) { return; }
@@ -330,30 +372,6 @@ public class NavalBattle
         {
             if (CheckRetreat(false)) { return; }
             if (CheckRetreat(true)) { return; }
-        }
-        float averageAttackerMorale = TotalMaxSailors(true);
-        float averageDefenderMorale = TotalMaxSailors(false);
-        foreach (var reserve in attackingReserves)
-        {
-            //reserve.TakeReserveMoraleDamage(averageDefenderMorale);
-        }
-        foreach (var reserve in defendingReserves)
-        {
-            //reserve.TakeReserveMoraleDamage(averageAttackerMorale);
-        }
-        foreach (var frontLine in attackingFrontLine.boats)
-        {
-            if (frontLine != null)
-            {
-                //frontLine.TakeFrontlineMoraleDamage(averageDefenderMorale);
-            }
-        }
-        foreach (var frontLine in defendingFrontLine.boats)
-        {
-            if (frontLine != null)
-            {
-                //frontLine.TakeFrontlineMoraleDamage(averageAttackerMorale);
-            }
         }
         float armyQ = 0;
         for (int i = 0; i < attackingFrontLine.width; i++)
@@ -376,8 +394,20 @@ public class NavalBattle
     }
     public void PhaseTick()
     {
-        attackerDiceRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
-        defenderDiceRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+        if (Game.main.isMultiplayer)
+        {
+            if (NetworkManager.Singleton.IsServer && networkBattle != null)
+            {
+                int attackerRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+                int defendingRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+                networkBattle.BattleDiceRollRpc(attackerRoll, defendingRoll);
+            }
+        }
+        else
+        {
+            attackerDiceRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+            defenderDiceRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+        }
         attackPhases++;
     }
     void AttackerBoard(ref int attackerCasualties, ref int defenderCasualties)
@@ -394,9 +424,9 @@ public class NavalBattle
                 if (target > -1)
                 {
                     int generalBonus = 0;
-                    if (attackerGeneral != null && attackerGeneral.active) { generalBonus = (target != i) ? attackerGeneral.flankingSkill : attackerGeneral.meleeSkill; }
+                    if (attackerGeneral != null && attackerGeneral.active) { generalBonus =  attackerGeneral.combatSkill; }
                     int defenderGeneralBonus = 0;
-                    if (defenderGeneral != null && defenderGeneral.active) { defenderGeneralBonus = (target != i) ? defenderGeneral.flankingSkill : defenderGeneral.meleeSkill; }
+                    if (defenderGeneral != null && defenderGeneral.active) { defenderGeneralBonus =defenderGeneral.combatSkill; }
                     Boat defender = defendingFrontLine.boats[target].boat;
                     if (defender.sailors > 0 && defender.hullStrength > 0 && defender.type > -1)
                     {
@@ -428,7 +458,7 @@ public class NavalBattle
                 if (target > -1)
                 {
                     int generalBonus = 0;
-                    if (attackerGeneral != null &&attackerGeneral.active) { generalBonus = (target != i) ? attackerGeneral.flankingSkill : attackerGeneral.meleeSkill; }
+                    if (attackerGeneral != null &&attackerGeneral.active) { generalBonus = attackerGeneral.combatSkill; }
                     Boat defender = defendingFrontLine.boats[target].boat;
                     if (defender.sailors > 0 && defender.hullStrength > 0 && defender.type > -1)
                     {
@@ -486,7 +516,7 @@ public class NavalBattle
                 if (target > -1)
                 {
                     int generalBonus = 0;
-                    if (defenderGeneral != null && defenderGeneral.active) { generalBonus = (target != i) ? defenderGeneral.flankingSkill : defenderGeneral.meleeSkill; }
+                    if (defenderGeneral != null && defenderGeneral.active) { generalBonus = defenderGeneral.combatSkill; }
                     Boat defender = attackingFrontLine.boats[target].boat;
                     if (defender.sailors > 0 && defender.hullStrength > 0 && defender.type > -1)
                     {

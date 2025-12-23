@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
-
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
+using static UnityEngine.GraphicsBuffer;
 
 public class DeclareWarPanelUI : MonoBehaviour
 {
@@ -33,12 +34,22 @@ public class DeclareWarPanelUI : MonoBehaviour
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation Target = Game.main.civs[DiplomacyUIPanel.main.diploCivID];
         Civilisation player = Player.myPlayer.myCiv;
-        player.DeclareWar(Target.CivID,warGoal,casusBelli);
+        if(player.avaliableDiplomats <= 0) { return; }
+        if (Game.main.isMultiplayer)
+        {
+            int cbIndex = Map.main.casusBellis.ToList().IndexOf(casusBelli);
+            Game.main.multiplayerManager.DeclareWarRpc(player.CivID, Target.CivID, warGoal, cbIndex);
+        }
+        else
+        {
+            player.DeclareWar(Target.CivID, warGoal, casusBelli);
+        }
         if (casusBelli.Name == "")
         {
             player.AddStability(-2);
             player.ApplyAE(Map.main.GetTile(Target.capitalPos), Target, 20);
         }
+        player.deployedDiplomats.Add(new DiplomatStatus(Target, player, DiplomatAction.Travelling));
         DiplomacyUIPanel.main.CancelWarDec();
     }
     void Cancel()

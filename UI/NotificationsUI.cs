@@ -26,6 +26,10 @@ public class NotificationsUI : MonoBehaviour
     public Notification djinnFavor;
     public Notification pickDeity;
     public Notification highHunger;
+    public Notification overGovCap;
+    public Notification overDipCap;
+    public Notification canTakeMission;
+
     private void Awake()
     {
         main = this;      

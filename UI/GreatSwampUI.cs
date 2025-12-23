@@ -24,7 +24,14 @@ public class GreatSwampUI : MonoBehaviour
     {
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
-        Feed(civ, id);
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivExtraActionRpc(civ.CivID, MultiplayerManager.CivExtraActions.ReligiousMechanic, 0, id);
+        }
+        else
+        {
+            Feed(civ, id);
+        }
     }
     public static void Feed(Civilisation civ, int id)
     {
@@ -53,7 +60,7 @@ public class GreatSwampUI : MonoBehaviour
                     return;
                 }
                 sub.RemovePopulation((int)(sub.GetTotalMaxPopulation() * 0.1f));
-                sub.libertyDesireTemp.IncreaseModifier("Sacrificed Our People", 30f, 1, Decay: true);
+                sub.libertyDesireTemp.IncreaseModifier("Sacrificed Our People", 30f, EffectType.Flat, Decay: true);
                 civ.religiousPoints = Mathf.Max(0, civ.religiousPoints - 10);
             }
         }
@@ -70,8 +77,15 @@ public class GreatSwampUI : MonoBehaviour
     void Ask(int id)
     {
         if (Player.myPlayer.myCivID == -1) { return; }
-        Civilisation civ = Player.myPlayer.myCiv;
-        Ask(civ, id);
+        Civilisation civ = Player.myPlayer.myCiv;        
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivExtraActionRpc(civ.CivID, MultiplayerManager.CivExtraActions.ReligiousMechanic, 1, id);
+        }
+        else
+        {
+            Ask(civ, id);
+        }
     }
     public static void Ask(Civilisation civ, int id)
     {

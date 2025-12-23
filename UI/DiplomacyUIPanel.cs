@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
+using static UnityEngine.GraphicsBuffer;
 
 public class DiplomacyUIPanel : MonoBehaviour
 {
@@ -10,11 +12,13 @@ public class DiplomacyUIPanel : MonoBehaviour
     [SerializeField] Button[] rivals;
     [SerializeField] Button closeRivalsList,toggleSubjectList;
     [SerializeField] Image civIcon, civReligion;
-    [SerializeField] TextMeshProUGUI civName, civGovRankName, civRulerName,opinion,diprep,diprel;
+    [SerializeField] TextMeshProUGUI civName, civGovRankName, civRulerName,opinion,diprep,diprel,civRulerSkills,spyNet;
     [SerializeField] TextMeshProUGUI adminTech, diploTech, milTech,ideas;
-    [SerializeField] GameObject diploMiniPrefab,diploBack,rivalBack,rivalPrefab,warDecBack,releaseSubjectBack;
-    [SerializeField] Transform warTransform,truceTransform,alianceTransform,rivalTransform,subjectTransform;
-    List<GameObject> wars,truces,allies,rivalList,subjects;
+    [SerializeField] GameObject diploMiniPrefab,diploBack,rivalBack,rivalPrefab,warDecBack,releaseSubjectBack,fabricateClaimPanel,claimPrefab;
+    [SerializeField] GameObject actionsBack;
+    [SerializeField] Transform warTransform,truceTransform,allianceTransform,rivalTransform,subjectTransform,accessTransform,claimTransform;
+    List<GameObject> wars,truces,allies,rivalList,subjects,access;
+    List<GameObject> possibleClaimObjects = new List<GameObject>();
     public static DiplomacyUIPanel main;
     public int diploCivID;
     int rivalSlot = 0;
@@ -23,6 +27,79 @@ public class DiplomacyUIPanel : MonoBehaviour
     {
         CancelWarDec();
         CloseRivalsList();
+        fabricateClaimPanel.SetActive(false);
+    }
+    void ToggleImproveRelations()
+    {
+        if(Player.myPlayer.myCivID == -1 || diploCivID == -1) { return; }
+        Civilisation target = Game.main.civs[diploCivID];
+        Civilisation civ = Player.myPlayer.myCiv;
+
+        if(civ.deployedDiplomats.Exists(i=>i.targetCivId == diploCivID && i.Action == DiplomatAction.Establishing))
+        {
+            DiplomatStatus diplomat = civ.deployedDiplomats.Find(i => i.targetCivId == diploCivID && i.Action == DiplomatAction.Establishing);
+            diplomat.Action = DiplomatAction.Travelling;
+        }
+        else if(civ.avaliableDiplomats > 0)
+        {
+            civ.deployedDiplomats.Add(new DiplomatStatus(target, civ, DiplomatAction.Establishing));
+        }
+    }
+    void ToggleSpy()
+    {
+        if (Player.myPlayer.myCivID == -1 || diploCivID == -1) { return; }
+        Civilisation target = Game.main.civs[diploCivID];
+        Civilisation civ = Player.myPlayer.myCiv;
+
+        if (civ.deployedDiplomats.Exists(i => i.targetCivId == diploCivID && i.Action == DiplomatAction.Spying))
+        {
+            DiplomatStatus diplomat = civ.deployedDiplomats.Find(i => i.targetCivId == diploCivID && i.Action == DiplomatAction.Spying);
+            diplomat.Action = DiplomatAction.Travelling;
+        }
+        else if (civ.avaliableDiplomats > 0)
+        {
+            civ.deployedDiplomats.Add(new DiplomatStatus(target, civ, DiplomatAction.Spying));
+        }
+    }
+    void ToggleClaims()
+    {
+        if (Player.myPlayer.myCivID == -1 || diploCivID == -1) { return; }
+        fabricateClaimPanel.SetActive(!fabricateClaimPanel.activeSelf);
+        if (fabricateClaimPanel.activeSelf)
+        {
+            ResetClaims();
+        }        
+    }
+    void ResetClaims()
+    {
+        Civilisation target = Game.main.civs[diploCivID];
+        Civilisation civ = Player.myPlayer.myCiv;
+        possibleClaimObjects.ForEach(i => Destroy(i));
+        possibleClaimObjects.Clear();
+        foreach (var tile in target.GetAllCivTileDatas())
+        {
+            if (civ.CanCoreTile(tile) && !civ.claims.Contains(tile.pos))
+            {
+                GameObject item = Instantiate(claimPrefab, claimTransform);
+                item.GetComponent<Button>().onClick.AddListener(delegate { FabricateClaim(tile.pos); });
+                var texts = item.GetComponentsInChildren<TextMeshProUGUI>();
+                texts[0].text = tile.Name;
+                texts[1].text = tile.totalDev + "";
+                item.GetComponent<HoverText>().text = "Requires Spy Network 20";
+                possibleClaimObjects.Add(item);
+            }
+        }
+    }
+    void FabricateClaim(Vector3Int pos)
+    {
+        if (Player.myPlayer.myCivID == -1 || diploCivID == -1) { return; }
+        Civilisation target = Game.main.civs[diploCivID];
+        Civilisation civ = Player.myPlayer.myCiv;
+        if (civ.spyNetwork[diploCivID] < 20) { return; }
+        civ.spyNetwork[diploCivID] -= 20;
+        civ.claims.Add(pos);
+        Game.main.refreshMap = true;
+        ResetClaims();
     }
     private void Awake()
     {
@@ -30,6 +107,9 @@ public class DiplomacyUIPanel : MonoBehaviour
         diplomaticActions[0].onClick.AddListener(DeclareWar);
         diplomaticActions[1].onClick.AddListener(SendAlliance);
         diplomaticActions[2].onClick.AddListener(SendMilAccess);
+        diplomaticActions[3].onClick.AddListener(ToggleImproveRelations);
+        diplomaticActions[4].onClick.AddListener(ToggleSpy);
+        diplomaticActions[5].onClick.AddListener(ToggleClaims);
         closeRivalsList.onClick.AddListener(CloseRivalsList);
         toggleSubjectList.onClick.AddListener(ToggleSubjectList);
         for(int i = 0; i < 3;i++)
@@ -42,7 +122,9 @@ public class DiplomacyUIPanel : MonoBehaviour
         allies = new List<GameObject>();
         rivalList = new List<GameObject>();
         subjects = new List<GameObject>();
+        access = new List<GameObject>();
         releaseSubjectBack.SetActive(false);
+        fabricateClaimPanel.SetActive(false);
     }
     void CloseRivalsList()
     {
@@ -141,6 +223,7 @@ public class DiplomacyUIPanel : MonoBehaviour
     {
         if (diploCivID == -1) { return; }
         Civilisation civ = Game.main.civs[diploCivID];
+        actionsBack.SetActive(diploCivID != Player.myPlayer.myCivID);
         if(civ.rivals != null)
         {
             for(int i = 0; i < civ.rivals.Length; i++)
@@ -159,9 +242,9 @@ public class DiplomacyUIPanel : MonoBehaviour
         if(diploCivID != Player.myPlayer.myCivID && Player.myPlayer.myCivID > -1)
         {
             Civilisation myCiv = Player.myPlayer.myCiv;
-            string hoverText = "";
+            string hoverText = "Positive Reasons:\n\n";
             hoverText = "<#00ff00>" + GetPositiveReasons(civ, myCiv);
-            hoverText += "\n<#ff0000>" + GetNegativeReasons(civ, myCiv);
+            hoverText += "Negative Reasons:\n\n" + "<#ff0000>" + GetNegativeReasons(civ, myCiv);
             float reasons = Mathf.Round(AllianceOffer(civ, myCiv));
             bool wouldAccept = reasons > 0;
             hoverText += "\n" + (wouldAccept ? "<#00ff00>" : "<#ff0000>") + "Total Reasons: " + reasons;
@@ -198,21 +281,40 @@ public class DiplomacyUIPanel : MonoBehaviour
         diprep.text = "Diplo Rep: " + Mathf.Round(civ.diploRep.v * 10f)/10f + " <sprite index=2>";
         diprep.GetComponent<HoverText>().text = civ.diploRep.ToString();
         diprel.text = "Diplomatic Capacity: "+ Mathf.Round(civ.diplomaticCapacity) +"/"+ Mathf.Round(civ.diplomaticCapacityMax.v) + " <sprite index=2>";
-        diprel.GetComponent<HoverText>().text = civ.diplomaticCapacityMax.ToString();
+        string text = civ.diplomaticCapacityMax.ToString() + "\n\n";            
+        foreach (var allyID in civ.allies)
+        {
+            Civilisation ally = Game.main.civs[allyID];
+            text += "Ally: " + ally.civName + " " + Mathf.Round(25 + ally.governingCapacity * 0.5f) + "\n";
+        }
+        foreach (var allyID in civ.subjects)
+        {
+            Civilisation ally = Game.main.civs[allyID];
+            SubjectType type = ally.subjectType > -1 ? Map.main.subjectTypes[ally.subjectType] : Map.main.subjectTypes[0];
+            text += "Subject: " + ally.civName + " " + Mathf.Round(type.DiplomaticCapacityFlat + ally.governingCapacity * type.DiplomaticCapacityFromGoverningCapacity) + "\n";
+        }
+        foreach (var allyID in civ.militaryAccess)
+        {
+            Civilisation ally = Game.main.civs[allyID];
+            text += "Access: " + ally.civName + " " + Mathf.Round(ally.governingCapacity * 0.25f) + "\n";
+        }
+        diprel.GetComponent<HoverText>().text = text;        
         civReligion.sprite = Map.main.religions[civ.religion].sprite;
         civReligion.GetComponent<HoverText>().text = Map.main.religions[civ.religion].GetHoverText(civ);
         if (Player.myPlayer.myCivID > -1 && Game.main.Started)
         {
             opinion.text = Mathf.Round(civ.opinionOfThem[Player.myPlayer.myCivID].v) + "";
             opinion.GetComponent<HoverText>().text = civ.opinionOfThem[Player.myPlayer.myCivID].ToString();
+            spyNet.text = "Spy: " +Mathf.Round(Player.myPlayer.myCiv.spyNetwork[diploCivID]);
         }
         adminTech.text = civ.adminTech + "<sprite index=1><sprite index=8>";
         diploTech.text = civ.diploTech + "<sprite index=2><sprite index=8>";
         milTech.text = civ.milTech + "<sprite index=3><sprite index=8>";
         if (civ.ruler.active)
         {
-            civRulerName.text = civ.ruler.Name + " ("+civ.ruler.age.y +") " + civ.ruler.adminSkill + "<sprite index=1> " + civ.ruler.diploSkill + "<sprite index=2> " + civ.ruler.milSkill +  "<sprite index=3>";
-        }
+            civRulerName.text = civ.ruler.Name + " ("+civ.ruler.age.y +")";
+            civRulerSkills.text = civ.ruler.adminSkill + "<sprite index=1> " + civ.ruler.diploSkill + "<sprite index=2> " + civ.ruler.milSkill + "<sprite index=3>";
+        }   
         else
         {
             civRulerName.text = "No Ruler";
@@ -222,7 +324,11 @@ public class DiplomacyUIPanel : MonoBehaviour
             diplomaticActions[0].GetComponentInChildren<TextMeshProUGUI>().text = Player.myPlayer.myCiv.atWarWith.Contains(diploCivID)? "Sue for Peace" : "Declare War";
             diplomaticActions[1].GetComponentInChildren<TextMeshProUGUI>().text = Player.myPlayer.myCiv.allies.Contains(diploCivID) ? "Break Alliance" : "Offer Alliance";
             diplomaticActions[2].GetComponentInChildren<TextMeshProUGUI>().text = Player.myPlayer.myCiv.militaryAccess.Contains(diploCivID) ? "Cancel Access" : "Request Access";
+            diplomaticActions[3].GetComponentInChildren<TextMeshProUGUI>().text = Player.myPlayer.myCiv.deployedDiplomats.Exists(i => i.targetCivId == diploCivID && i.Action == DiplomatAction.Establishing) ? "Cancel Diplomat" : "Improve Relations";
+            diplomaticActions[4].GetComponentInChildren<TextMeshProUGUI>().text = Player.myPlayer.myCiv.deployedDiplomats.Exists(i => i.targetCivId == diploCivID && i.Action == DiplomatAction.Spying) ? "Cancel Diplomat" : "Build Spy Network";
         }
+
+
         List<War> civWars = civ.GetWars();
         while (wars.Count != civWars.Count)
         {
@@ -235,6 +341,9 @@ public class DiplomacyUIPanel : MonoBehaviour
             else
             {
                 GameObject item = Instantiate(diploMiniPrefab, warTransform);
+                Button button = item.GetComponent<Button>();
+                int id = wars.Count;
+                button.onClick.AddListener(delegate { DiploMiniClicked(0, id); });
                 wars.Add(item);
             }
         }
@@ -244,6 +353,8 @@ public class DiplomacyUIPanel : MonoBehaviour
             wars[i].GetComponentInChildren<Image>().color = civWar.GetOpposingLeader(civ.CivID).c;
             wars[i].GetComponentInChildren<TextMeshProUGUI>().text = Mathf.Round(civWar.warScore) * ((civWar.attackerCiv == civ) ? 1f : -1f) + "%";
         }
+
+
         int numTruces = civ.truces.ToList().FindAll(i => i > 0).Count;
         while (truces.Count != numTruces)
         {
@@ -256,6 +367,9 @@ public class DiplomacyUIPanel : MonoBehaviour
             else
             {
                 GameObject item = Instantiate(diploMiniPrefab, truceTransform);
+                Button button = item.GetComponent<Button>();
+                int id = truces.Count;
+                button.onClick.AddListener(delegate { DiploMiniClicked(1, id); });
                 truces.Add(item);
             }
         }
@@ -269,6 +383,8 @@ public class DiplomacyUIPanel : MonoBehaviour
                 index++;
             }
         }       
+
+
         while (allies.Count != civ.allies.Count)
         {
             if (allies.Count > civ.allies.Count)
@@ -279,7 +395,10 @@ public class DiplomacyUIPanel : MonoBehaviour
             }
             else
             {
-                GameObject item = Instantiate(diploMiniPrefab, alianceTransform);
+                GameObject item = Instantiate(diploMiniPrefab, allianceTransform);
+                Button button = item.GetComponent<Button>();
+                int id = allies.Count;
+                button.onClick.AddListener(delegate { DiploMiniClicked(2, id); });
                 allies.Add(item);
             }
         }
@@ -290,6 +409,8 @@ public class DiplomacyUIPanel : MonoBehaviour
             TextMeshProUGUI[] texts = allies[i].GetComponentsInChildren<TextMeshProUGUI>();
             texts[0].text = Mathf.Round(ally.opinionOfThem[civ.CivID].v) + "";        
         }
+
+
         while (subjects.Count != civ.subjects.Count)
         {
             if (subjects.Count > civ.subjects.Count)
@@ -301,6 +422,9 @@ public class DiplomacyUIPanel : MonoBehaviour
             else
             {
                 GameObject item = Instantiate(diploMiniPrefab, subjectTransform);
+                Button button = item.GetComponent<Button>();
+                int id = subjects.Count;
+                button.onClick.AddListener(delegate { DiploMiniClicked(3, id); });
                 subjects.Add(item);
             }
         }
@@ -311,41 +435,140 @@ public class DiplomacyUIPanel : MonoBehaviour
             TextMeshProUGUI[] texts = subjects[i].GetComponentsInChildren<TextMeshProUGUI>();
             texts[0].text = Mathf.Round(subject.libertyDesire) + "";
         }
+
+
+        while (access.Count != civ.militaryAccess.Count)
+        {
+            if (access.Count > civ.militaryAccess.Count)
+            {
+                int lastIndex = access.Count - 1;
+                Destroy(access[lastIndex]);
+                access.RemoveAt(lastIndex);
+            }
+            else
+            {
+                GameObject item = Instantiate(diploMiniPrefab, accessTransform);
+                Button button = item.GetComponent<Button>();
+                int id = access.Count;
+                button.onClick.AddListener(delegate { DiploMiniClicked(4, id); });
+                access.Add(item);
+            }
+        }
+        for (int i = 0; i < civ.militaryAccess.Count; i++)
+        {
+            Civilisation accessCiv = Game.main.civs[civ.militaryAccess[i]];
+            access[i].GetComponentInChildren<Image>().color = accessCiv.c;
+            TextMeshProUGUI[] texts = access[i].GetComponentsInChildren<TextMeshProUGUI>();
+            texts[0].text = Mathf.Round(accessCiv.governingCapacity * 0.25f) + "";
+        }
+    }
+    void DiploMiniClicked(int mode,int id)
+    {
+        if (diploCivID == -1) { return; }     
+        Civilisation civ = Game.main.civs[diploCivID];
+        switch(mode)
+        {
+            case 0:
+                diploCivID = civ.GetWars()[id].GetOpposingLeader(civ.CivID).CivID;
+                break;
+            case 1:
+                int numTruces = civ.truces.ToList().FindAll(i => i > 0).Count;              
+                int index = 0;
+                for (int i = 0; i < civ.truces.Length; i++)
+                {                   
+                    if (civ.truces[i] > 0)
+                    {
+                        if (index == id) { diploCivID = i; }
+                        index++;
+                    }               
+                }
+                break;
+            case 2:
+                diploCivID = civ.allies[id];
+                break;
+            case 3:
+                diploCivID = civ.subjects[id];
+                break;
+            case 4:
+                diploCivID = civ.militaryAccess[id];
+                break;
+        }
     }
     void SendAlliance()
     {
         if (diploCivID == -1 || Player.myPlayer.myCivID == -1) { return; }
+        Civilisation civ = Player.myPlayer.myCiv;
+        if(civ.avaliableDiplomats <= 0) { return; }
         if (diploCivID != Player.myPlayer.myCivID)
         {
-            if (!Player.myPlayer.myCiv.allies.Contains(diploCivID))
-            {
-                Player.myPlayer.myCiv.OfferAlliance(diploCivID);
+            if (!civ.allies.Contains(diploCivID))
+            {               
+                if (Game.main.isMultiplayer)
+                {
+                    Game.main.multiplayerManager.CivActionRpc(Player.myPlayer.myCivID, MultiplayerManager.CivActions.Alliance, diploCivID);
+                }
+                else
+                {
+                    civ.OfferAlliance(diploCivID);
+                }                
             }
             else
             {
-                Player.myPlayer.myCiv.BreakAlliance(diploCivID);
+                if (Game.main.isMultiplayer)
+                {
+                    Game.main.multiplayerManager.CivActionRpc(Player.myPlayer.myCivID, MultiplayerManager.CivActions.BreakAlliance, diploCivID);
+                }
+                else
+                {
+                    civ.BreakAlliance(diploCivID);
+                }
+                civ.deployedDiplomats.Add(new DiplomatStatus(Game.main.civs[diploCivID], civ));
             }
         }
     }
     void SendMilAccess()
     {
         if (diploCivID == -1 || Player.myPlayer.myCivID == -1) { return; }
+        Civilisation civ = Player.myPlayer.myCiv;
+        if (civ.avaliableDiplomats <= 0) { return; }
         if (diploCivID != Player.myPlayer.myCivID)
         {
             if (!Player.myPlayer.myCiv.militaryAccess.Contains(diploCivID))
             {
-                Player.myPlayer.myCiv.AccessRequest(diploCivID);
+                if (Game.main.isMultiplayer)
+                {
+                    if (NetworkManager.Singleton.IsServer)
+                    {
+                        Game.main.multiplayerManager.CivRequestAccessRpc(Player.myPlayer.myCivID, diploCivID);
+                    }
+                }
+                else
+                {
+                    Player.myPlayer.myCiv.AccessRequest(diploCivID);
+                }
             }
             else
             {
-                Player.myPlayer.myCiv.RemoveAccess(diploCivID);
+                if (Game.main.isMultiplayer)
+                {
+                    if (NetworkManager.Singleton.IsServer)
+                    {
+                        Game.main.multiplayerManager.CivRequestAccessRpc(Player.myPlayer.myCivID, diploCivID,true);
+                    }
+                }
+                else
+                {
+                    Player.myPlayer.myCiv.RemoveAccess(diploCivID);
+                }
             }
+            
         }
     }
     void DeclareWar()
     {
         if (diploCivID == -1 || Player.myPlayer.myCivID == -1) { return; }
-        if(diploCivID != Player.myPlayer.myCivID)
+        Civilisation civ = Player.myPlayer.myCiv;
+        if (diploCivID != Player.myPlayer.myCivID)
         {
             if (!Player.myPlayer.myCiv.atWarWith.Contains(diploCivID))
             {
@@ -371,23 +594,23 @@ public class DiplomacyUIPanel : MonoBehaviour
 
     public static string GetPositiveReasons(Civilisation target, Civilisation fromCiv)
     {
-        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].v > 0? "Opinion: " + 0.25f * target.opinionOfThem[fromCiv.CivID].v +"\n": "";
-        reasons += fromCiv.diploRep.v > 0 ? "Diplo Rep: " + fromCiv.diploRep.v * 5f  + "\n": "";
-        reasons += Mathf.Clamp(20f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) > 0f ? "Relative Military Strength: " + Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) : "";       
+        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].v > 0? "Opinion: " + Mathf.Round(0.25f * target.opinionOfThem[fromCiv.CivID].v) +"\n": "";
+        reasons += fromCiv.diploRep.v > 0 ? "Diplo Rep: " + Mathf.Round(fromCiv.diploRep.v * 5f)  + "\n": "";
+        reasons += Mathf.Clamp(20f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) > 0f ? "Relative Military Strength: " + Mathf.Round(Mathf.Clamp(50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f)) + "\n" : "";       
         return reasons;
     }
     public static string GetNegativeReasons(Civilisation target, Civilisation fromCiv)
     {
-        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].v < 0 ? "Opinion: " + -0.25f * target.opinionOfThem[fromCiv.CivID].v + "\n" : "";
-        reasons += fromCiv.diploRep.v < 0 ? "Diplo Rep: " + fromCiv.diploRep.v * -5f + "\n": "";
-        reasons += Mathf.Clamp(20f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) < 0f ? "Relative Military Strength: " + Mathf.Clamp(-50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) + "\n" : "";
+        string reasons = 0.25f * target.opinionOfThem[fromCiv.CivID].v < 0 ? "Opinion: " +Mathf.Round( -0.25f * target.opinionOfThem[fromCiv.CivID].v) + "\n" : "";
+        reasons += fromCiv.diploRep.v < 0 ? "Diplo Rep: " + Mathf.Round(fromCiv.diploRep.v * -5f) + "\n": "";
+        reasons += Mathf.Clamp(20f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f) < 0f ? "Relative Military Strength: " + Mathf.Round(Mathf.Clamp(-50f * ((1f + fromCiv.TotalMilStrength()) / (1f + target.TotalMilStrength()) - 1f), -20f, 20f)) + "\n" : "";
         reasons += Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) > 0 ? "Distance Between Borders: " + Mathf.Max(0, target.MinimumDistTo(fromCiv) - 10) + "\n" : "";
         reasons += fromCiv.atWarWith.Count > 0 ? "You are at War: 1000\n" : "";
         reasons += (fromCiv.CivID == target.overlordID) ? "They are a your subject: 1000\n" : "";
         reasons += (fromCiv.overlordID == target.CivID) ? "They are a your overlord: 1000\n" : "";
         reasons += (target.overlordID > -1 && target.libertyDesire < 50f) ? "They are a Loyal Subject: 1000\n" : "";
         reasons += (fromCiv.overlordID > -1 && fromCiv.libertyDesire < 50f) ? "You are a Loyal Subject: 1000\n" : "";
-        reasons += (target.diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > target.diplomaticCapacityMax.v ? "Target Would Be Over Diplomatic Capacity: " + (target.diplomaticCapacity + 25 +fromCiv.governingCapacity * 0.5f - target.diplomaticCapacityMax.v) / target.diplomaticCapacityMax.v * -100f + "\n" : "";
+        reasons += (target.diplomaticCapacity + 25 + fromCiv.governingCapacity * 0.5f) > target.diplomaticCapacityMax.v ? "Target Would Be Over Diplomatic Capacity: " + Mathf.Round((target.diplomaticCapacity + 25 +fromCiv.governingCapacity * 0.5f - target.diplomaticCapacityMax.v) / target.diplomaticCapacityMax.v * -100f) + "\n" : "";
         return reasons;
     }
     public float AllianceOffer(Civilisation target, Civilisation fromCiv)

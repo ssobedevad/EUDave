@@ -4,6 +4,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static UnityEngine.UI.CanvasScaler;
 
 public class MercenaryMenuUI : MonoBehaviour
 {
@@ -96,17 +97,40 @@ public class MercenaryMenuUI : MonoBehaviour
         if (id < possiblemercs.Count)
         {
             MercenaryGroup merc = possiblemercs[id];
-            tile.StartRecruitingMercenary(Map.main.mercenaries.ToList().IndexOf(merc));
+            int index = Map.main.mercenaries.ToList().IndexOf(merc);
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.RecruitMerc, index);
+            }
+            else
+            {
+                tile.StartRecruitingMercenary(index);
+            }
+            
         }
         else if(id < possiblemercs.Count + unitCount)
         {
-            int unitID = id - possiblemercs.Count;
-            tile.StartRecruiting(unitID);
+            int unitID = id - possiblemercs.Count;        
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.Recruit, unitID);
+            }
+            else
+            {
+                tile.StartRecruiting(unitID);
+            }
         }
         else if (id < possiblemercs.Count + unitCount + shipCount)
         {
             int unitID = id - possiblemercs.Count - unitCount;
-            tile.StartRecruitingBoat(unitID);
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.RecruitBoat, unitID);
+            }
+            else
+            {
+                tile.StartRecruitingBoat(unitID);
+            }
         }
     }
 
@@ -119,12 +143,12 @@ public class MercenaryMenuUI : MonoBehaviour
             foreach (var regiment in army.regiments)
             {
                 float mult = regiment.mercenary ? (0.5f + Game.main.gameTime.y * 0.25f) : 1f;
-                armyCosts += mult * civ.units[regiment.type].baseCost * (float)regiment.size / (float)regiment.maxSize * 0.25f / 12f;
+                armyCosts += mult * civ.units[regiment.type].baseCost.v * (float)regiment.size / (float)regiment.maxSize * 0.25f / 12f;
             }
         }
-        armyCosts += infantry * (0.5f + Game.main.gameTime.y * 0.25f) * civ.units[0].baseCost * 0.25f / 12f;
-        armyCosts += cavalry * (0.5f + Game.main.gameTime.y * 0.25f) * civ.units[1].baseCost * 0.25f / 12f;
-        armyCosts += artillery * (0.5f + Game.main.gameTime.y * 0.25f) * civ.units[2].baseCost * 0.25f / 12f;
+        armyCosts += infantry * (0.5f + Game.main.gameTime.y * 0.25f) * civ.units[0].baseCost.v * 0.25f / 12f;
+        armyCosts += cavalry * (0.5f + Game.main.gameTime.y * 0.25f) * civ.units[1].baseCost.v * 0.25f / 12f;
+        armyCosts += artillery * (0.5f + Game.main.gameTime.y * 0.25f) * civ.units[2].baseCost.v * 0.25f / 12f;
         if (civ.TotalMaxArmySize() / 1000f  + infantry + cavalry > civ.forceLimit.v)
         {
             float increase = (civ.forceLimit.v + (civ.TotalMaxArmySize() / 1000f+ infantry + cavalry - civ.forceLimit.v) * 2) / civ.forceLimit.v;

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -49,9 +50,26 @@ public class Player : MonoBehaviour
     }
     public void SelectCiv(int civID)
     {
-        if (civID != myCivID)
+        if (spectator)
         {
-            myCivID = civID;
+            if (civID != myCivID)
+            {
+                myCivID = civID;
+            }
+        }
+        else
+        {
+            if (civID != myCivID && !Game.main.Started)
+            {
+                if (Game.main.isMultiplayer)
+                {
+                    Game.main.multiplayerManager.SelectCivRpc(civID, (int)NetworkManager.Singleton.LocalClientId);
+                }
+                else
+                {
+                    myCivID = civID;
+                }
+            }
         }
 
     }

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -24,9 +26,11 @@ public class Map : MonoBehaviour
     [SerializeField] public EventData[] pulseEvents;
     [SerializeField] public Religion[] religions;
     [SerializeField] public GovernmentType[] governmentTypes;
+    [SerializeField] public GovernmentReformTier[] DefaultTiers;
     [SerializeField] public MercenaryGroup[] mercenaries;
     [SerializeField] public CasusBelli[] casusBellis;
-    [SerializeField] public GameObject capitalIndicatorPrefab,resourceIndicatorPrefab,armyPrefab,fortPrefab,boatPrefab,settlementPrefab,tileTextPrefab;
+    [SerializeField] public Decision[] decisions;
+    [SerializeField] public GameObject capitalIndicatorPrefab,armyPrefab,fortPrefab,boatPrefab,settlementPrefab,tileTextPrefab;
     public Dictionary<string, TradeRegion> tradeRegions = new Dictionary<string, TradeRegion>();
     public Dictionary<string, Terrain> terrainDict = new Dictionary<string, Terrain>();
     public Dictionary<string,ResourceType> resourceDict = new Dictionary<string,ResourceType>();
@@ -35,10 +39,121 @@ public class Map : MonoBehaviour
     [SerializeField] Tilemap resources, terrain,civs,religion;
     [SerializeField] public GameObject civBorderPrefab,civNamePrefab;
     [SerializeField] public Trait[] rulerTraits;
+    [SerializeField] public SubjectType[] subjectTypes;
 
+    [EditorButton]
+    void CheckAllMapEffects()
+    {
+        foreach (var resource in resourceTypes)
+        {
+            try
+            {
+                Enum.Parse<EffectName>(resource.localTileEffect.Replace(" ", ""));
+            }
+            catch
+            {
+                Debug.Log(resource.name + ": " + resource.localTileEffect + " Not Found");
+            }
+        }
+        List<Advisor> advisors = new List<Advisor>();
+        advisors.AddRange(advisorsA);
+        advisors.AddRange(advisorsD);
+        advisors.AddRange(advisorsM);
+        foreach (var advisor in advisors)
+        {
+            try
+            {
+                Enum.Parse<EffectName>(advisor.effects.name.Replace(" ", ""));
+            }
+            catch
+            {
+                Debug.Log(advisor.type + ": " + advisor.effects.name + " Not Found");
+            }
+        }
+        List<Tech> techs = new List<Tech>();
+        techs.AddRange(TechA);
+        techs.AddRange(TechD);
+        techs.AddRange(TechM);
+        foreach (var tech in techs)
+        {
+            foreach (var effect in tech.effect)
+            {
+                try
+                {
+                    Enum.Parse<EffectName>(effect.Replace(" ", ""));
+                }
+                catch
+                {
+                    Debug.Log(tech.Name + "(" + tech.type + "): " + effect + " Not Found");
+                }
+            }
+        }
+        List<IdeaGroup> ideas = new List<IdeaGroup>();
+        ideas.AddRange(IdeasA);
+        ideas.AddRange(IdeasD);
+        ideas.AddRange(IdeasM);
+        foreach (var group in ideas)
+        {
+            foreach (var idea in group.ideas)
+            {
+                foreach (var effect in idea.effects)
+                {
+                    try
+                    {
+                        Enum.Parse<EffectName>(effect.name.Replace(" ", ""));
+                    }
+                    catch
+                    {
+                        Debug.Log(group.name + "(" + idea.name + "): " + effect.name + " Not Found");
+                    }
+                }
+            }
+        }
+        foreach (var building in Buildings)
+        {
+            try
+            {
+                Enum.Parse<EffectName>(building.effects.name.Replace(" ", ""));
+            }
+            catch
+            {
+                Debug.Log(building.Name + ": " + building.effects.name + " Not Found");
+            }
+        }
+    }
     private void Awake()
     {
         main = this;
+        foreach(var government in governmentTypes)
+        {
+            foreach(var tier in government.BaseReforms)
+            {
+                if(tier.type == TierType.DefaultTier1)
+                {
+                    var reforms = tier.Reforms.ToList();
+                    reforms.AddRange(DefaultTiers[0].Reforms);
+                    tier.Reforms = reforms.ToArray();
+                }
+                else if (tier.type == TierType.DefaultTier2)
+                {
+                    var reforms = tier.Reforms.ToList();
+                    reforms.AddRange(DefaultTiers[1].Reforms);
+                    tier.Reforms = reforms.ToArray();
+                }
+                else if (tier.type == TierType.DefaultTier3)
+                {
+                    var reforms = tier.Reforms.ToList();
+                    reforms.AddRange(DefaultTiers[2].Reforms);
+                    tier.Reforms = reforms.ToArray();
+                }
+                else if (tier.type == TierType.DefaultTier4)
+                {
+                    var reforms = tier.Reforms.ToList();
+                    reforms.AddRange(DefaultTiers[3].Reforms);
+                    tier.Reforms = reforms.ToArray();
+                }
+            }
+        }
         BoundsInt bounds = tileMapManager.tilemap.cellBounds;
         boundsMinX = bounds.xMin;
         boundsMinY = bounds.yMin;

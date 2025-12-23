@@ -50,6 +50,8 @@ using UnityEngine;
         ag = battle.attackerGeneral;
         dg = battle.defenderGeneral;
 
+        battle.attackingArmies.RemoveAll(i => i == null);
+        battle.defendingArmies.RemoveAll(i => i == null);
         aA = battle.attackingArmies.ConvertAll(i => new SaveGameArmy(i));
         dA = battle.defendingArmies.ConvertAll(i => new SaveGameArmy(i));
 
@@ -75,7 +77,7 @@ using UnityEngine;
         ap = battle.attackPhases;
     }
 
-    public void LoadToBattle()
+    public Battle LoadToBattle()
     {
         Battle battle = new Battle(this);
         battle.attackerCiv = Game.main.civs[ai];
@@ -106,5 +108,7 @@ using UnityEngine;
         battle.active = a;
         battle.battleLength = bl;
         battle.attackPhases = ap;
+
+        return battle;
     }
 }

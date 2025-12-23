@@ -22,7 +22,7 @@ public class Tech
         Civilisation civilisation = Game.main.civs[civID];        
         for (int i = 0; i < effect.Length; i++)
         {
-            civilisation.ApplyCivModifier(effect[i], effectStrength[i], Name, effectType[i]);
+            civilisation.ApplyCivModifier(effect[i], effectStrength[i], Name, (EffectType)effectType[i]);
         }
         foreach (var unlocked in unlock)
         {
@@ -44,7 +44,7 @@ public class Tech
         if (ahead > 0)
         {
             string aeffect = type == 0 ? "Tax Efficiency" : type == 1 ? "Production Value" : "Population Growth";
-            civilisation.ApplyCivModifier(aeffect, 0.2f, "Ahead of Time",1, ahead);
+            civilisation.ApplyCivModifier(aeffect, 0.2f, "Ahead of Time",EffectType.Additive, ahead);
         }
     }
 }

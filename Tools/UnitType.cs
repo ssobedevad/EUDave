@@ -6,20 +6,31 @@ using UnityEngine;
 public class UnitType
 {
     public string name;
-    public Stat meleeDamage = new Stat(0f, "Melee Damage",true);
-    public Stat flankingDamage = new Stat(0f, "Flanking Damage",true);
-    public Stat rangedDamage = new Stat(0f, "Ranged Damage", true);
-    public Stat combatAbility = new Stat(0f, "Combat Ability");
+    public Stat baseDamage = new Stat(0f, "Base Damage",true);
     public int flankingRange;
-    public float baseCost;
+    public Stat baseCost = new Stat(0f, "Base Cost",true);
 
-    public UnitType(string name, float baseMelee,float baseFlanking, float baseRanged, int FlankingRange, float baseCost)
+    public UnitType(string name, float baseDamage, int FlankingRange, float baseCost,Civilisation civ)
     {
         this.name = name;
-        meleeDamage.ChangeBaseStat(baseMelee);
-        flankingDamage.ChangeBaseStat(baseFlanking);
-        rangedDamage.ChangeBaseStat(baseRanged);
+        this.baseDamage.ChangeBaseStat(baseDamage);
         flankingRange = FlankingRange;
-        this.baseCost = baseCost;
+        this.baseCost.ChangeBaseStat(baseCost);
+        if (!civ.stats.ContainsKey(name + " Damage"))
+        {
+            civ.stats.Add(name + " Damage", this.baseDamage);
+        }
+        else
+        {
+            this.baseDamage = civ.stats[name + " Damage"];
+        }
+        if (!civ.stats.ContainsKey(name + " Cost"))
+        {
+            civ.stats.Add(name + " Cost", this.baseCost);
+        }
+        else
+        {
+            this.baseCost = civ.stats[name + " Cost"];
+        }
     }
 }

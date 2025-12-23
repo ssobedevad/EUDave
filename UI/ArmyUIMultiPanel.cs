@@ -89,23 +89,32 @@ public class ArmyUIMultiPanel : MonoBehaviour
     void MergeAll()
     {
         List<Army> temp = Player.myPlayer.selectedArmies.ToList();
-        for (int i = 1; i < temp.Count; i++)
+        if (temp.Count > 1)
         {
-            Army army = temp[i];
-            if (army.pos == temp[0].pos)
+            Army baseArmy = temp[0];            
+            for (int i = 1; i < temp.Count; i++)
             {
-                Player.myPlayer.selectedArmies.Remove(army);
-                army.CombineInto(temp[0]);
+                Army army = temp[i];
+                if (army.pos == baseArmy.pos)
+                {
+                    Player.myPlayer.selectedArmies.Remove(army);
+                    army.CombineInto(baseArmy);
+                }
             }
         }
+
         List<Fleet> tempF = Player.myPlayer.selectedFleets.ToList();
-        for (int i = 1; i < tempF.Count; i++)
+        if (tempF.Count > 1)
         {
-            Fleet fleet = tempF[i];
-            if (fleet.pos == tempF[0].pos)
+            Fleet baseFleet = tempF[0];
+            for (int i = 1; i < temp.Count; i++)
             {
-                Player.myPlayer.selectedFleets.Remove(fleet);
-                fleet.CombineInto(tempF[0]);
+                Fleet fleet = tempF[i];
+                if (fleet.pos == tempF[0].pos)
+                {
+                    Player.myPlayer.selectedFleets.Remove(fleet);
+                    fleet.CombineInto(baseFleet);
+                }
             }
         }
     }

@@ -47,36 +47,45 @@ public class ReleaseSubjectUI : MonoBehaviour
             texts[0].text = subject.civName;
         }
     }
-    void ReleaseSubject(int index)
+    public void ReleaseSubject(int index)
     {
         if (Player.myPlayer.myCivID == -1 || DiplomacyUIPanel.main.diploCivID != Player.myPlayer.myCivID) { return; }
         Civilisation civ = Game.main.civs[DiplomacyUIPanel.main.diploCivID];
         if (possibleSubjects[index].isActive()) { return; }
         Civilisation released = possibleSubjects[index];
-        List<TileData> releaseTiles = new List<TileData>();
-        foreach (var prov in civ.GetAllCivTileDatas())
+        if (Game.main.isMultiplayer)
         {
-            if (prov.cores.Contains(released.CivID) && civ.capitalPos != prov.pos)
+            Game.main.multiplayerManager.CivActionRpc(civ.CivID, MultiplayerManager.CivActions.ReleaseSubject, released.CivID);
+        }
+        else
+        {
+            ReleaseCiv(civ, released);
+        }
+        gameObject.SetActive(false);
+    }
+    public static void ReleaseCiv(Civilisation fromCiv,Civilisation released)
+    {
+        List<TileData> releaseTiles = new List<TileData>();
+        foreach (var prov in fromCiv.GetAllCivTileDatas())
+        {
+            if (prov.cores.Contains(released.CivID) && fromCiv.capitalPos != prov.pos)
             {
                 releaseTiles.Add(prov);
             }
         }
-        foreach(var releaseTile in releaseTiles)
+        foreach (var releaseTile in releaseTiles)
         {
-            releaseTile.civID = released.CivID;
+            releaseTile.TransferOccupation(released.CivID, true);
             releaseTile.control = 100;
-            if (releaseTile.cores.Contains(civ.CivID))
+            if (releaseTile.cores.Contains(fromCiv.CivID))
             {
-                releaseTile.cores.Remove(civ.CivID);
+                releaseTile.cores.Remove(fromCiv.CivID);
             }
-            if (civ.claims.Contains(releaseTile.pos))
+            if (fromCiv.claims.Contains(releaseTile.pos))
             {
-                civ.claims.Remove(releaseTile.pos);
+                fromCiv.claims.Remove(releaseTile.pos);
             }
         }
-        civ.updateBorders = true;
-        released.updateBorders = true;
-        civ.Subjugate(released);
-        gameObject.SetActive(false);
+        fromCiv.Subjugate(released);
     }
 }

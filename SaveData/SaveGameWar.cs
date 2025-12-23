@@ -48,7 +48,7 @@ using System.Collections.Generic;
         siegeResults = war.siegeResults;
     }
 
-    public void LoadToWar()
+    public War LoadToWar()
     {
         Civilisation attackerCiv = Game.main.civs[attackerCivID];
         Civilisation defenderCiv = Game.main.civs[defenderCivID];
@@ -69,5 +69,7 @@ using System.Collections.Generic;
 
         war.battleResults = battleResults;
         war.siegeResults = siegeResults;
+
+        return war;
     }
 }

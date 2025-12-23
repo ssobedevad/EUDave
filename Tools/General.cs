@@ -1,16 +1,14 @@
 ﻿using MessagePack;
 using System;
 using System.Collections.Generic;
-
+using Unity.Netcode;
 using UnityEngine;
 [MessagePackObject(keyAsPropertyName: true)]
 [Serializable]
 public class General
 {
     public string name;
-    public int meleeSkill;
-    public int flankingSkill;
-    public int rangedSkill;
+    public int combatSkill;
     public int siegeSkill;
     public int maneuverSkill;
     public Effect[] traits;
@@ -28,7 +26,7 @@ public class General
     public int Stars()
     {
         int count = 1;
-        count += (meleeSkill + flankingSkill + rangedSkill + siegeSkill + maneuverSkill) / 6;
+        count += (combatSkill + siegeSkill + maneuverSkill) / 3;
         return count;
     }
     public void Kill()
@@ -39,11 +37,12 @@ public class General
     }
     void CheckDeath()
     {
+        if (Game.main.isMultiplayer && !NetworkManager.Singleton.IsServer) { return; }
         if (age.m > 0 || age.y > 0)
         {
             if (UnityEngine.Random.Range(0f, 50f) < age.m + age.y * 12)
-            {
-                Kill();
+            {               
+                 Kill();                
             }
         }
     }

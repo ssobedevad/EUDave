@@ -46,7 +46,7 @@ public class NavalBattleUIPanel : MonoBehaviour
             }
             if (battle.attackerGeneral != null && battle.attackerGeneral.active)
             {
-                bonusRollA.text = battle.attackerGeneral.meleeSkill + " " + battle.attackerGeneral.flankingSkill + " " + battle.attackerGeneral.rangedSkill;
+                bonusRollA.text = battle.attackerGeneral.combatSkill + "";
                 bonusRollA.transform.parent.gameObject.SetActive(true);
             }
             else
@@ -55,7 +55,7 @@ public class NavalBattleUIPanel : MonoBehaviour
             }
             if (battle.defenderGeneral != null && battle.defenderGeneral.active)
             {
-                bonusRollD.text = battle.defenderGeneral.meleeSkill + " " + battle.defenderGeneral.flankingSkill + " " + battle.defenderGeneral.rangedSkill;
+                bonusRollD.text = battle.defenderGeneral.combatSkill + "";
                 bonusRollD.transform.parent.gameObject.SetActive(true);
             }
             else

@@ -39,6 +39,13 @@ public class PeaceDeal
         subjugation = false;
         SetPossible();
     }
+    public PeaceDeal(Civilisation Target, Civilisation Taker)
+    {
+        target = Target;
+        taker = Taker;
+        warScore = 0f;
+        subjugation = false;
+    }
     public void AddLoan()
     {
         if(numLoans < 5)
@@ -81,12 +88,12 @@ public class PeaceDeal
         subjugation = false;
         RecalculateWarScore();
     }
-    void RecalculateWarScore()
+    public void RecalculateWarScore()
     {
         warScore = 0f;
         overextension = 0f;
         aggressiveExpansion = 0f;
-        bool isPrimary = (target == war.attackerCiv || target == war.defenderCiv);
+        bool isPrimary = (war == null || target == war.attackerCiv || target == war.defenderCiv);
         for (int i = 0; i < provinces.Count;i++)
         {
             TileData prov = Map.main.GetTile(provinces[i]);
@@ -119,7 +126,7 @@ public class PeaceDeal
     }
     public void SetPossible()
     {
-        if (!war.casusBelli.canTakeProvinces) { return; }
+        if (war == null || !war.casusBelli.canTakeProvinces) { return; }
         List<Vector3Int> provs = target.GetAllCivTiles();
         if (war.Between(taker.CivID, target.CivID))
         {

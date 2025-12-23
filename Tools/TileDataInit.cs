@@ -1,18 +1,17 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+
 public class TileDataInit : MonoBehaviour
 {
-    [SerializeField] string Name,Region,TradeRegion,Continent;
-    [SerializeField] int armies,horses,artillery,marketLevel,status;
-    [SerializeField] bool capital,fort,hasMarket;
-    [SerializeField] int developmentA,developmentB,developmentC;
-    [SerializeField] float control;
-    [SerializeField] int transport,supply,warship;
+    [SerializeField] public string Name,Region,TradeRegion,Continent;
+    [SerializeField] public int armies,horses,artillery,marketLevel,status;
+    [SerializeField] public bool capital,fort,hasMarket;
+    [SerializeField] public int developmentA,developmentB,developmentC;
+    [SerializeField] public float control;
+    [SerializeField] public int transport,supply,warship;
 
     private void Start()
     {
@@ -21,9 +20,9 @@ public class TileDataInit : MonoBehaviour
         TileData data = Map.main.GetTile(pos);
         if(data != null)
         {
-            data.tileText = Instantiate(Map.main.tileTextPrefab, transform.position, Quaternion.Euler(0, 0, Random.Range(0,60)), Map.main.tileTextTransform).GetComponent<TextMeshProUGUI>();
-            data.tileText.text = Name;
-            data.Name = Name;
+            data.tileText = Instantiate(Map.main.tileTextPrefab, transform.position, Quaternion.Euler(0, 0, UnityEngine.Random.Range(0,60)), Map.main.tileTextTransform).GetComponent<TextMeshProUGUI>();
+            data.tileText.text = name;
+            data.Name = name;
             data.region = Region;
             data.tradeRegion = TradeRegion;
             if (Map.main.tradeRegions.ContainsKey(TradeRegion))
@@ -55,9 +54,6 @@ public class TileDataInit : MonoBehaviour
             { 
             data.control = 100f;
             }
-            data.SetDevCost();
-            data.population = (int)(0.65f * data.maxPopulation);
-            data.avaliablePopulation = (int)(0.65f * data.avaliableMaxPopulation);
             if (data.civID > -1)
             {
                 Civilisation civ = Game.main.civs[data.civID];
@@ -97,8 +93,8 @@ public class TileDataInit : MonoBehaviour
                     for (int i = 0; i < artillery; i++)
                     {
                         regiments.Add(new Regiment(data.civID, Type: 2));
-                    }
-                    Army.NewArmy(data, data.civID, regiments);
+                    }                               
+                    Army.NewArmy(data, data.civID, regiments);                   
                 }
                 if (transport > 0|| supply > 0 || warship > 0)
                 {
@@ -117,7 +113,10 @@ public class TileDataInit : MonoBehaviour
                     }
                     Fleet.NewFleet(data, data.civID, boatlist);
                 }
-            }                         
+            }
+            data.SetDevCost();
+            data.population = (int)(0.65f * data.maxPopulation);
+            data.avaliablePopulation = (int)(0.65f * data.avaliableMaxPopulation);
         }
         Destroy(gameObject);
     }

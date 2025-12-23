@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 
 public class AIMoveFleetsWar
@@ -18,6 +19,21 @@ public class AIMoveFleetsWar
 
     public static List<Vector3Int> enemyCoastalProvinces = new List<Vector3Int>();
     public static List<Vector3Int> allyCoastalProvinces = new List<Vector3Int>();
+
+    public static void RecruitBoat(TileData tile, int unitType)
+    {
+        if (Game.main.isMultiplayer)
+        {
+            if (NetworkManager.Singleton.IsServer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.RecruitBoat, unitType);
+            }
+        }
+        else
+        {
+            tile.StartRecruitingBoat(unitType);
+        }
+    }
     public static void MoveAtWar(int civID)
     {
         Civilisation civ = Game.main.civs[civID];
@@ -309,7 +325,7 @@ public class AIMoveFleetsWar
             Civilisation target = Game.main.civs[id];
             foreach (var fleet in target.fleets)
             {
-
+                if(fleet == null) { continue; }
                 if (enemyFleets.Exists(i => i.pos == fleet.pos))
                 {
                     EnemyFleet a = enemyFleets.Find(i => i.pos == fleet.pos);
@@ -339,10 +355,12 @@ public class AIMoveFleetsWar
     }
     public static bool ShouldMergeFleet(Civilisation civ, Fleet fleet)
     {
+        if (fleet == null) { return false; }
         return (civ.fleets.Count > 1 && fleet.CombatWidth() < 31);
     }
     public static bool ShouldSplitFleet(Civilisation civ, Fleet fleet)
     {
+        if (fleet == null) { return false; }
         return (fleet.CombatWidth() > 62);
     }
     static void ProcessFleetPositions(Civilisation civ)

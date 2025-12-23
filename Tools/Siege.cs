@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Burst.Intrinsics;
-
+using Unity.Netcode;
 using UnityEngine;
 
 public class Siege
@@ -93,6 +93,16 @@ public class Siege
             tickTimer = 0;
         }
     }
+    public void AddProgress(int roll)
+    {
+        progressRoll = roll;
+        progress += (float)progressRoll / (100f * (2 * fortLevel + 0.5f));
+        if (Mathf.Round(progress * 100f) / 100f >= 1f)
+        {
+            Complete();
+        }
+        tickTimer = 0;
+    }
     void Tick()
     {
         artillery = 0;
@@ -125,12 +135,19 @@ public class Siege
                 }
             }
         }
-        int generalSiege = (siegeGeneral != null && siegeGeneral.active) ? siegeGeneral.siegeSkill : 0;
-        progressRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID + artillery/(1 + fortLevel) + generalSiege;
-        progress += (float)progressRoll / (100f * (2 * fortLevel + 0.5f));
-        if(Mathf.Round(progress * 100f)/100f >= 1f)
+        int generalSiege = (siegeGeneral != null && siegeGeneral.active) ? siegeGeneral.siegeSkill : 0;        
+        if (Game.main.isMultiplayer)
         {
-            Complete();
+            if (NetworkManager.Singleton.IsServer)
+            {
+                int roll = WeightedChoiceManager.getChoice(diceRolls).choiceID + artillery / (1 + fortLevel) + generalSiege;
+                Game.main.multiplayerManager.SiegeDiceRollRpc(target.pos, roll);
+            }
+        }
+        else
+        {
+            int roll = WeightedChoiceManager.getChoice(diceRolls).choiceID + artillery / (1 + fortLevel) + generalSiege;
+            AddProgress(roll);
         }
         float siegeAbility = 0f;
         if(leaderCivID > -1)
@@ -139,25 +156,51 @@ public class Siege
         }
         tickTime = (int)(24 * (1f + target.localDefensiveness.v + target.civ.fortDefence.v - siegeAbility));
     }
+    void Occupy(TileData tile, int occupierID)
+    {
+        if (Game.main.isMultiplayer)
+        {
+            if (NetworkManager.Singleton.IsServer)
+            {
+                Game.main.multiplayerManager.CivOccupyRpc(occupierID, tile.pos);
+            }
+        }
+        else
+        {
+            Civilisation tileCiv = tile.civ;
+            if (tileCiv.atWarWith.Contains(occupierID))
+            {
+                tile.occupied = true;
+                tile.occupiedByID = occupierID;
+            }
+            else if (tileCiv.atWarTogether.Contains(occupierID))
+            {
+                tile.occupied = false;
+                tile.occupiedByID = occupierID;
+            }
+            else
+            {
+                tile.occupied = false;
+                tile.occupiedByID = tile.civID;
+            }
+        }
+    }
     void Complete()
     {
         List<TileData> neighbors = target.GetNeighborTiles();
         if (leaderCivID == target.civID || target.civ.atWarTogether.Contains(leaderCivID)||(target.civ.overlordID == leaderCivID && leaderCivID > -1))
         {
-            target.occupied = false;
-            target.occupiedByID = target.civID;
+            Occupy(target, target.civID);
             foreach (var n in neighbors)
             {
                 if(n.civID == target.civID && n.occupied && !n.HasNeighboringActiveOccupiedFort(target.civID) && n.fortLevel == 0 && n.armiesOnTile.Count == 0)
                 {
-                    n.occupied = false;
-                    n.occupiedByID = target.civID;
+                    Occupy(n,target.civID);
                 }
             }
         }
         else if (leaderCivID != target.civID && (target.civ.atWarWith.Contains(leaderCivID)|| leaderCivID == -1) && (!target.occupied || target.occupiedByID == -1 || (leaderCivID == -1 && target.occupied && target.occupiedByID > -1)) )
-        {
-            target.occupied = true;
+        {           
             int occupyId = leaderCivID;
             if (leaderCivID > -1)
             {
@@ -178,13 +221,12 @@ public class Siege
                     }
                 }
             }
-            target.occupiedByID = occupyId;
+            Occupy(target, occupyId);
             foreach (var n in neighbors)
             {
                 if (n.civID == target.civID && !n.occupied && !n.HasNeighboringActiveFort(leaderCivID) && n.fortLevel == 0 && n.armiesOnTile.Count ==0)
                 {
-                    n.occupied = true;
-                    n.occupiedByID = occupyId;
+                    Occupy(n, occupyId);
                 }
             }
         }

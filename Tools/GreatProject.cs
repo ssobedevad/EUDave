@@ -57,7 +57,7 @@ public class GreatProject
             }
             else
             {
-                tile.ApplyTileLocalModifier(effect[i].name, effect[i].amount, effect[i].type, Name);
+                tile.ApplyTileLocalModifier(effect[i].name, effect[i].amount, (int)effect[i].type, Name);
             }
         }
     }
@@ -80,7 +80,7 @@ public class GreatProject
         string text = Name + " T1:\n";
         for (int i = 0; i < T1.Length; i++)
         {
-            if (T1[i].type == 4)
+            if (T1[i].type == EffectType.Other)
             {
                 text += (T1[i].isProvince ? "Province: " : "") + T1[i].name + "\n";
             }
@@ -96,7 +96,7 @@ public class GreatProject
         string text = Name + " T2:\n";
         for (int i = 0; i < T2.Length; i++)
         {
-            if (T2[i].type == 4)
+            if (T2[i].type == EffectType.Other)
             {
                 text += (T2[i].isProvince ? "Province: " : "") + T2[i].name + "\n";
             }
@@ -112,7 +112,7 @@ public class GreatProject
         string text = Name + " T3:\n";
         for (int i = 0; i < T3.Length; i++)
         {
-            if (T3[i].type == 4)
+            if (T3[i].type == EffectType.Other)
             {
                 text += (T3[i].isProvince ? "Province: " : "") + T3[i].name + "\n";
             }

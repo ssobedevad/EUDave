@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class Fleet : MonoBehaviour
 {
-    public int civID;
+    public int civID = -1;
     public bool inBattle;
     public List<Boat> boats = new List<Boat>();
     public List<Regiment> army = new List<Regiment>();
@@ -97,10 +98,7 @@ public class Fleet : MonoBehaviour
                 if (unit.type < 0 || unit.type >= civ.boats.Count) { continue; }
                 float power = (float)unit.sailors;
                 power *= (0.01f + unit.cannons * 0.5f);
-                power *= Mathf.Max((1f + ((general != null && general.active) ? general.meleeSkill * 0.1f : 0f))
-                    , (1f + ((general != null && general.active) ? general.flankingSkill * 0.1f : 0f))
-                    , (1f + ((general != null && general.active) ? general.rangedSkill * 0.1f : 0f)));
-                power *= 1f + civ.units[unit.type].combatAbility.v;
+                power *= (1f + ((general != null && general.active) ? general.combatSkill * 0.1f : 0f));
                 strength += power;
             }
         }
@@ -118,19 +116,48 @@ public class Fleet : MonoBehaviour
     public void ExitBattle()
     {
         inBattle = false;
-        foreach (var boat in boats)
+        foreach (var boat in boats.ToList())
         {
             boat.inBatle = false;
+            if(boat.hullStrength <= 0)
+            {
+                boats.Remove(boat);
+            }
         }
         if(boats.Count == 0)
         {
-            OnExitTile();
-            Destroy(gameObject);
+            if (!Game.main.isMultiplayer || NetworkManager.Singleton.IsServer)
+            {
+                OnExitTile(tile);
+                Destroy(gameObject);
+            }
         }
+        if (Game.main.isMultiplayer && NetworkManager.Singleton.IsServer)
+        {
+            GetComponent<NetworkFleet>().SendFleetDataRpc();
+        }
+
     }
 
     private void Update()
     {
+        if (Game.main.isMultiplayer && NetworkManager.Singleton.IsConnectedClient)
+        {
+            if (GetComponent<NetworkFleet>() == null)
+            {
+                if (NetworkManager.Singleton.IsServer)
+                {
+                    NetworkFleet netFleet = NetworkManager.Singleton.SpawnManager.InstantiateAndSpawn(Game.main.multiplayerManager.netFleetPrefab, position: tile.worldPos()).GetComponent<NetworkFleet>();
+                    netFleet.pos = pos;
+                    netFleet.civID = civID;
+                    netFleet.boats = boats.ToArray();
+                    netFleet.init = true;
+                }
+                OnExitTile(tile);
+                Destroy(gameObject);
+                return;
+            }
+        }
         if (civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
@@ -153,6 +180,7 @@ public class Fleet : MonoBehaviour
                 {
                     exiled = false;
                     path.Clear();
+
                 }
             }
         }
@@ -226,9 +254,9 @@ public class Fleet : MonoBehaviour
     private void Start()
     {
         moveTime = 12f;
-        if (civID > -1)
+        if (civID > -1 && !Game.main.isMultiplayer)
         {
-            Game.main.civs[civID].fleets.Add(this);
+            Game.main.civs[civID].fleets.Add(this);            
         }
         Game.main.tenMinTick.AddListener(UpdateMovement);
         Game.main.dayTick.AddListener(DayTick);
@@ -289,9 +317,19 @@ public class Fleet : MonoBehaviour
             }
         }
     }
-    public void OnExitTile()
+    public void OnExitTile(TileData target)
     {
-        tile.fleetsOnTile.Remove(this);
+        if (Game.main.isMultiplayer && GetComponent<NetworkFleet>() != null)
+        {
+            if (NetworkManager.Singleton.IsServer)
+            {
+                GetComponent<NetworkFleet>().ExitEnterRpc(false, tile.pos);
+            }
+        }
+        else
+        {
+            target.fleetsOnTile.Remove(this);
+        }
     }
     public void OnDestroy()
     {
@@ -300,30 +338,47 @@ public class Fleet : MonoBehaviour
             Game.main.civs[civID].fleets.Remove(this);
         }
     }
-    public void OnEnterTile()
+    public void OnEnterTile(TileData target)
     {
-        tile.fleetsOnTile.Add(this);
-        if (!tile.terrain.isSea)
+        if (Game.main.isMultiplayer && GetComponent<NetworkFleet>() != null)
         {
-            if(army.Count > 0)
+            if (NetworkManager.Singleton.IsServer)
             {
-                Army.NewArmy(tile,civID, army);
-                army.Clear();
+                GetComponent<NetworkFleet>().ExitEnterRpc(true, tile.pos);
             }
-            if(tile.civID != civID || tile.occupied && tile.civID != civID)
+        }
+        else
+        {
+            target.fleetsOnTile.Add(this);
+            if (!target.terrain.isSea)
             {
-                SetPath(tile.portTile);
+                if (army.Count > 0)
+                {
+                    Army.NewArmy(target, civID, army);
+                    army.Clear();
+                }
+                if (target.civID != civID || target.occupied && target.civID != civID)
+                {
+                    SetPath(target.portTile);
+                }
             }
         }
     }
     public void CombineInto(Fleet fleet)
     {
         if (fleet.civID == civID)
-        {
-            fleet.boats.AddRange(boats);
-            boats.Clear();
-            OnExitTile();
-            Destroy(gameObject);
+        {                          
+            if (Game.main.isMultiplayer)
+            {
+                GetComponent<NetworkFleet>().CombineIntoRpc(new NetworkObjectReference(fleet.GetComponent<NetworkObject>()));
+            }
+            else
+            {
+                fleet.boats.AddRange(boats);
+                boats.Clear();
+                OnExitTile(tile);
+                Destroy(gameObject);
+            }
         }
     }
     void CheckBlockade()
@@ -334,6 +389,7 @@ public class Fleet : MonoBehaviour
     }
     void CheckBattle()
     {
+        if (Game.main.isMultiplayer && !NetworkManager.Singleton.IsServer) { return; }
         TileData tileData = Map.main.GetTile(pos);
         if (civID == -1 || tileData.fleetsOnTile.Count == 0) { return; }
         Civilisation civ = Game.main.civs[civID];
@@ -407,7 +463,13 @@ public class Fleet : MonoBehaviour
                     }
                 }
             }
-
+            if (Game.main.isMultiplayer)
+            {
+                NetworkNavalBattle netBattle = NetworkManager.Singleton.SpawnManager.InstantiateAndSpawn(Game.main.multiplayerManager.netNavalBattlePrefab, position: tile.worldPos()).GetComponent<NetworkNavalBattle>();
+                netBattle.battle = newBattle;
+                newBattle.networkBattle = netBattle;
+                netBattle.init = true;
+            }
         }
     }
     public void UpdateMovement()
@@ -439,9 +501,9 @@ public class Fleet : MonoBehaviour
                         }
                         path.RemoveAt(0);
 
-                        OnExitTile();
+                        OnExitTile(tile);
                         transform.position = Map.main.tileMapManager.tilemap.CellToWorld(target);
-                        OnEnterTile();
+                        OnEnterTile(tile);
                         moveTimer = 0;
                     }
                 }
@@ -459,14 +521,13 @@ public class Fleet : MonoBehaviour
             }
         }
     }
-    public bool SetPath(Vector3Int destination)
+    public bool SetPathForced(Vector3Int destination)
     {
-        if (retreating) { return false; }
         Vector3Int[] newPath = new Vector3Int[0];
         if (moveTimer < moveTime * 0.5f)
         {
             path.Clear();
-            newPath = Pathfinding.FindBestPath(pos, destination,isBoat: true,fleet: this);
+            newPath = Pathfinding.FindBestPath(pos, destination, isBoat: true, fleet: this);
         }
         else if (path.Count > 0)
         {
@@ -478,12 +539,33 @@ public class Fleet : MonoBehaviour
         if (newPath.Length > 0)
         {
             path.AddRange(newPath.ToList());
+            if (Game.main.isMultiplayer)
+            {
+                GetComponent<NetworkFleet>().SetPathRpc(path.ToArray());
+            }
             return true;
         }
         else
         {
+            if (Game.main.isMultiplayer)
+            {
+                GetComponent<NetworkFleet>().SetPathRpc(new Vector3Int[0]);
+            }
             return false;
         }
+
+    }
+    public bool SetPath(Vector3Int destination)
+    {
+        if (retreating) { return false; }
+        if (Game.main.isMultiplayer)
+        {
+            if (!NetworkManager.Singleton.IsServer)
+            {
+                return Pathfinding.FindBestPath(pos, destination, fleet: this, isBoat: true).Length > 0;
+            }
+        }
+        return SetPathForced(destination);
     }
     public float TotalSailors()
     {
@@ -601,10 +683,24 @@ public class Fleet : MonoBehaviour
             boat.sailors = Mathf.Min(boat.sailors, 50);
         }
         path.Clear();
+        if (Game.main.isMultiplayer)
+        {
+            if (!NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
+        }
         var newPath = Pathfinding.FindBestPath(pos, destination, fleet: this,isBoat: true);
         if (newPath.Length > 0)
         {
             path.AddRange(newPath.ToList());
+        }
+        if (Game.main.isMultiplayer)
+        {
+            if (Game.main.isMultiplayer)
+            {
+                GetComponent<NetworkFleet>().SetPathRpc(path.ToArray());
+            }
         }
     }
 }

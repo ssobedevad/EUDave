@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Burst.Intrinsics;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -16,8 +18,19 @@ public class AIMoveArmiesPeace
         if(civ.militaryAccess.Count > 0)
         {
             foreach(var civid in civ.militaryAccess.ToList())
-            {                
-                civ.RemoveAccess(civid);
+            {
+                if (Game.main.isMultiplayer)
+                {
+                    if (NetworkManager.Singleton.IsServer)
+                    {
+                        Game.main.multiplayerManager.CivRequestAccessRpc(civ.CivID, civid, true);
+                    }
+                }
+                else
+                {
+                    civ.RemoveAccess(civid);
+                }
+
             }
         }
         foreach(var army in civ.armies)
@@ -81,11 +94,28 @@ public class AIMoveArmiesPeace
         {
             if (civ.generals.Exists(i => i.equipped == false))
             {
-                foreach (var army in freeArmies)
+                foreach (var army in civ.armies)
                 {
                     if (civ.generals.Exists(i => i.equipped == false))
                     {
-                        army.AssignGeneral(civ.generals.Find(i => i.equipped == false));
+                        if (army.general == null || !army.general.active || !army.general.equipped)
+                        {
+                            int generalIndex = civ.generals.FindIndex(i => i.equipped == false);
+
+
+                            if (Game.main.isMultiplayer)
+                            {
+                                if (NetworkManager.Singleton.IsServer)
+                                {
+                                    army.GetComponent<NetworkArmy>().EquipGeneralRpc(generalIndex);
+                                }
+                            }
+                            else
+                            {
+
+                                army.AssignGeneral(civ.generals[generalIndex]);
+                            }
+                        }
                     }
                     else
                     {
@@ -99,10 +129,10 @@ public class AIMoveArmiesPeace
         if(civ.TotalMaxArmySize()/1000f < (civ.forceLimit.v - 1) && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f && Game.main.Started)
         {
             TileData safeProv = Map.main.GetTile(civ.SafeProvince());
-            if (safeProv.recruitQueue.Count == 0)
+            if (safeProv.unitQueue.Count == 0)
             {
                 int desiredUnitType = AIMoveArmiesWar.GetDesiredUnitType(civ);
-                safeProv.StartRecruiting(desiredUnitType);
+                AIMoveArmiesWar.RecruitUnit(safeProv, desiredUnitType);
             }
         }
     }

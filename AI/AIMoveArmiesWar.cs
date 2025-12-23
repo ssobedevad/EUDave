@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using Unity.Burst.Intrinsics;
+using Unity.Netcode;
 using UnityEngine;
 
 public class AIMoveArmiesWar
@@ -84,13 +85,41 @@ public class AIMoveArmiesWar
         }
         else if (civ.techUnlocks.Contains("Flanking Units")) 
         {
-            float cavalryRatio = 0.2f + civ.units[1].combatAbility.v;
+            float cavalryRatio = 0.2f;
             if (numCavalry < civ.forceLimit.v * cavalryRatio)
             {
                 return 1;
             }
         }
         return 0;
+    }
+    public static void RecruitUnit(TileData tile,int unitType)
+    {
+        if (Game.main.isMultiplayer)
+        {
+            if (NetworkManager.Singleton.IsServer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.Recruit, unitType);
+            }
+        }
+        else
+        {
+            tile.StartRecruiting(unitType);
+        }
+    }
+    public static void RecruitMercenary(TileData tile, int mercID)
+    {
+        if (Game.main.isMultiplayer)
+        {
+            if (NetworkManager.Singleton.IsServer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.RecruitMerc, mercID);
+            }
+        }
+        else
+        {
+            tile.StartRecruitingMercenary(mercID);
+        }
     }
     public static void MoveAtWar(int civID)
     {
@@ -115,18 +144,18 @@ public class AIMoveArmiesWar
                         }
                         if (civ.coins >= cost)
                         {
-                            safeTile.StartRecruitingMercenary(first);
+                            RecruitMercenary(safeTile, first);
                             
                         }
                     }
                     else
                     {
-                        safeTile.StartRecruiting(desiredUnit);
+                        RecruitUnit(safeTile,desiredUnit);
                     }
                 }
                 else
                 {
-                    safeTile.StartRecruiting(desiredUnit);
+                    RecruitUnit(safeTile, desiredUnit);
                 }
             }
         }
@@ -155,7 +184,23 @@ public class AIMoveArmiesWar
             {
                 if (civ.generals.Exists(i => i.equipped == false))
                 {
-                    army.AssignGeneral(civ.generals.Find(i => i.equipped == false));
+                    if (army.general == null || !army.general.active || !army.general.equipped)
+                    {
+                        int generalIndex = civ.generals.FindIndex(i => i.equipped == false);
+
+                        if (Game.main.isMultiplayer)
+                        {
+                            if (NetworkManager.Singleton.IsServer)
+                            {
+                                army.GetComponent<NetworkArmy>().EquipGeneralRpc(generalIndex);
+                            }
+                        }
+                        else
+                        {
+
+                            army.AssignGeneral(civ.generals[generalIndex]);
+                        }
+                    }
                 }
                 else
                 {
@@ -248,7 +293,18 @@ public class AIMoveArmiesWar
                             }
                             else if (!eArmy.sieging)
                             {
-                                army.path.Clear();
+                                
+                                if (Game.main.isMultiplayer)
+                                {
+                                    if (NetworkManager.Singleton.IsServer)
+                                    {
+                                        army.GetComponent<NetworkArmy>().SetPathRpc(new Vector3Int[0]);
+                                    }
+                                }
+                                else
+                                {
+                                    army.path.Clear();
+                                }
                                 if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
                                 {
                                     Debug.Log("Wait from siege: " + GetSiegeStayDesire(army) + " Retreat Province: " + army.RetreatProvince());
@@ -267,7 +323,17 @@ public class AIMoveArmiesWar
                             }
                             else if (!eArmy.sieging)
                             {
-                                army.path.Clear();
+                                if (Game.main.isMultiplayer)
+                                {
+                                    if (NetworkManager.Singleton.IsServer)
+                                    {
+                                        army.GetComponent<NetworkArmy>().SetPathRpc(new Vector3Int[0]);
+                                    }
+                                }
+                                else
+                                {
+                                    army.path.Clear();
+                                }
                                 if (Player.myPlayer.selectedArmies.Count > 0 && Player.myPlayer.selectedArmies.Contains(army))
                                 {
                                     Debug.Log("Wait: " + GetSiegeStayDesire(army) + " Retreat Province: " + army.RetreatProvince());
@@ -333,10 +399,12 @@ public class AIMoveArmiesWar
     }
     public static bool ShouldMergeArmy(Civilisation civ, Army army)
     {
+        if(army == null) { return false; }
         return (civ.armies.Count > 1 && army.regiments.Count < army.tile.supplyLimit);
     }
     public static bool ShouldSplitArmy(Civilisation civ, Army army)
     {
+        if (army == null) { return false; }
         return (army.regiments.Count > army.tile.supplyLimit);
     }
     public static void BuildEnemyArmy(Civilisation civ)

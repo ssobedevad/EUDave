@@ -16,10 +16,10 @@ public class StabilityUI : MonoBehaviour
     private void Awake()
     {
         stabButton.onClick.AddListener(StabClick);
-        overextension.transform.parent.GetComponent<Button>().onClick.AddListener(delegate { SetMode(true); });
-        globalUnrest.transform.parent.GetComponent<Button>().onClick.AddListener(delegate { SetMode(false); });
+        //overextension.transform.parent.GetComponent<Button>().onClick.AddListener(delegate { SetMode(true); });
+        //globalUnrest.transform.parent.GetComponent<Button>().onClick.AddListener(delegate { SetMode(false); });
         coreAll.onClick.AddListener(CoreAll);
-        SetMode(false);
+        SetMode(true);
     }
     void SetMode(bool mode)
     {
@@ -33,8 +33,16 @@ public class StabilityUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         if (civ.adminPower >= civ.GetStabilityCost() && civ.stability < 3)
         {
-            civ.adminPower -= civ.GetStabilityCost();
-            civ.AddStability(1);
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.CivActionRpc(civ.CivID, MultiplayerManager.CivActions.SpendAdmin, civ.GetStabilityCost());
+                Game.main.multiplayerManager.CivActionRpc(civ.CivID, MultiplayerManager.CivActions.AddStability, 1);
+            }
+            else
+            {
+                civ.adminPower -= civ.GetStabilityCost();
+                civ.AddStability(1);
+            }
         }
     }
     private void OnGUI()
@@ -93,7 +101,14 @@ public class StabilityUI : MonoBehaviour
         List<TileData> tiles = civ.GetAllCivTiles().ConvertAll(i => Map.main.GetTile(i));
         if (tiles.Count < id) { return; }
         tiles.RemoveAll(i => i.hasCore);
-        tiles[id].StartCore();
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.TileActionRpc(tiles[id].pos, MultiplayerManager.TileActions.CoreConvertStatus, 0);
+        }
+        else
+        {
+            tiles[id].StartCore();
+        }
     }
     void CoreAll()
     {
@@ -105,7 +120,14 @@ public class StabilityUI : MonoBehaviour
         tiles.Sort((x,y)=>y.totalDev.CompareTo(x.totalDev));
         foreach(var tile in tiles)
         {
-            tile.StartCore();
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.CoreConvertStatus, 0);
+            }
+            else
+            {
+                tile.StartCore();
+            }
         }
     }
 }

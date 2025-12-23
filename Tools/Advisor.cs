@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using System;
+using Unity.Netcode;
 using UnityEngine;
 
 [Serializable]
@@ -10,12 +11,13 @@ public class Advisor
     public string Name;
     public string effect;
     public float effectStrength;
-    public int effectType;
+    public EffectType effectType;
     public Effect effects;
     public int civID;
     public int type;
     public bool active;
     public Sprite icon;
+
     public float HireCost(Civilisation civ, int increaseLevel = 0) 
     {
         float baseCost = 10 * Mathf.Pow(skillLevel + increaseLevel, 2);
@@ -26,7 +28,7 @@ public class Advisor
         float baseCost = 1 * Mathf.Pow(skillLevel + increaseLevel, 2);
         return baseCost * (1f + civ.advisorCosts.v + (type == 0 ? civ.advisorCostsA.v : type == 1 ? civ.advisorCostsD.v : civ.advisorCostsM.v));
     } 
-    public Advisor(int skill,Age Age, int CivID, int Type, string Effect = "", float EffectStrength = 0f, int effetType = 0)
+    public Advisor(int skill,Age Age, int CivID, int Type, string Effect = "", float EffectStrength = 0f, EffectType effetType = 0)
     {
         skillLevel = skill;
         age = Age;
@@ -36,6 +38,7 @@ public class Advisor
         effectStrength = EffectStrength;
         type = Type;
         this.effectType = effetType;
+        effects = new Effect();
     }
     public Advisor()
     {
@@ -49,28 +52,32 @@ public class Advisor
         active = clone.active;
         effect = clone.effect;
         effectStrength = clone.effectStrength;
+        effects = clone.effects;
         type = clone.type;
         effectType = clone.effectType;
         icon = clone.icon;
     }
-    void Activate()
+    public void Activate()
     {
         Game.main.monthTick.AddListener(CheckDeath);       
     }
-    public static Advisor NewRandomAdvisor(int type,int CivID)
+    public static Advisor NewRandomAdvisor(int type,int CivID,ref int index)
     {
         Advisor advisor = new Advisor(0,Age.zero,-1,-1);
         if (type == 0)
         {
-            advisor = new Advisor(Map.main.advisorsA[UnityEngine.Random.Range(0, Map.main.advisorsA.Length)]);
+            index = UnityEngine.Random.Range(0, Map.main.advisorsA.Length);
+            advisor = new Advisor(Map.main.advisorsA[index]);
         }
         else if (type == 1)
         {
-            advisor = new Advisor(Map.main.advisorsD[UnityEngine.Random.Range(0, Map.main.advisorsD.Length)]);
+            index = UnityEngine.Random.Range(0, Map.main.advisorsD.Length);
+            advisor = new Advisor(Map.main.advisorsD[index]);
         }
         else if (type == 2)
         {
-            advisor = new Advisor(Map.main.advisorsM[UnityEngine.Random.Range(0, Map.main.advisorsM.Length)]);
+            index = UnityEngine.Random.Range(0, Map.main.advisorsM.Length);
+            advisor = new Advisor(Map.main.advisorsM[index]);
         }
         advisor.age = new Age(0, 0, 0, UnityEngine.Random.Range(1, 11));
         advisor.skillLevel = 1;
@@ -95,6 +102,7 @@ public class Advisor
     }
     void CheckDeath()
     {
+        if(Game.main.isMultiplayer && !NetworkManager.Singleton.IsServer) { return; }
         if(age.m > 0 || age.y > 0)
         {
             if(UnityEngine.Random.Range(0f,1000f) < age.m + age.y * 12)

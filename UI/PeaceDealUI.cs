@@ -258,6 +258,7 @@ public class PeaceDealUI : MonoBehaviour
         if (civ.overlordID > -1) { return; }
         Civilisation myCiv = Player.myPlayer.myCiv;
         War war = myCiv.GetWars().Find(i => i.Involving(civ.CivID));
+        int warID = Game.main.ongoingWars.IndexOf(war);
         bool mainTarget = (war.defenderCiv == civ && war.attackerCiv == myCiv) || (war.defenderCiv == myCiv && war.attackerCiv == civ);
         if (peaceDeal != null && peaceDeal.war == war && peaceDeal.target == civ && peaceDeal.taker == myCiv)
         {
@@ -265,17 +266,52 @@ public class PeaceDealUI : MonoBehaviour
             {                 
                 if (mainTarget)
                 {
-                    war.EndWar();
+                    if (Game.main.isMultiplayer)
+                    {
+                        if (war.networkWar != null)
+                        {
+                            war.networkWar.EndWarRpc();                            
+                        }
+                    }
+                    else
+                    {
+                        war.EndWar();
+                        civ.AcceptPeaceDeal(peaceDeal, mainTarget);
+                    }
                 }
                 else if (war.attackerCiv == myCiv || war.defenderCiv == myCiv)
                 {
-                    war.LeaveWar(civ.CivID);
+                    if (Game.main.isMultiplayer)
+                    {
+                        if (war.networkWar != null)
+                        {
+                            war.networkWar.EndWarRpc(civ.CivID);
+                        }
+                    }
+                    else
+                    {
+                        war.LeaveWar(civ.CivID);
+                        civ.AcceptPeaceDeal(peaceDeal, mainTarget);
+                    }
+
                 }
                 else if (war.defenderCiv == civ || war.attackerCiv == civ)
                 {
-                    war.LeaveWar(myCiv.CivID);
+                    if (Game.main.isMultiplayer)
+                    {
+                        if (war.networkWar != null)
+                        {
+                            war.networkWar.EndWarRpc(myCiv.CivID);
+                            Game.main.multiplayerManager.SendPeaceDeal(peaceDeal, peaceDeal.target, mainTarget);
+                        }
+                    }
+                    else
+                    {
+                        war.LeaveWar(myCiv.CivID);
+                        civ.AcceptPeaceDeal(peaceDeal, mainTarget);
+                    }
                 }
-                civ.AcceptPeaceDeal(peaceDeal, mainTarget);
+               
                 Player.myPlayer.mapMode = 0;
             }
         }

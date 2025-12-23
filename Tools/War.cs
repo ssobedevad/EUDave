@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 
 public class War
@@ -20,6 +21,7 @@ public class War
     public bool attackerControlsWarGoal;
     public int warGoalTimer;
     public bool active;
+    public NetworkWar networkWar;
     public bool Involving(int civID)
     {
         if (attackerCiv.CivID == civID || defenderCiv.CivID == civID|| attackerAllies.Exists(i=>i.CivID == civID) || defenderAllies.Exists(i => i.CivID == civID)) { return true; }
@@ -208,7 +210,10 @@ public class War
         attackerCiv = attacker;
         defenderCiv = defender;
         warScore = 0;
-        Game.main.ongoingWars.Add(this);
+        if (!Game.main.isMultiplayer)
+        {
+            Game.main.ongoingWars.Add(this);
+        }
         Game.main.hourTick.AddListener(HourTick);
         Game.main.dayTick.AddListener(DayTick);
         WarID = 0;
@@ -366,6 +371,10 @@ public class War
     {
         battleResults.Add(battleScore);
         UpdateWarScore();
+        if(Game.main.isMultiplayer && NetworkManager.Singleton.IsServer && networkWar != null)
+        {
+            networkWar.SyncWarScoreRpc();
+        }
     }
     public float OccupiedAndBesiegedProvs(Civilisation target)
     {
@@ -462,9 +471,13 @@ public class War
         if (fullyOccupiedAttacker && attackerOccupations == 0) { attackerSurrender = true; }
         if (fullyOccupiedDefender && defenderOccupations == 0) { defenderSurrender = true; }
         UpdateWarScore();
+        if (Game.main.isMultiplayer && NetworkManager.Singleton.IsServer && networkWar != null)
+        {
+            networkWar.SyncWarScoreRpc();
+        }
     }
 
-    void UpdateWarScore()
+    public void UpdateWarScore()
     {
         warScore = 0f;
         battleResults.ForEach(i => warScore += i);

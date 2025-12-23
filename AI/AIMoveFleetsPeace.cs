@@ -21,12 +21,13 @@ public class AIMoveFleetsPeace
                 float cost = boatTile.GetRecruitCost(0);
                 if (civ.coins >= cost)
                 {
-                    boatTile.StartRecruitingBoat(0);
+                    AIMoveFleetsWar.RecruitBoat(boatTile, 0);
                 }              
             }
         }
         foreach(var fleet in civ.fleets)
         {
+            if(fleet == null) { continue; }
             if (AIMoveFleetsWar.ShouldMergeFleet(civ, fleet))
             {
                 if (!fleet.isMerging)
@@ -82,14 +83,6 @@ public class AIMoveFleetsPeace
                 freeFleets.ForEach(i => i.SetPath(allyCoastalProvinces[0].pos));
             }
         }
-        //if(civ.TotalMaxArmySize()/1000f < (civ.forceLimit.value -1) && civ.GetTotalTilePopulation() > civ.GetTotalMaxPopulation() * 0.5f && Game.main.Started)
-        //{
-        //    TileData capitalTile = Map.main.GetTile(civ.SafeProvince());
-        //    if (capitalTile.recruitQueue.Count == 0)
-        //    {
-        //        capitalTile.StartRecruiting(0);
-        //    }
-        //}
     }
     public static void AddHomeProvinces(Civilisation civ)
     {

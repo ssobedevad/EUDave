@@ -62,8 +62,12 @@ public class ArmyUIPanel : MonoBehaviour
         }
         if (army.regiments.Count == 0)
         {
-            army.OnExitTile();
-            Destroy(army.gameObject);
+            if (Game.main.isMultiplayer) { }
+            else
+            {
+                army.OnExitTile(army.tile);
+                Destroy(army.gameObject);
+            }
         }
     }
     void ToggleAttach()
@@ -75,7 +79,15 @@ public class ArmyUIPanel : MonoBehaviour
         if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
         {
             Army army = Player.myPlayer.selectedArmies[0];
-            army.DetatchMercs();
+            if (Game.main.isMultiplayer)
+            {
+                army.GetComponent<NetworkArmy>().ArmyActionRpc(NetworkArmy.ArmyActions.SplitMercs, 0);
+            }
+            else
+            {
+                army.DetatchMercs();
+            }
+
         }
     }
     private void OnGUI()
@@ -145,7 +157,7 @@ public class ArmyUIPanel : MonoBehaviour
                     TextMeshProUGUI text = generalStats[i];
                     if (army.general != null && army.general.active)
                     {
-                        int skill = i == 0 ? army.general.meleeSkill : i == 1 ? army.general.flankingSkill : i == 2 ? army.general.rangedSkill : i == 3 ? army.general.siegeSkill : army.general.maneuverSkill;                  
+                        int skill = i == 0 ? army.general.combatSkill : i == 1 ? army.general.siegeSkill : army.general.maneuverSkill;                  
                         text.text = skill + "";
                     }
                     else
@@ -166,7 +178,14 @@ public class ArmyUIPanel : MonoBehaviour
         if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
         {
             Army army = Player.myPlayer.selectedArmies[0];
-            army.Disband();
+            if (Game.main.isMultiplayer)
+            {
+                army.GetComponent<NetworkArmy>().ArmyActionRpc(NetworkArmy.ArmyActions.Disband, 0);
+            }
+            else
+            {
+                army.Disband();
+            }
         }
     }
     void OpenSiegeView()
@@ -186,8 +205,15 @@ public class ArmyUIPanel : MonoBehaviour
     {
         if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
         {
-            Army army = Player.myPlayer.selectedArmies[0];
-            army.Consolidate(!Input.GetKey(KeyCode.LeftShift));
+            Army army = Player.myPlayer.selectedArmies[0];          
+            if (Game.main.isMultiplayer)
+            {
+                army.GetComponent<NetworkArmy>().ArmyActionRpc(NetworkArmy.ArmyActions.Consolidate, Input.GetKey(KeyCode.LeftShift) ? 1 : 0);
+            }
+            else
+            {
+                army.Consolidate(!Input.GetKey(KeyCode.LeftShift));
+            }
         }
     }
     void Split()
@@ -196,8 +222,14 @@ public class ArmyUIPanel : MonoBehaviour
         if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
         {
             Army army = Player.myPlayer.selectedArmies[0];
-            
-            army.Split();
+            if (Game.main.isMultiplayer)
+            {
+                army.GetComponent<NetworkArmy>().ArmyActionRpc(NetworkArmy.ArmyActions.Split, 0);
+            }
+            else
+            {
+                army.Split();
+            }
         }
     }
 }

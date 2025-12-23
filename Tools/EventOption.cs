@@ -14,5 +14,5 @@ public class EventOption
     public int population;
     public float coins;
     public float coinsYIncomePercent;
-
+    [SerializeField] public int buildingID = -1;
 }

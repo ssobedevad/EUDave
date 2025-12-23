@@ -51,6 +51,11 @@ public class EventData
             {
                 desc += (opt.population > 0 ? "+" : "") + opt.population + " population<sprite index=4>\n";
             }
+            if (opt.buildingID > -1)
+            {
+                Building building = Map.main.Buildings[opt.buildingID];
+                desc += "Adds Building " + building.Name + "\n";
+            }
             for (int i = 0; i < opt.effects.Length; i++)
             {
                 desc += opt.effects[i].name + Modifier.ToString(opt.effects[i].amount, province.GetStat(opt.effects[i].name)) + " for " + Mathf.Round(opt.effects[i].duration * 10f / 60f) / 10f + " days\n";

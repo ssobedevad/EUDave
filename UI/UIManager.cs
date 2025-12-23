@@ -56,6 +56,7 @@ public class UIManager : MonoBehaviour
         Player.myPlayer.isHoveringUI = false;
         foreach (GameObject go in UI) 
         {
+            if(go == null) { continue; }
             if (IsMouseOverUI(go.GetComponent<RectTransform>()))
             {
                 Player.myPlayer.isHoveringUI = true;
@@ -63,6 +64,7 @@ public class UIManager : MonoBehaviour
         }
         foreach (GameObject go in WorldSpaceUI)
         {
+            if (go == null) { continue; }
             if (IsMouseOverUIWorld(go.GetComponent<RectTransform>()))
             {
                 Player.myPlayer.isHoveringUI = true;

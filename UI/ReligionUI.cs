@@ -25,6 +25,14 @@ public class ReligionUI : MonoBehaviour
         religionMechanics[civ.religion].SetActive(true);
         MainPanel.SetActive(false);
     }
+    private void OnDisable()
+    {
+        MainPanel.SetActive(true);
+        foreach(var page in religionMechanics)
+        {
+            page.SetActive(false);
+        }
+    }
 
     private void OnGUI()
     {

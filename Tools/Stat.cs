@@ -8,11 +8,22 @@ using UnityEngine;
 [MessagePackObject(keyAsPropertyName: true)]
 public class Stat
 {
+    [Header("Base Stat")]
     public float bs;
-    public float v;  
+
+    [Header("Value")]
+    public float v;
+
+    [Header("Modifiers")]
     public List<Modifier> ms = new List<Modifier>();
+
+    [Header("Temp Active")]
     public bool ta;
+
+    [Header("Is Flat")]
     public bool f;
+
+    [Header("Decay Rate")]
     public float d = 1f;
     public Stat(float BaseStat,string Name,bool IsFlat = false)
     {
@@ -125,17 +136,23 @@ public class Stat
             //Debug.Log("Modifier with name " + modifier.name + " already exists on stat " + name);
         }
     }
-    public void IncreaseModifier(string name, float byAmount, int type = 0,bool Decay = true)
+    public void IncreaseModifier(string name, float byAmount, EffectType type = 0,bool Decay = true)
     {
         Modifier modifier;
         if (ms.Exists(i => i.n == name))
         {
             modifier = ms.Find(i => i.n == name);
             modifier.v += byAmount;
+            if (Decay && !ta)
+            {
+                modifier.dc = true;
+                Game.main.tenMinTick.AddListener(TickTempModifiers);
+                ta = true;
+            }
         }
         else
         {
-            modifier = new Modifier(byAmount, type, name, decay: Decay);
+            modifier = new Modifier(byAmount, (int)type, name, decay: Decay);
             AddModifier(modifier);
             if ((modifier.d != -1 || modifier.dc) && !ta)
             {
@@ -166,7 +183,7 @@ public class Stat
             {
                 if(modifier.v > 0)
                 {
-                    modifier.v -= 1f / 1440f;
+                    modifier.v -= 1f / 720f;
                     if(modifier.v < 0)
                     {
                         RemoveModifier(modifier);
@@ -174,7 +191,7 @@ public class Stat
                 }
                 else if (modifier.v < 0)
                 {
-                    modifier.v += d / 1440f;
+                    modifier.v += Mathf.Max(0,d) / 360f;
                     if (modifier.v > 0)
                     {
                         RemoveModifier(modifier);
@@ -188,6 +205,7 @@ public class Stat
             Game.main.tenMinTick.RemoveListener(TickTempModifiers);
             ta = false;
         }
+        SetValue();
     }
     public void RemoveModifier(Modifier modifier)
     {
@@ -203,7 +221,7 @@ public class Stat
             SetValue();
         }
     }
-    public void UpdateModifier(string name,  float value, int type = 0)
+    public void UpdateModifier(string name,  float value, EffectType type = 0,bool decay =false)
     {
         Modifier modifier = ms.Find(i => i.n == name);
         try
@@ -212,12 +230,12 @@ public class Stat
         }
         catch
         {
-            modifier = new Modifier(value, type, name);
+            modifier = new Modifier(value, (int)type, name,decay: decay);
             AddModifier(modifier);           
         }
         SetValue();
     }
-    public void UpdateModifierDuration(string name,float value, int duration, int type = 0)
+    public void UpdateModifierDuration(string name,float value, int duration, EffectType type = 0)
     {
         Modifier modifier;
         if (ms.Exists(i => i.n == name))
@@ -228,7 +246,7 @@ public class Stat
         }
         else
         {
-            modifier = new Modifier(value, type, name, duration);
+            modifier = new Modifier(value, (int)type, name, duration);
             AddModifier(modifier);
             if ((modifier.d != -1 || modifier.dc) && !ta)
             {

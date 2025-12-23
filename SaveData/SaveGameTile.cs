@@ -18,13 +18,9 @@ using UnityEngine;
     public List<int> cs;
     public int cr;
 
-    public List<int> rq;
-    public List<int> fq;
-    public List<int> mq;
+    public List<RecruitData> rq;
     public List<int> cq;
     public int rr;
-    public int fr;
-    public int mr;
     public int br;
 
     public bool o;
@@ -74,13 +70,9 @@ using UnityEngine;
         cs = tile.cores;
         cr = tile.coreTimer;
 
-        rq = tile.recruitQueue;
-        fq = tile.boatQueue;
-        mq = tile.mercenaryQueue;
+        rq = tile.unitQueue;
         cq = tile.buildQueue;
-        rr = tile.recruitTimer;
-        fr = tile.boatTimer;
-        mr = tile.mercenaryTimer;
+        rr = tile.unitTimer;
         br = tile.buildTimer;
 
         o = tile.occupied;
@@ -150,13 +142,9 @@ using UnityEngine;
         data.cores = cs;
         data.coreTimer = cr;
 
-        data.recruitQueue = rq;
-        data.boatQueue = fq;
-        data.mercenaryQueue = mq;
+        data.unitQueue = rq;
         data.buildQueue = cq;
-        data.recruitTimer = rr;
-        data.boatTimer = fr;
-        data.mercenaryTimer = mr;
+        data.unitTimer = rr;
         data.buildTimer = br;
 
         data.occupied = o;

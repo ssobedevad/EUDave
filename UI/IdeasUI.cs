@@ -7,7 +7,6 @@ using UnityEngine.UI;
 
 public class IdeasUI : MonoBehaviour
 {
-    [SerializeField] TextMeshProUGUI trad1, trad2;
     [SerializeField] TextMeshProUGUI trad1V,trad2V;
     [SerializeField] Image[] nationalIdeas,ideaGroups;
     [SerializeField] Image nationalIdeasFill;
@@ -53,8 +52,15 @@ public class IdeasUI : MonoBehaviour
     void BuyIdeaLocal(int index, int level)
     {
         if (Player.myPlayer.myCivID == -1) { return; }
-        Civilisation civ = Player.myPlayer.myCiv;
-        BuyIdea(index, level, civ);
+        Civilisation civ = Player.myPlayer.myCiv;      
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivActionRpc(civ.CivID, MultiplayerManager.CivActions.BuyIdea, index);
+        }
+        else
+        {
+            BuyIdea(index, level, civ);
+        }
     }
     public static void BuyIdea(int index,int level,Civilisation civ)
     {       
@@ -95,10 +101,8 @@ public class IdeasUI : MonoBehaviour
     {
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
-        trad1.text = civ.nationalIdeas.traditions[0].name;
-        trad2.text = civ.nationalIdeas.traditions[1].name;
-        trad1V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditions[0].amount, civ.GetStat(civ.nationalIdeas.traditions[0].name), civ.nationalIdeas.traditions[1].type == 2 || civ.nationalIdeas.traditions[1].type == 0, civ.nationalIdeas.traditions[1].type == 3);
-        trad2V.text = "<#00ff00>" + Modifier.ToString(civ.nationalIdeas.traditions[1].amount, civ.GetStat(civ.nationalIdeas.traditions[1].name), civ.nationalIdeas.traditions[1].type == 2 || civ.nationalIdeas.traditions[1].type == 0, civ.nationalIdeas.traditions[1].type == 3);
+        trad1V.text = civ.nationalIdeas.traditions[0].GetHoverText(civ);
+        trad2V.text = civ.nationalIdeas.traditions[1].GetHoverText(civ);
         int unlocked = 0;
         foreach(var civIdea in civ.ideaGroups)
         {
@@ -168,6 +172,11 @@ public class IdeasUI : MonoBehaviour
     void AbandonIdeaGroup(int index)
     {
         if (Player.myPlayer.myCivID == -1) { return; }
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivActionRpc(Player.myPlayer.myCivID,MultiplayerManager.CivActions.RemoveIdeaGroup, index);
+            return;
+        }
         Civilisation civ = Player.myPlayer.myCiv;
         IdeaGroupData ideaGroup = civ.ideaGroups[index];
         if (ideaGroup.active)
@@ -259,7 +268,14 @@ public class IdeasUI : MonoBehaviour
         {
             if(idea != null && idea.active &&idea.id == index && idea.type == ideaGroup.type ) { return; }
         }
-        civ.ideaGroups[SelectedIndex] = new IdeaGroupData(index,ideaGroup.type,0);
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivExtraActionRpc(civ.CivID, MultiplayerManager.CivExtraActions.SelectIdeaGroup, SelectedIndex,index, ideaGroup.type);
+        }
+        else
+        {
+            civ.ideaGroups[SelectedIndex] = new IdeaGroupData(index, ideaGroup.type, 0);
+        }
         ideaShop.SetActive(false);
         ideaBack.SetActive(true);
     }

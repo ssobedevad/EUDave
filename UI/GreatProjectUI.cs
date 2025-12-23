@@ -70,8 +70,15 @@ public class GreatProjectUI : MonoBehaviour
         float cost = gp.GetCost(tile, civ);
         if (civ.coins >= cost)
         {
-            gp.isBuilding = true;
-            civ.coins -= cost;
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.UpgradeGreatProj, civ.CivID);
+            }
+            else
+            {
+                gp.isBuilding = true;
+                civ.coins -= cost;
+            }
         }
     }
 }

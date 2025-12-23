@@ -34,6 +34,7 @@ using static Unity.Collections.AllocatorManager;
     public int[] rv;
     public int[] mt;
     public int[] tr;
+    public bool[] ms;
 
     public List<General> g;
 
@@ -77,88 +78,8 @@ using static Unity.Collections.AllocatorManager;
     public List<int> rfs;
     public List<SaveGameVector3Int> cs;
 
-    public Stat mxs;
-    public Stat psc;
-    public Stat gcmx;
-    public Stat gcm;
-    public Stat dcmx;
-    public Stat afe;
-    public Stat la;
-    public Stat adr;
-    public Stat ddr;
-    public Stat gms;
-    public Stat gfs;
-    public Stat grs;
-    public Stat gss;
-    public Stat gmvs;
-    public Stat ras;
-    public Stat rds;
-    public Stat rms;
-    public Stat rpg;
-    public Stat mtt;
-    public Stat dpl;
-    public Stat mmx;
-    public Stat mr;
-    public Stat rs;
-    public Stat cw;
-    public Stat fs;
-    public Stat dcm;
-    public Stat dc;
-    public Stat fd;
-    public Stat fm;
-    public Stat sa;
-    public Stat cc;
-    public Stat ct;
-    public Stat pg;
-    public Stat mp;
-    public Stat te;
-    public Stat ti;
-    public Stat pv;
-    public Stat pa;
-    public Stat dac;
-    public Stat cd;
-    public Stat rmc;
-    public Stat rc;
-    public Stat rt;
-    public Stat ms;
-    public Stat fl;
-    public Stat pgd;
-    public Stat mpg;
-    public Stat atd;
-    public Stat mot;
-    public Stat sc;
-    public Stat crc;
-    public Stat cvc;
-    public Stat mxa;
-    public Stat ac;
-    public Stat acA;
-    public Stat acD;
-    public Stat acM;
-    public Stat tc;
-    public Stat tcA;
-    public Stat tcD;
-    public Stat tcM;
-    public Stat ic;
-    public Stat gu;
-    public Stat tft;
-    public Stat iit;
-    public Stat wsc;
-    public Stat daxc;
-    public Stat dlfsd;
-    public Stat bp;
-    public Stat bt;
-    public Stat dr;
-    public Stat ldfs;
-    public Stat ifs;
-    public Stat ir;
-    public Stat aei;
-    public Stat mos;
-    public Stat cr;
-    public Stat ipm;
-    public Stat mc;
-    public Stat tv;
-    public Stat tp;
-    public Stat tvpc;
+    public Stat[] sts;
+    public string[] kys;
     public Stat[] oot;
 
     public SaveGameCiv()
@@ -195,6 +116,7 @@ using static Unity.Collections.AllocatorManager;
         rv = civ.rivals;
         mt = civ.mercTimers;
         tr = civ.truces;
+        ms = civ.missionProgress;
 
         g = civ.generals;
 
@@ -238,88 +160,14 @@ using static Unity.Collections.AllocatorManager;
         rfs = civ.reforms;
         cs = civ.claims.ConvertAll(i => new SaveGameVector3Int(i));
 
-         mxs = civ.maxSettlements;
-         psc = civ.promoteSettlementCost;
-         gcmx = civ.governingCapacityMax;
-         gcm = civ.governingCostModifier;
-         dcmx = civ.diplomaticCapacityMax;
-         afe = civ.attritionForEnemies;
-         la = civ.landAttrition;
-         adr = civ.attackerDiceRoll;
-         ddr = civ.defenderDiceRoll;
-         gms = civ.generalMeleeSkill;
-         gfs = civ.generalFlankingSkill;
-         grs = civ.generalRangedSkill;
-         gss = civ.generalSiegeSkill;
-         gmvs = civ.generalManeuverSkill;
-         ras = civ.rulerAdminSkill;
-         rds = civ.rulerDiploSkill;
-         rms = civ.rulerMilSkill;
-         rpg = civ.reformProgressGrowth;
-         mtt = civ.militaryTactics;
-         dpl = civ.discipline;
-         mmx = civ.moraleMax;
-         mr = civ.moraleRecovery;
-         rs = civ.reinforceSpeed;
-         cw = civ.combatWidth;
-         fs = civ.flankingSlots;
-         dcm = civ.devCostMod;
-         dc = civ.devCost;
-         fd = civ.fortDefence;
-         fm = civ.fortMaintenance;
-         sa = civ.siegeAbility;
-         cc = civ.constructionCost;
-         ct = civ.constructionTime;
-         pg = civ.populationGrowth;
-         mp = civ.maximumPopulation;
-         te = civ.taxEfficiency;
-         ti = civ.taxIncome;
-         pv = civ.productionValue;
-         pa = civ.productionAmount;
-         dac = civ.dailyControl;
-         cd = civ.controlDecay;
-         rmc = civ.regimentMaintenanceCost;
-         rc = civ.regimentCost;
-         rt = civ.recruitmentTime;
-         ms = civ.movementSpeed;
-         fl = civ.forceLimit;
-         pgd = civ.prestigeDecay;
-         mpg = civ.monthlyPrestige;
-         atd = civ.armyTraditionDecay;
-         mot = civ.monthlyTradition;
-         sc = civ.stabilityCost;
-         crc = civ.coreCost;
-         cvc = civ.conversionCost;
-         mxa = civ.maximumAdvisors;
-         ac = civ.advisorCosts;
-         acA = civ.advisorCostsA;
-         acD = civ.advisorCostsD;
-         acM = civ.advisorCostsM;
-         tc = civ.techCosts;
-         tcA = civ.techCostsA;
-         tcD = civ.techCostsD;
-         tcM = civ.techCostsM;
-         ic = civ.ideaCosts;
-         gu = civ.globalUnrest;
-         tft = civ.trueFaithTolerance;
-         iit = civ.infidelIntolerance;
-         wsc = civ.warScoreCost;
-         daxc = civ.dipAnnexCost;
-         dlfsd = civ.libDesireFromDevForSubjects;
-         bp = civ.battlePrestige;
-         bt = civ.battleTraditon;
-         dr = civ.diploRep;
-         ldfs = civ.libDesireInSubjects;
-         ifs = civ.incomeFromSubjects;
-         ir = civ.improveRelations;
-         aei = civ.aggressiveExpansionImpact;
-         mos = civ.monthsOfSeperatism;
-         cr = civ.coringRange;
-         ipm = civ.interestPerMonth;
-         mc = civ.minControl;
-         tv = civ.tradeValue;
-         tp = civ.tradePenalty;
-         tvpc = civ.tradeValPerCiv;
+        sts = new Stat[civ.stats.Count];
+        kys = new string[civ.stats.Count];
+
+        for(int i = 0; i <  civ.stats.Count; i++)
+        {
+            sts[i] = civ.stats.Values.ToArray()[i];
+            kys[i] = civ.stats.Keys.ToArray()[i];
+        }
         oot = civ.opinionOfThem;
     }
     public void LoadToCiv(Civilisation civ)
@@ -357,12 +205,12 @@ using static Unity.Collections.AllocatorManager;
 
         foreach(var army in civ.armies)
         {
-            army.OnExitTile();
+            army.OnExitTile(army.tile);
             GameObject.Destroy(army.gameObject);
         }
         foreach (var fleet in civ.fleets)
         {
-            fleet.OnExitTile();
+            fleet.OnExitTile(fleet.tile);
             GameObject.Destroy(fleet.gameObject);
         }
         foreach (var army in a)
@@ -390,6 +238,21 @@ using static Unity.Collections.AllocatorManager;
         civ.rivals = rv;
         civ.mercTimers = mt;
         civ.truces = tr;
+
+        try
+        {
+            for (int i = 0; i < ms.Length; i++)
+            {
+                if (civ.missionProgress.Length > i)
+                {
+                    civ.missionProgress[i] = ms[i];
+                }
+            }
+        }
+        catch
+        {
+
+        }
 
         civ.generals = g;
 
@@ -449,88 +312,21 @@ using static Unity.Collections.AllocatorManager;
         civ.reforms = rfs;
         civ.claims = cs.ConvertAll(i=>i.GetVector3Int());
 
-        civ.maxSettlements = mxs;
-        civ.promoteSettlementCost = psc;
-        civ.governingCapacityMax = gcmx;
-        civ.governingCostModifier = gcm;
-        civ.diplomaticCapacityMax = dcmx;
-        civ.attritionForEnemies = afe;
-        civ.landAttrition = la;
-        civ.attackerDiceRoll = adr;
-        civ.defenderDiceRoll = ddr;
-        civ.generalMeleeSkill = gms;
-        civ.generalFlankingSkill = gfs;
-        civ.generalRangedSkill = grs;
-        civ.generalSiegeSkill = gss;
-        civ.generalManeuverSkill = gmvs;
-        civ.rulerAdminSkill = ras;
-        civ.rulerDiploSkill = rds;
-        civ.rulerMilSkill = rms;
-        civ.reformProgressGrowth = rpg;
-        civ.militaryTactics = mtt;
-        civ.discipline = dpl;
-        civ.moraleMax = mmx;
-        civ.moraleRecovery = mr;
-        civ.reinforceSpeed = rs;
-        civ.combatWidth = cw;
-        civ.flankingSlots = fs;
-        civ.devCostMod = dcm;
-        civ.devCost = dc;
-        civ.fortDefence = fd;
-        civ.fortMaintenance = fm;
-        civ.siegeAbility = sa;
-        civ.constructionCost = cc;
-        civ.constructionTime = ct;
-        civ.populationGrowth = pg;
-        civ.maximumPopulation = mp;
-        civ.taxEfficiency = te;
-        civ.taxIncome = ti;
-        civ.productionValue = pv;
-        civ.productionAmount = pa;
-        civ.dailyControl = dac;
-        civ.controlDecay = cd;
-        civ.regimentMaintenanceCost = rmc;
-        civ.regimentCost = rc;
-        civ.recruitmentTime = rt;
-        civ.movementSpeed = ms;
-        civ.forceLimit = fl;
-        civ.prestigeDecay = pgd;
-        civ.monthlyPrestige = mpg;
-        civ.armyTraditionDecay = atd;
-        civ.monthlyTradition = mot;
-        civ.stabilityCost = sc;
-        civ.coreCost = crc;
-        civ.conversionCost = cvc;
-        civ.maximumAdvisors = mxa;
-        civ.advisorCosts = ac;
-        civ.advisorCostsA = acA;
-        civ.advisorCostsD = acD;
-        civ.advisorCostsM = acM;
-        civ.techCosts = tc;
-        civ.techCostsA = tcA;
-        civ.techCostsD = tcD;
-        civ.techCostsM = tcM;
-        civ.ideaCosts = ic;
-        civ.globalUnrest = gu;
-        civ.trueFaithTolerance = tft;
-        civ.infidelIntolerance = iit;
-        civ.warScoreCost = wsc;
-        civ.dipAnnexCost = daxc;
-        civ.libDesireFromDevForSubjects = dlfsd;
-        civ.battlePrestige = bp;
-        civ.battleTraditon = bt;
-        civ.diploRep = dr;
-        civ.libDesireInSubjects = ldfs;
-        civ.incomeFromSubjects = ifs;
-        civ.improveRelations = ir;
-        civ.aggressiveExpansionImpact = aei;
-        civ.monthsOfSeperatism = mos;
-        civ.coringRange = cr;
-        civ.interestPerMonth = ipm;
-        civ.minControl = mc;
-        civ.tradeValue = tv;
-        civ.tradePenalty = tp;
-        civ.tradeValPerCiv = tvpc;
+
+        for (int i = 0; i < sts.Length; i++)
+        {
+            Stat stat = null;
+            if (civ.stats.TryGetValue(kys[i], out stat))
+            {
+                civ.stats[kys[i]] = sts[i];
+            }
+            else
+            {
+                civ.stats.Add(kys[i],sts[i]);
+            }
+        }
+        civ.CacheStats();
+
         civ.opinionOfThem = oot;
         civ.updateBorders = true;
     }

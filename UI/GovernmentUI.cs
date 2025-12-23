@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,6 +22,12 @@ public class GovernmentUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         GovernmentType governmentType = Map.main.governmentTypes[civ.government];
         if (governmentType.BaseReforms.Length == 0) { return; }
+
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivExtraActionRpc(civ.CivID, MultiplayerManager.CivExtraActions.TakeGovReform, tier, id);
+            return;
+        }
         GovernmentReformTier[] tiers = governmentType.BaseReforms;
         if (civ.reforms.Count == tier)
         {
@@ -34,6 +41,8 @@ public class GovernmentUI : MonoBehaviour
         }
         else if(civ.reforms.Count > tier)
         {
+            GovernmentReform current = tiers[tier].Reforms[civ.reforms[tier]];
+            if (current.isLocked) { return; }
             int cost = 50;
             if (civ.reformProgress >= cost && civ.reforms[tier] != id)
             {
@@ -126,10 +135,25 @@ public class GovernmentUI : MonoBehaviour
         {
             GovernmentReformTier tier = tiers[i];
             List<GameObject> reformList = reforms[i];
-            reformNames[i].GetComponentInChildren<TextMeshProUGUI>().text = "Tier " + (i + 1) + ": " + tier.name;
-            while (reformList.Count != tier.Reforms.Length) 
+            List<GovernmentReform> tierReforms = tier.Reforms.ToList();
+            for(int a = 0; a < tier.Reforms.Length; a++)
             {
-                if (reformList.Count > tier.Reforms.Length)
+                if (!tier.Reforms[a].CanTake(civ))
+                {
+                    if (civ.reforms.Count > i)
+                    {
+                        if(civ.reforms[i] == a)
+                        {
+                            continue;
+                        }
+                    }
+                    tierReforms.Remove(tier.Reforms[a]);
+                }
+            }
+            reformNames[i].GetComponentInChildren<TextMeshProUGUI>().text = "Tier " + (i + 1) + ": " + tier.name;
+            while (reformList.Count != tierReforms.Count) 
+            {
+                if (reformList.Count > tierReforms.Count)
                 {
                     int lastIndex = reformList.Count - 1;
                     Destroy(reformList[lastIndex]);
@@ -144,14 +168,35 @@ public class GovernmentUI : MonoBehaviour
                     reformList.Add(item);
                 }
             }
-            for(int j = 0; j < tier.Reforms.Length; j++)
+            for(int j = 0; j < tierReforms.Count; j++)
             {
+                GovernmentReform reform = tierReforms[j];
                 GameObject item = reformList[j];
-                item.GetComponentsInChildren<Image>()[1].sprite = tier.Reforms[j].icon;
-                string text = tier.Reforms[j].GetHoverText(civ);
+                item.GetComponentsInChildren<Image>()[1].sprite = reform.icon;
+                string text = reform.GetHoverText(civ);
                 text += civ.reforms.Count == i ? "\nIt will cost " + (40 + 40 * i) + " reform progress for this" : civ.reforms.Count > i ? "\nIt will cost 50 reform progress to switch to this" : "\nNeed to unlock reform from previous tier first";
+                bool isMet = true;
+                if (reform.conditions.Length > 0)
+                {
+                    foreach (var condition in reform.conditions)
+                    {
+                        bool met = condition.isMet(civ);
+                        if (!met) { isMet = false; }
+                        text += "\n" + condition.ToString(civ) + " (" + met + ")";
+                    }
+                }
+                if (reform.isLocked)
+                {
+                    text += "\n\nThis is a Locked Reform.\nYou Cannot Switch to Another Reform of this Tier";
+                }
                 item.GetComponent<HoverText>().text = text;
-                item.GetComponent<Button>().enabled = civ.reforms.Count >= i;            
+                item.GetComponent<Button>().enabled = civ.reforms.Count >= i;
+
+                if (!isMet) 
+                {
+                    item.GetComponentsInChildren<Image>()[0].color = Color.black;
+                    continue;
+                }
                 if(civ.reforms.Count > i)
                 {
                     item.GetComponentsInChildren<Image>()[0].color = civ.reforms[i] == j ? Color.yellow : Color.gray;

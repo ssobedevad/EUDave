@@ -9,7 +9,7 @@ public class InterestingCountriesUI : MonoBehaviour
     [SerializeField] Image[] icons;
     [SerializeField] int[] ids;
 
-    private void Start()
+    private void OnGUI()
     {
         for(int i = 0; i < icons.Length;i++)
         {
@@ -27,7 +27,7 @@ public class InterestingCountriesUI : MonoBehaviour
     {
         if (id != Player.myPlayer.myCivID)
         {
-            Player.myPlayer.myCivID = id;
+            Player.myPlayer.SelectCiv(id);
             Civilisation civ = Game.main.civs[id];
             CameraController.main.rb.position = Map.main.tileMapManager.tilemap.CellToWorld(civ.capitalPos);
         }

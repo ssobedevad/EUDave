@@ -27,7 +27,7 @@ public class TileMapManager : MonoBehaviour
                     Civilisation civ = Player.myPlayer.myCiv;
                     if (army.civID == civ.CivID || (civ.subjects.Contains(army.civID) && Game.main.civs[army.civID].libertyDesire < 50f))
                     {
-                        army.SetPath(tilemapPos);
+                        army.SetPathForced(tilemapPos);
                     }
                 }
             }
@@ -39,7 +39,7 @@ public class TileMapManager : MonoBehaviour
                     Civilisation civ = Player.myPlayer.myCiv;
                     if (fleet.civID == civ.CivID || (civ.subjects.Contains(fleet.civID) && Game.main.civs[fleet.civID].libertyDesire < 50f))
                     {
-                        fleet.SetPath(tilemapPos);
+                        fleet.SetPathForced(tilemapPos);
                     }
                 }
             }

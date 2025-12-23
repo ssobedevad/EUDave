@@ -13,9 +13,7 @@ public class Regiment
     public float maxMorale;
     public int civID;
     public int flankingRange;
-    public float meleeDamage;
-    public float flankingDamage;
-    public float rangedDamage;
+    public float baseDamage;
     public bool inBatle;
     public bool mercenary;
     public Regiment()
@@ -29,9 +27,7 @@ public class Regiment
         type = Type;
         morale = 2f;
         maxMorale = 2f;
-        meleeDamage = 0.25f;
-        flankingDamage = 0.2f;
-        rangedDamage = 0.1f;
+        baseDamage = 0.25f;
         flankingRange = 1;
         civID = CivID;
         mercenary = merc;
@@ -53,7 +49,7 @@ public class Regiment
             type = -1;
             morale = 2f;
             maxMorale = 2f;
-            meleeDamage = 0f;
+            baseDamage = 0f;
             flankingRange = 0;
             inBatle = false;
             mercenary = false;
@@ -67,7 +63,7 @@ public class Regiment
             morale = clone.morale;
             flankingRange = clone.flankingRange;
             maxMorale = clone.maxMorale;
-            meleeDamage = clone.meleeDamage;
+            baseDamage = clone.baseDamage;
             inBatle = clone.inBatle;
             mercenary = clone.mercenary;
         }

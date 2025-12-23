@@ -20,8 +20,15 @@ public class DjinnWorshipUI : MonoBehaviour
     void DjinnFavor(int index)
     {
         if (Player.myPlayer.myCivID == -1) { return; }
-        Civilisation civ = Player.myPlayer.myCiv;
-        DjinnFavor(civ,index);
+        Civilisation civ = Player.myPlayer.myCiv;       
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivExtraActionRpc(civ.CivID, MultiplayerManager.CivExtraActions.ReligiousMechanic, index);
+        }
+        else
+        {
+            DjinnFavor(civ, index);
+        }
     }
     public static void DjinnFavor(Civilisation civ,int index)
     {

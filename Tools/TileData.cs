@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using TMPro;
-
+using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class TileData
 {
@@ -33,19 +34,16 @@ public class TileData
     public SpriteRenderer selectedTileObj,settlementSprite;
     public Battle _battle = null;
     public NavalBattle _navalBattle = null;
-    public int recruitTimer = -1;
-    public int boatTimer = -1;
-    public int mercenaryTimer = -1;
-    public List<int> recruitQueue = new List<int>();
-    public List<int> boatQueue = new List<int>();
-    public List<int> mercenaryQueue = new List<int>();
+    public int unitTimer = -1;
+    public List<RecruitData> unitQueue = new List<RecruitData>();
     public int buildTimer = -1;
     public List<int> buildQueue = new List<int>();
     public string region;
     public string tradeRegion;
     public int tradeRegionID;
     public string continent;
-    public int religionTimer = -1;
+    public float conversionProgress;
+    public bool isConverting;
     public int religion;
     public int population;
     public int avaliablePopulation;
@@ -161,7 +159,7 @@ public class TileData
     public bool needsConverting()
     {
         if (civID == -1) { return false; }
-        if (religion == civ.religion || religionTimer != -1)
+        if (religion == civ.religion || isConverting)
         {
             return false;
         }
@@ -184,7 +182,7 @@ public class TileData
         buildQueue.Add(id);
         if (fromCiv == civ.overlordID && civ.overlordID > -1)
         {
-            civ.libertyDesireTemp.IncreaseModifier("Built Building", -10f, 1, Decay: true);
+            civ.libertyDesireTemp.IncreaseModifier("Built Building", -10f, EffectType.Additive, Decay: true);
         }
 
     }
@@ -196,11 +194,11 @@ public class TileData
             civ.coins -= cost;
         }
         else { return; }
-        if (recruitQueue.Count == 0)
+        if (unitQueue.Count == 0)
         {
-            recruitTimer = GetRecruitTime();
+            unitTimer = GetRecruitTime();
         }
-        recruitQueue.Add(type);
+        unitQueue.Add(new RecruitData(type,UnitTypeID.Regiment));
     }
     public void StartRecruitingBoat(int type)
     {
@@ -210,11 +208,11 @@ public class TileData
             civ.coins -= cost;
         }
         else { return; }
-        if (boatQueue.Count == 0)
+        if (unitQueue.Count == 0)
         {
-            boatTimer = GetRecruitTime();
+            unitTimer = GetRecruitTime();
         }
-        boatQueue.Add(type);
+        unitQueue.Add(new RecruitData(type, UnitTypeID.Boat));
     }
     public void StartRecruitingMercenary(int mercID)
     {
@@ -225,11 +223,11 @@ public class TileData
             civ.coins -= cost;
         }
         else { return; }
-        if (mercenaryQueue.Count == 0)
+        if (unitQueue.Count == 0)
         {
-            mercenaryTimer = GetRecruitTime();
+            unitTimer = GetRecruitTime();
         }
-        mercenaryQueue.Add(mercID);
+        unitQueue.Add(new RecruitData(mercID, UnitTypeID.Mercenary));
         civ.mercTimers[mercID] = 6;
     }
     public int GetRecruitTime()
@@ -244,7 +242,7 @@ public class TileData
             buildings.Add(id);
             if (building.effects.name.Length > 0)
             {
-                ApplyTileLocalModifier(building.effects.name, building.effects.amount, building.effects.type, building.Name);
+                ApplyTileLocalModifier(building.effects.name, building.effects.amount, (int)building.effects.type, building.Name);
             }
             if (building.fortLevel > 0)
             {
@@ -280,30 +278,37 @@ public class TileData
             GetStat(building.effects.name).TryRemoveModifier(building.Name);
         }
     }
+    public void UpdateUnrestModifiers()
+    {
+        if(unrest > 0)
+        {
+            float Value = Mathf.Max(-1f, -unrest / 20f);
+            localTaxEfficiency.UpdateModifier("Unrest", Value,EffectType.Flat);
+            localRecruitmentTime.UpdateModifier("Unrest", -Value, EffectType.Flat);
+            localConstructionTime.UpdateModifier("Unrest", -Value, EffectType.Flat);
+        }
+        else
+        {
+            float Value = -unrest / 20f;
+            localTaxEfficiency.UpdateModifier("Unrest", Value, EffectType.Flat);
+            localRecruitmentTime.UpdateModifier("Unrest", 0, EffectType.Flat);
+            localConstructionTime.UpdateModifier("Unrest", 0, EffectType.Flat);
+        }
+    }
     public void StartConvert()
     {
         if (civID == -1) { return; }
-        if (religion == civ.religion || religionTimer != -1) { return; }
-        else if (control >= GetConvertControl() && civ.diploPower >= GetConvertCost())
+        if (religion == civ.religion || isConverting) { return; }
+        else if (civ.avaliableMissionaries > 0)
         {
-            religionTimer = GetConvertTime();
-            civ.diploPower -= GetConvertCost();
+            conversionProgress = 0;
+            isConverting = true;
+            civ.deployedMissionaries.Add(pos);
         }
     }
-    public float GetConvertControl()
+    public float GetConvertResistance()
     {
-        float baseControl = 90f * (1f + civ.conversionCost.v);
-        return Mathf.Max(baseControl, 0);
-    }
-    public int GetConvertTime()
-    {
-        int baseTime = (int)(totalDev * 12 * (1f + civ.conversionCost.v));
-        return Mathf.Max(baseTime, 1);
-    }
-    public int GetConvertCost()
-    {
-        int baseCost = (int)(totalDev * 5 * (1f + civ.conversionCost.v));
-        return Mathf.Max(baseCost, 1);
+        return totalDev * 0.1f + (hasCore ? 0f : 2f);
     }
     public void StartCore()
     {
@@ -317,7 +322,14 @@ public class TileData
     }
     public void TransferOccupation(int civTo, bool integrated = false)
     {
+        if (isConverting)
+        {
+            civ.deployedMissionaries.Remove(pos);
+            isConverting = false;
+        }
+        civ.updateBorders = true;
         civID = civTo;
+        civ.updateBorders = true;
         if (integrated)
         {
             if (!cores.Contains(civTo))
@@ -333,16 +345,32 @@ public class TileData
         }
         SetMaxControl();
         buildQueue.Clear();
-        recruitQueue.Clear();
-        mercenaryQueue.Clear();
-        boatQueue.Clear();
+        unitQueue.Clear();
         coreTimer = -1;
-        religionTimer = -1;
+        conversionProgress = 0;
         buildTimer = -1;
-        recruitTimer = -1;
-        mercenaryTimer = -1;
-        boatTimer = -1;
+        unitTimer = -1;
         control = Mathf.Min(75f, control, maxControl);
+
+    }
+
+    public void ChangeControl(bool up)
+    {        
+        if (localUnrest.ms.Exists(i => i.n == "Control Increased" || i.n == "Control Decreased"))
+        {
+            return;
+        }
+        if (up)
+        {
+
+            control = Mathf.Clamp(control + 25, 0, maxControl);
+            localUnrest.AddModifier(new Modifier(10f, ModifierType.Flat, "Control Increased", 25920));
+        }
+        else
+        {
+            control = Mathf.Clamp(control - 25, 0, maxControl);
+            localUnrest.AddModifier(new Modifier(-10f, ModifierType.Flat, "Control Decreased", 25920));
+        }
     }
     public int GetCoreTime()
     {
@@ -362,7 +390,7 @@ public class TileData
         if (!hasCore) { return false; }
         if (civ.maxSettlements.v <= civ.controlCentres.Count && status == 0) { return false; }
         if (status >= 3) { return false; }
-        if(totalDev < status * 10f + 5f) { return false; }
+        if(totalDev < status * 10f) { return false; }
         return civ.adminPower >= PromoteStatusCost();
     }
     public int PromoteStatusCost()
@@ -371,28 +399,29 @@ public class TileData
     }
     public void UpdateInfrastructureModifiers()
     {
-        localTaxEfficiency.UpdateModifier("Infrastructure", infrastructureLevel * 0.1f, 1);
-        localDevCost.UpdateModifier("Infrastructure", infrastructureLevel * -0.15f, 1);
-        localProductionQuantity.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, 1);
-        localProductionValue.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, 1);
-        localPopulationGrowth.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, 1);
-        localMaxPopulation.UpdateModifier("Infrastructure", infrastructureLevel * 0.1f, 1);
-        localConstructionCost.UpdateModifier("Infrastructure", infrastructureLevel * -0.05f, 1);
-        localConstructionTime.UpdateModifier("Infrastructure", infrastructureLevel * -0.05f, 1);
-        localDefensiveness.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, 1);
-        localRecruitmentTime.UpdateModifier("Infrastructure", infrastructureLevel * -0.15f, 1);
-        localGoverningCost.UpdateModifier("Infrastructure", infrastructureLevel * 5f, 1);
-        localGoverningCostMod.UpdateModifier("Infrastructure", infrastructureLevel * 0.1f, 1);
+        localTaxEfficiency.UpdateModifier("Infrastructure", infrastructureLevel * 0.1f, EffectType.Flat);
+        localDevCost.UpdateModifier("Infrastructure", infrastructureLevel * -0.15f, EffectType.Flat);
+        localProductionQuantity.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, EffectType.Flat);
+        localProductionValue.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, EffectType.Flat);
+        localPopulationGrowth.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, EffectType.Flat);
+        localMaxPopulation.UpdateModifier("Infrastructure", infrastructureLevel * 0.1f, EffectType.Flat);
+        localConstructionCost.UpdateModifier("Infrastructure", infrastructureLevel * -0.05f, EffectType.Flat);
+        localConstructionTime.UpdateModifier("Infrastructure", infrastructureLevel * -0.05f, EffectType.Flat);
+        localDefensiveness.UpdateModifier("Infrastructure", infrastructureLevel * 0.05f, EffectType.Flat);
+        localRecruitmentTime.UpdateModifier("Infrastructure", infrastructureLevel * -0.15f, EffectType.Flat);
+        localGoverningCost.UpdateModifier("Infrastructure", infrastructureLevel * 5f, EffectType.Flat);
+        localGoverningCostMod.UpdateModifier("Infrastructure", infrastructureLevel * 0.1f, EffectType.Flat);
     }
     public void UpdateStatusModifiers()
     {
         if (status > 1)
         {
             int level = status - 1;
-            localDevCostMod.UpdateModifier("Status", -0.05f * level, 1);
-            localConstructionTime.UpdateModifier("Status", -0.1f * level, 1);
-            localConstructionCost.UpdateModifier("Status", -0.05f * level, 1);
-            localUnrest.UpdateModifier("Status", -1f * level, 1);
+            localDevCostMod.UpdateModifier("Status", -0.05f * level, EffectType.Flat);
+            localConstructionTime.UpdateModifier("Status", -0.1f * level, EffectType.Flat);
+            localConstructionCost.UpdateModifier("Status", -0.05f * level, EffectType.Flat);
+            localUnrest.UpdateModifier("Status", -1f * level, EffectType.Flat);
+            localMaxPopulation.UpdateModifier("Status", 0.5f * level, EffectType.Flat);
         }
         settlementSprite.sprite = Map.main.statusSprites[status];
     }
@@ -426,7 +455,14 @@ public class TileData
             maximumControl = Mathf.Max(possibleMaximumControl, maximumControl);
         }
         float minimumControl = pos == civ.capitalPos ? 100f : localMinimumControl.v + civ.minControl.v;
-        maxControl = Mathf.Clamp(maximumControl, minimumControl, hasCore ? 100f : 25f);
+
+        float maxControlUnrest = 100f;
+
+        if(unrest > 0)
+        {
+            maxControlUnrest = Mathf.Max(25f, 100f * (1f - unrest / 20f));
+        }
+        maxControl = Mathf.Clamp(maximumControl, minimumControl, hasCore ? maxControlUnrest : 25f);
         control = Mathf.Max(minimumControl, Mathf.Min(control, maxControl));
     }
     public float GetDevProdIncrease()
@@ -465,7 +501,7 @@ public class TileData
     public float GetRecruitCost(int type)
     {
         if (civID == -1) { return 9999f; }
-        float baseCost = civ.units[type].baseCost;
+        float baseCost = civ.units[type].baseCost.v;
         baseCost *= (1f + localRecruitmentCost.v + civ.regimentCost.v);
         return Mathf.Max(baseCost,1f);
     }
@@ -616,7 +652,7 @@ public class TileData
             civ.RefreshForceLimit();
             if(fromCiv == civ.overlordID && civ.overlordID > -1)
             {
-                civ.libertyDesireTemp.IncreaseModifier("Developed Our Land", -5f, 1, Decay: true);
+                civ.libertyDesireTemp.IncreaseModifier("Developed Our Land", -5f, EffectType.Flat, Decay: true);
             }
         }
     }

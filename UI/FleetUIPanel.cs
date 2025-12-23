@@ -62,7 +62,7 @@ public class FleetUIPanel : MonoBehaviour
         }
         if (army.regiments.Count == 0)
         {
-            army.OnExitTile();
+            army.OnExitTile(army.tile);
             Destroy(army.gameObject);
         }
     }
@@ -149,7 +149,7 @@ public class FleetUIPanel : MonoBehaviour
                     TextMeshProUGUI text = generalStats[i];
                     if (fleet.general != null && fleet.general.active)
                     {
-                        int skill = i == 0 ? fleet.general.meleeSkill : i == 1 ? fleet.general.flankingSkill : i == 2 ? fleet.general.rangedSkill : i == 3 ? fleet.general.siegeSkill : fleet.general.maneuverSkill;
+                        int skill = i == 0 ? fleet.general.combatSkill : i == 1 ? fleet.general.siegeSkill : fleet.general.maneuverSkill;
                         text.text = skill + "";
                     }
                     else
@@ -165,43 +165,5 @@ public class FleetUIPanel : MonoBehaviour
             gameObject.SetActive(false);
         }
     }
-    void Disband()
-    {
-        if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
-        {
-            Army army = Player.myPlayer.selectedArmies[0];
-            army.Disband();
-        }
-    }
-    void OpenSiegeView()
-    {
-        if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
-        {
-            Army army = Player.myPlayer.selectedArmies[0];
-            if (Map.main.GetTile(army.pos).underSiege)
-            {
-                Player.myPlayer.selectedArmies.Clear();
-                Player.myPlayer.selectedTile = army.tile;
-                Player.myPlayer.siegeSelected = true;
-            }
-        }
-    }
-    void ConsolidateRegiments()
-    {
-        if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
-        {
-            Army army = Player.myPlayer.selectedArmies[0];
-            army.Consolidate(!Input.GetKey(KeyCode.LeftShift));
-        }
-    }
-    void Split()
-    {
-        
-        if (Player.myPlayer.selectedArmies.Count == 1 && !Player.myPlayer.selectedArmies[0].inBattle)
-        {
-            Army army = Player.myPlayer.selectedArmies[0];
-           
-            army.Split();
-        }
-    }
+   
 }

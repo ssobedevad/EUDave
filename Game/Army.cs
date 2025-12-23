@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Burst.Intrinsics;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class Army : MonoBehaviour
 {
-    public int civID;
+    public int civID = -1;
     public List<Regiment> regiments = new List<Regiment>();
     public bool inBattle;
     public bool retreating;
@@ -29,6 +31,14 @@ public class Army : MonoBehaviour
 
     public void AssignGeneral(General General)
     {
+        if (General.equipped)
+        {
+            Army old = Game.main.civs[civID].armies.Find(i => i.general == General);
+            if(old != null)
+            {
+                old.general = null;
+            }
+        }
         if(general != null && !general.equipped)
         {            
             general.equipped = false;
@@ -127,7 +137,7 @@ public class Army : MonoBehaviour
         tile.armiesOnTile.Add(a);
         a.regiments.AddRange(regiments);
         a.isMercenary = merc;
-        return a;
+        return a;        
     }
     public void WinBattleMorale()
     {
@@ -139,14 +149,42 @@ public class Army : MonoBehaviour
     public void ExitBattle()
     {
         inBattle = false;
+        int count = 0;
         foreach(var regiment in regiments)
         {
             regiment.inBatle = false;
+            count += regiment.size;
+        }
+        if(count <= 0)
+        {
+            OnExitTile(tile);
+            Destroy(gameObject);
+        }
+        else if(Game.main.isMultiplayer && NetworkManager.Singleton.IsServer)
+        {
+            GetComponent<NetworkArmy>().SendArmyDataRpc();
         }
     }
 
     private void Update()
     {
+        if (Game.main.isMultiplayer && NetworkManager.Singleton.IsConnectedClient)
+        {
+            if(GetComponent<NetworkArmy>() == null)
+            {
+                if (NetworkManager.Singleton.IsServer)
+                {
+                    NetworkArmy netArmy = NetworkManager.Singleton.SpawnManager.InstantiateAndSpawn(Game.main.multiplayerManager.netArmyPrefab, position: tile.worldPos()).GetComponent<NetworkArmy>();
+                    netArmy.pos = pos;
+                    netArmy.civID = civID;                    
+                    netArmy.regiments = regiments.ToArray();
+                    netArmy.init = true;
+                }
+                OnExitTile(tile);
+                Destroy(gameObject);
+                return;
+            }
+        }
         if (Input.GetKeyDown(KeyCode.I) && Player.myPlayer.selectedArmies.Contains(this))
         {
             var neighbors = tile.GetNeighbors();
@@ -173,9 +211,7 @@ public class Army : MonoBehaviour
             foreach (var regiment in regiments)
             {
                 regiment.maxMorale = civ.moraleMax.v;
-                regiment.meleeDamage = civ.units[regiment.type].meleeDamage.v;
-                regiment.flankingDamage = civ.units[regiment.type].flankingDamage.v;
-                regiment.rangedDamage = civ.units[regiment.type].rangedDamage.v;
+                regiment.baseDamage = civ.units[regiment.type].baseDamage.v;
                 regiment.flankingRange = civ.units[regiment.type].flankingRange;
             }
             if (tile.civID != civID)
@@ -190,7 +226,17 @@ public class Army : MonoBehaviour
                 if (exiled)
                 {
                     exiled = false;
-                    path.Clear();
+                    if (Game.main.isMultiplayer)
+                    {
+                        if (NetworkManager.Singleton.IsServer)
+                        {
+                            GetComponent<NetworkArmy>().SetPathRpc(path.ToArray());
+                        }
+                    }
+                    else
+                    {
+                        path.Clear();
+                    }
                 }
             }
             if(savedSiegeProgress > 0 && path.Count > 0)
@@ -269,7 +315,7 @@ public class Army : MonoBehaviour
     private void Start()
     {
         moveTime = 12f;
-        if (civID > -1)
+        if (civID > -1 && !Game.main.isMultiplayer)
         {
             Game.main.civs[civID].armies.Add(this);
         }
@@ -279,17 +325,43 @@ public class Army : MonoBehaviour
     {
         if (civID > -1)
         {
-            Game.main.civs[civID].armies.Remove(this);
+            try
+            {
+                tile.armiesOnTile.Remove(this);
+                Game.main.civs[civID].armies.Remove(this);
+            }
+            catch
+            {
+
+            }
         }
     }
     public void CombineInto(Army army)
     {
         if (army.civID == civID)
         {
-            army.regiments.AddRange(regiments);
-            regiments.Clear();
-            OnExitTile();
-            Destroy(gameObject);
+            if (Game.main.isMultiplayer)
+            {
+                GetComponent<NetworkArmy>().CombineIntoRpc(new NetworkObjectReference(army.GetComponent<NetworkObject>()));
+            }
+            else
+            {
+                army.regiments.AddRange(regiments);
+                if (general != null && general.equipped && general.active)
+                {
+                    if (army.general == null ||!army.general.active || !army.general.equipped)
+                    {
+                        army.AssignGeneral(general);
+                    }
+                    else
+                    {
+                        general.equipped = false;
+                    }
+                }
+                regiments.Clear();
+                OnExitTile(tile);
+                Destroy(gameObject);
+            }
         }
     }
     public void Split()
@@ -364,11 +436,7 @@ public class Army : MonoBehaviour
                 if(unit.type < 0 || unit.type >= civ.units.Count) { continue; }
                 float power = (float)unit.size/(float)unit.maxSize;
                 power *= unit.morale;
-                power *= Mathf.Max(civ.units[unit.type].meleeDamage.v * (1f + ((general != null &&general.active) ? general.meleeSkill * 0.1f : 0f))
-                    , civ.units[unit.type].flankingDamage.v * (1f + ((general != null && general.active) ? general.flankingSkill * 0.1f : 0f))
-                    , civ.units[unit.type].rangedDamage.v * (1f + ((general != null && general.active) ? general.rangedSkill * 0.1f : 0f)));
-                power *= 1f + civ.units[unit.type].combatAbility.v;
-
+                power *= civ.units[unit.type].baseDamage.v * (1f + ((general != null && general.active) ? general.combatSkill * 0.1f : 0f));        
                 strength += power;
             }            
         }       
@@ -430,28 +498,51 @@ public class Army : MonoBehaviour
         if(civID > -1)
         {
             Civilisation civ = Game.main.civs[civID];
-            movementSpeed += civ.movementSpeed.v;
+            movementSpeed = Mathf.Max(0.1f, movementSpeed + civ.movementSpeed.v);
         }
         if(general != null && general.active)
         {
-            movementSpeed += general.maneuverSkill * 0.05f;
+            movementSpeed *= (1f + general.maneuverSkill * 0.1f);
         }
         if (!inBattle)
         {
             if (path.Count > 0)
             {
-                if (!CanMoveHostileZOC(path[0],pos)) { path.Clear(); return; }
+                if (!CanMoveHostileZOC(path[0],pos)) 
+                {
+                    if (Game.main.isMultiplayer)
+                    {
+                        if (NetworkManager.Singleton.IsServer)
+                        {
+                            GetComponent<NetworkArmy>().SetPathRpc(new Vector3Int[0]);
+                        }
+                    }
+                    else
+                    {
+                        path.Clear();
+                    }
+                    return;
+                }
                 if (moveTimer >= moveTime)
                 {                  
                     if (Pathfinding.CanMoveToTile(pos,path[0], false))
-                    {                        
-                        Vector3Int target = path[0];
-                        path.RemoveAt(0);
-                        
-                        OnExitTile();
-                        transform.position = Map.main.tileMapManager.tilemap.CellToWorld(target);
-                        OnEnterTile();
-                        moveTimer = 0;                       
+                    {
+                        if (Game.main.isMultiplayer)
+                        {
+                            if (NetworkManager.Singleton.IsServer)
+                            {
+                                MoveToPos(path[0]);
+                                GetComponent<NetworkArmy>().SetPathRpc(path.ToArray());
+                            }
+                            else
+                            {
+                                moveTimer = 0;
+                            }
+                        }
+                        else
+                        {
+                            MoveToPos(path[0]);
+                        }
                     }
                 }
                 else
@@ -469,8 +560,20 @@ public class Army : MonoBehaviour
             }
         }
     }
+    public void MoveToPos(Vector3Int target)
+    {       
+        OnExitTile(tile);
+        transform.position = Map.main.tileMapManager.tilemap.CellToWorld(target);
+        OnEnterTile(tile);
+        moveTimer = 0;
+        if (path.Count > 0)
+        {
+            path.RemoveAt(0);
+        }
+    }
     void CheckBattle()
     {
+        if (Game.main.isMultiplayer && !NetworkManager.Singleton.IsServer) { return; }
         TileData tileData = Map.main.GetTile(pos);
         if (civID == -1 || tileData.armiesOnTile.Count == 0) { return; }
         Civilisation civ = Game.main.civs[civID];
@@ -505,13 +608,14 @@ public class Army : MonoBehaviour
                 {
                     defenders = tileData.armiesOnTile.FindAll(i => civ.atWarWith.Contains(i.civID) && !i.retreating && !i.exiled);
                     attackers = tileData.armiesOnTile.FindAll(i => i.civID == civID && !i.retreating && !i.exiled);
-                    StartBattle(attackers, defenders, isAttacker);
+
+                    StartBattle(attackers, defenders);
                 }
                 else
                 {
                     attackers = tileData.armiesOnTile.FindAll(i => civ.atWarWith.Contains(i.civID) && !i.retreating && !i.exiled);
                     defenders = tileData.armiesOnTile.FindAll(i => i.civID == civID && !i.retreating && !i.exiled);
-                    StartBattle(attackers, defenders,isAttacker);
+                    StartBattle(attackers, defenders);
                 }
             }
             else if (tileData.armiesOnTile.Exists(i => i.civID == -1))
@@ -520,23 +624,24 @@ public class Army : MonoBehaviour
                 {
                     defenders = tileData.armiesOnTile.FindAll(i => i.civID == -1 && !i.retreating && !i.exiled);
                     attackers = tileData.armiesOnTile.FindAll(i => i.civID == civID && !i.retreating && !i.exiled);
-                    StartBattle(attackers, defenders, isAttacker);
+                    StartBattle(attackers, defenders);
                 }
                 else
                 {
                     attackers = tileData.armiesOnTile.FindAll(i => i.civID == -1 && !i.retreating && !i.exiled);
                     defenders = tileData.armiesOnTile.FindAll(i => i.civID == civID && !i.retreating && !i.exiled);
-                    StartBattle(attackers, defenders, isAttacker);
+                    StartBattle(attackers, defenders);
                 }
             }
         }
     }
-    void StartBattle(List<Army> attackers,List<Army> defenders,bool isAttacker)
+    void StartBattle(List<Army> attackers,List<Army> defenders)
     {        
         if (defenders.Count > 0 && attackers.Count > 0)
         {
             War war = Game.main.ongoingWars.Find(i => i.InvolvingAll(new List<int>() { attackers[0].civID, defenders[0].civID }));
             Battle newBattle;
+           
             if (war != null)
             {
                 newBattle = new Battle(pos, attackers[0], defenders[0], warID: war.WarID);
@@ -545,7 +650,6 @@ public class Army : MonoBehaviour
             {
                 newBattle = new Battle(pos, attackers[0], defenders[0]);
             }
-
             if (defenders.Count > 0)
             {
                 for (int i = 0; i < defenders.Count; i++)
@@ -568,18 +672,34 @@ public class Army : MonoBehaviour
                     }
                 }
             }
+            if (Game.main.isMultiplayer)
+            {
+                NetworkBattle netBattle = NetworkManager.Singleton.SpawnManager.InstantiateAndSpawn(Game.main.multiplayerManager.netBattlePrefab, position: tile.worldPos()).GetComponent<NetworkBattle>();
+                netBattle.battle = newBattle;
+                newBattle.networkBattle = netBattle;
+                netBattle.init = true;
+            }
 
         }
     }
-    public void OnExitTile()
+    public void OnExitTile(TileData tile)
     {
-        TileData tileData = Map.main.GetTile(pos);
-        tileData.armiesOnTile.Remove(this);
-        lastPos = pos;
-        if(!tileData.hasZOC || (tileData.hasZOC && !tileData.HasNeighboringActiveFort(civID)))
+        if (Game.main.isMultiplayer && GetComponent<NetworkArmy>() != null)
         {
-            lastPosNoZOC = pos;
+            if (NetworkManager.Singleton.IsServer)
+            {
+                GetComponent<NetworkArmy>().ExitEnterRpc(false, tile.pos);
+            }
         }
+        else
+        {
+            tile.armiesOnTile.Remove(this);
+            lastPos = pos;
+            if (!tile.hasZOC || (tile.hasZOC && !tile.HasNeighboringActiveFort(civID)))
+            {
+                lastPosNoZOC = pos;
+            }
+        }        
     }
     public void TrySiege(TileData tile)
     {
@@ -621,12 +741,21 @@ public class Army : MonoBehaviour
             }
         }
     }
-    public void OnEnterTile()
+    public void OnEnterTile(TileData tile)
     {
-        TileData tileData = Map.main.GetTile(pos);
-        tileData.armiesOnTile.Add(this);
-        CheckBattle();
-        TrySiege(tileData);
+        if (Game.main.isMultiplayer) 
+        {
+            if (NetworkManager.Singleton.IsServer)
+            {
+                GetComponent<NetworkArmy>().ExitEnterRpc(true, tile.pos);
+            }
+        }
+        else
+        {
+            tile.armiesOnTile.Add(this);
+            CheckBattle();
+            TrySiege(tile);
+        }
     }
     public Vector3Int RetreatProvince()
     {
@@ -703,21 +832,31 @@ public class Army : MonoBehaviour
         {
             regiment.morale = Mathf.Min(regiment.morale, 0.5f);
         }
+        if (Game.main.isMultiplayer)
+        {
+            if (!NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
+        }
         path.Clear();
         var newPath = Pathfinding.FindBestPath(pos, destination, army: this, isBoat: false);
         if (newPath.Length > 0)
         {
             path.AddRange(newPath.ToList());
         }
+        if (Game.main.isMultiplayer)
+        {
+            GetComponent<NetworkArmy>().SetPathRpc(path.ToArray());
+        }
     }
-    public bool SetPath(Vector3Int destination)
+    public bool SetPathForced(Vector3Int destination)
     {
-        if (retreating) { return false; }
         Vector3Int[] newPath = new Vector3Int[0];
         if (moveTimer < moveTime * 0.5f)
         {
             path.Clear();
-            newPath = Pathfinding.FindBestPath(pos, destination,army: this,isBoat: false);
+            newPath = Pathfinding.FindBestPath(pos, destination, army: this, isBoat: false);
         }
         else if (path.Count > 0)
         {
@@ -726,15 +865,35 @@ public class Army : MonoBehaviour
             path.Add(goal);
             newPath = Pathfinding.FindBestPath(goal, destination, army: this, isBoat: false);
         }
-        if(newPath.Length > 0)
+        if (newPath.Length > 0)
         {
             path.AddRange(newPath.ToList());
+            if (Game.main.isMultiplayer)
+            {
+                GetComponent<NetworkArmy>().SetPathRpc(path.ToArray());
+            }
             return true;
         }
         else
-        {            
+        {
+            if (Game.main.isMultiplayer)
+            {
+                GetComponent<NetworkArmy>().SetPathRpc(new Vector3Int[0]);
+            }
             return false;
         }
+    }
+    public bool SetPath(Vector3Int destination)
+    {
+        if (retreating) { return false; }
+        if (Game.main.isMultiplayer)
+        {
+            if (!NetworkManager.Singleton.IsServer)
+            {
+                return Pathfinding.FindBestPath(pos, destination, army: this, isBoat: false).Length > 0;
+            }
+        }
+        return SetPathForced(destination);
     }
     public bool HasAccess(int CivID)
     {
@@ -766,20 +925,26 @@ public class Army : MonoBehaviour
     }
     public void DisbandMercs()
     {
+        if(Game.main.isMultiplayer && !NetworkManager.Singleton.IsServer) { return; }
         regiments.RemoveAll(i => i.mercenary);
         if (regiments.Count == 0)
         {
-            OnExitTile();
+            OnExitTile(tile);
             Destroy(gameObject);
+        }
+        else if (Game.main.isMultiplayer)
+        {
+            GetComponent<NetworkArmy>().SendArmyDataRpc();
         }
     }
     public void Disband()
     {
+        if (Game.main.isMultiplayer && !NetworkManager.Singleton.IsServer) { return; }
         regiments.RemoveAll(i => i.mercenary);
         int space = Game.main.civs[civID].AddPopulation((int)ArmySize());
         if (space >= (int)ArmySize())
         {
-            OnExitTile();
+            OnExitTile(tile);
             Destroy(gameObject);
         }
         else
@@ -799,13 +964,18 @@ public class Army : MonoBehaviour
             }
             if (regiments.Count == 0)
             {
-                OnExitTile();
+                OnExitTile(tile);
                 Destroy(gameObject);
+            }
+            else if (Game.main.isMultiplayer)
+            {
+                GetComponent<NetworkArmy>().SendArmyDataRpc();
             }
         }
     }
     public void DetatchMercs()
     {
+        if (Game.main.isMultiplayer && !NetworkManager.Singleton.IsServer) { return; }
         List<Regiment> newRegiments = new List<Regiment>();
         List<Regiment> temp = regiments.ToList();
         for (int i = 0; i < temp.Count; i++)
@@ -818,13 +988,28 @@ public class Army : MonoBehaviour
         }
         if (newRegiments.Count > 0)
         {
-            Army a = NewArmy(tile, civID, newRegiments);
-            a.lastPos = lastPos;
+            if (Game.main.isMultiplayer)
+            {
+                NetworkArmy netArmy = NetworkManager.Singleton.SpawnManager.InstantiateAndSpawn(Game.main.multiplayerManager.netArmyPrefab, position: tile.worldPos()).GetComponent<NetworkArmy>();
+                netArmy.pos = tile.pos;
+                netArmy.civID = civID;
+                netArmy.regiments = newRegiments.ToArray();
+                netArmy.init = true;
+            }
+            else
+            {
+                Army a = NewArmy(tile, civID, newRegiments);
+                a.lastPos = lastPos;
+            }            
         }
         if(regiments.Count <= 0)
         {
-            OnExitTile();
+            OnExitTile(tile);
             Destroy(gameObject);
+        }
+        else if (Game.main.isMultiplayer)
+        {
+            GetComponent<NetworkArmy>().SendArmyDataRpc();
         }
     }
     public bool CanMoveHostileZOC(Vector3Int moveTo,Vector3Int moveFrom)
@@ -839,7 +1024,8 @@ public class Army : MonoBehaviour
             (From.HasNeighboringActiveFort(civID)|| (civ.atWarWith.Contains(From.civID) && From.hasFort && !From.occupied))
             )
         {
-            if(To.civID == civID && !To.HasNeighboringActiveOccupiedFort(civID))
+            if((civ.atWarTogether.Contains(To.civID) || To.civID == civID || civ.subjects.Contains(To.civID) )
+                && !To.HasNeighboringActiveOccupiedFort(civID))
             {
                 return true;
             }

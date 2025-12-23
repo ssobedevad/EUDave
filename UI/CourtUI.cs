@@ -21,9 +21,16 @@ public class CourtUI : MonoBehaviour
     {
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
-        if(civ.focusCD > 0) { return; }
-        civ.focus = id;
-        civ.focusCD = 6;
+        if (civ.focusCD > 0) { return; }
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivActionRpc(civ.CivID, MultiplayerManager.CivActions.ChangeFocus, id);
+        }
+        else
+        {
+            civ.focus = id;
+            civ.focusCD = 6;
+        }
     }
     private void OnDisable()
     {
@@ -45,6 +52,7 @@ public class CourtUI : MonoBehaviour
         advisorDFire.onClick.AddListener(delegate { Fire(1); });
         advisorMFire.onClick.AddListener(delegate { Fire(2); });
         disinherit.onClick.AddListener(DisInherit);
+        abdicate.onClick.AddListener(Abdicate);
     }
     void Promote(int id)
     {
@@ -52,11 +60,18 @@ public class CourtUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         Advisor advisor = id == 0 ? civ.advisorA : id == 1 ? civ.advisorD : civ.advisorM;
         if (!advisor.active) { return; }
-        float PromoteCost = advisor.HireCost(civ) * 10f;
-        if(civ.coins >= PromoteCost)
+        float PromoteCost = advisor.HireCost(civ,1) * 2f;
+        if (civ.coins >= PromoteCost)
         {
-            civ.coins -= PromoteCost;
-            advisor.skillLevel++;
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.CivExtraActionRpc(civ.CivID, MultiplayerManager.CivExtraActions.PromoteAdvisor, id);
+            }
+            else
+            {
+                civ.coins -= PromoteCost;
+                advisor.skillLevel++;
+            }
         }
     }
     void Fire (int id)
@@ -65,8 +80,15 @@ public class CourtUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         Advisor advisor = id == 0? civ.advisorA : id == 1? civ.advisorD : civ.advisorM;
         if (!advisor.active) { return; }
-        advisor.active = false;
-        civ.RemoveAdvisor(advisor);
+        if (Game.main.isMultiplayer)
+        {
+            Game.main.multiplayerManager.CivExtraActionRpc(civ.CivID, MultiplayerManager.CivExtraActions.FireAdvisor, id);
+        }
+        else
+        {
+            advisor.active = false;
+            civ.RemoveAdvisor(advisor);
+        }
     }
     void DisInherit()
     {
@@ -74,8 +96,32 @@ public class CourtUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         if (civ.prestige >= 0 && civ.heir.active)
         {
-            civ.heir.active = false;
-            civ.AddPrestige(-50);
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.CivActionRpc(civ.CivID, MultiplayerManager.CivActions.AbdicateDisinherit, 1);
+            }
+            else
+            {
+                civ.heir.active = false;
+                civ.AddPrestige(-50);
+            }
+        }
+    }
+    void Abdicate()
+    {
+        if (Player.myPlayer.myCivID == -1) { return; }
+        Civilisation civ = Player.myPlayer.myCiv;
+        if (civ.prestige >= 0 && civ.ruler.active && civ.heir.active)
+        {          
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.CivActionRpc(civ.CivID, MultiplayerManager.CivActions.AbdicateDisinherit, 0);
+            }
+            else
+            {
+                civ.ruler.active = false;
+                civ.AddPrestige(-25);
+            }
         }
     }
     void OpenShop(int id)
@@ -152,9 +198,9 @@ public class CourtUI : MonoBehaviour
         }
         if (civ.advisorA.active)
         {
-            advisorA.text = civ.advisorA.Name + " " + civ.advisorA.age.ToString(true,true) + civ.advisorA.skillLevel + "<sprite index=1> "  + civ.advisorA.effect + " " + Modifier.ToString(civ.advisorA.effectStrength, civ.GetStat(civ.advisorA.effect), civ.advisorA.effectType == 2 || civ.advisorA.effectType == 0, civ.advisorA.effectType == 3) ;
+            advisorA.text = civ.advisorA.Name + " " + civ.advisorA.age.ToString(true,true) + civ.advisorA.skillLevel + "<sprite index=1> "  + civ.advisorA.effects.GetHoverText(civ);
             advisorAB.GetComponentsInChildren<Image>()[0].sprite = civ.advisorA.icon;
-            string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorA.HireCost(civ) * 1000f)/100f + "<sprite index=0>\n";
+            string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorA.HireCost(civ, 1) * 200f)/100f + "<sprite index=0>\n";
             hoverText += "Salary Will Increase To: " + Mathf.Round(civ.advisorA.Salary(civ, 1) * 100f) / 100f + "<sprite index=0>\n";
             advisorAUpgrade.GetComponent<HoverText>().text = hoverText;
             salaryA.text ="Salary: " + Mathf.Round(civ.advisorA.Salary(civ, 0) * 100f) / 100f + "<sprite index=0>";
@@ -168,9 +214,9 @@ public class CourtUI : MonoBehaviour
         }
         if (civ.advisorD.active)
         {
-            advisorD.text = civ.advisorD.Name + " " + civ.advisorD.age.ToString(true, true) + civ.advisorD.skillLevel + "<sprite index=2> "  + civ.advisorD.effect + " " + Modifier.ToString(civ.advisorD.effectStrength, civ.GetStat(civ.advisorD.effect),civ.advisorD.effectType == 2 || civ.advisorD.effectType == 0, civ.advisorD.effectType == 3);
+            advisorD.text = civ.advisorD.Name + " " + civ.advisorD.age.ToString(true, true) + civ.advisorD.skillLevel + "<sprite index=2> "  + civ.advisorD.effects.GetHoverText(civ);
             advisorDB.GetComponentsInChildren<Image>()[0].sprite = civ.advisorD.icon;
-            string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorD.HireCost(civ) * 1000f) / 100f + "<sprite index=0>\n";
+            string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorD.HireCost(civ, 1) * 200f) / 100f + "<sprite index=0>\n";
             hoverText += "Salary Will Increase To: " + Mathf.Round(civ.advisorD.Salary(civ, 1) * 100f) / 100f + "<sprite index=0>\n";
             advisorDUpgrade.GetComponent<HoverText>().text = hoverText;
             salaryD.text = "Salary: " + Mathf.Round(civ.advisorD.Salary(civ, 0) * 100f) / 100f + "<sprite index=0>";
@@ -184,9 +230,9 @@ public class CourtUI : MonoBehaviour
         }
         if (civ.advisorM.active)
         {
-            advisorM.text = civ.advisorM.Name + " " + civ.advisorM.age.ToString(true, true) + civ.advisorM.skillLevel + "<sprite index=3> " + civ.advisorM.effect + " " + Modifier.ToString(civ.advisorM.effectStrength, civ.GetStat(civ.advisorM.effect), civ.advisorM.effectType == 2 || civ.advisorM.effectType == 0, civ.advisorM.effectType == 3);
+            advisorM.text = civ.advisorM.Name + " " + civ.advisorM.age.ToString(true, true) + civ.advisorM.skillLevel + "<sprite index=3> " + civ.advisorM.effects.GetHoverText(civ);
             advisorMB.GetComponentsInChildren<Image>()[0].sprite = civ.advisorM.icon;
-            string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorM.HireCost(civ) * 1000f) / 100f + "<sprite index=0>\n";
+            string hoverText = "Promote this Advisor for: " + Mathf.Round(civ.advisorM.HireCost(civ, 1) * 200f) / 100f + "<sprite index=0>\n";
             hoverText += "Salary Will Increase To: " + Mathf.Round(civ.advisorM.Salary(civ, 1) * 100f) / 100f + "<sprite index=0>\n";
             advisorMUpgrade.GetComponent<HoverText>().text = hoverText;
             salaryM.text = "Salary: " + Mathf.Round(civ.advisorM.Salary(civ, 0) * 100f) / 100f + "<sprite index=0>";
@@ -223,7 +269,7 @@ public class CourtUI : MonoBehaviour
             for (int i = 0; i < advisors.Count; i++)
             {
                 Advisor advisor = advisors[i];
-                advisorList[i].GetComponentsInChildren<TextMeshProUGUI>()[0].text = advisor.age.ToString() + " "+ type+" " + advisor.skillLevel + " " + advisor.effect + " " + Modifier.ToString(advisor.effectStrength, civ.GetStat(advisor.effect), advisor.effectType == 2 || advisor.effectType == 0, advisor.effectType == 3);
+                advisorList[i].GetComponentsInChildren<TextMeshProUGUI>()[0].text = advisor.age.ToString() + " "+ type+" " + advisor.skillLevel + " " + advisor.effects.GetHoverText(civ);
                 advisorList[i].GetComponentsInChildren<TextMeshProUGUI>()[1].text = "Hire Cost: " +Mathf.Round(advisor.HireCost(civ)*100f)/100f + "<sprite index=0>. Salary: " + Mathf.Round(advisor.Salary(civ) * 100f) / 100f + "<sprite index=0> per day.";
                 advisorList[i].GetComponentsInChildren<Image>()[2].sprite = advisor.active ?advisor.icon : blank;
             }
@@ -237,7 +283,14 @@ public class CourtUI : MonoBehaviour
         List<Advisor> advisors = advisorShopType == 0 ? civ.advisorsA : advisorShopType == 1 ? civ.advisorsD : civ.advisorsM;
         if (civ.coins >= advisors[advisorID].HireCost(civ))
         {
-            civ.AssignAdvisor(advisors[advisorID]);
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.CivExtraActionRpc(civ.CivID, MultiplayerManager.CivExtraActions.AssignAdvisor, advisorShopType,advisorID);
+            }
+            else
+            {
+                civ.AssignAdvisor(advisors[advisorID]);
+            }
             advisorShopPanel.SetActive(false);
             courtPanel.SetActive(true);
         }

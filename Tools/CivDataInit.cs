@@ -14,4 +14,12 @@ public class CivDataInit
     [SerializeField] public int techLevel,startReform;
     [SerializeField] public int religion,government;
     [SerializeField] public int overlordID = -1;
+    [SerializeField] public int subjectType = -1;
+    [SerializeField] public MissionStyle missionStyle;
+    [SerializeField] public Mission[] missions;
+}
+public enum MissionStyle
+{
+    Default,
+    Custom,
 }

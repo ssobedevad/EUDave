@@ -32,15 +32,26 @@ public class SpeedController : MonoBehaviour
     void SpeedUp()
     {
         int val = Mathf.Clamp(Game.main.gameSpeed + 1, 0, 4);
-        Game.main.gameSpeed = val;
-
-
+        if (!Game.main.isMultiplayer)
+        {            
+            Game.main.gameSpeed = val;
+        }
+        else
+        {
+            Game.main.multiplayerManager.ChangeSpeedValRpc(val);
+        }
     }
 
     void SpeedDown()
     {
         int val = Mathf.Clamp(Game.main.gameSpeed - 1, 0, 4);
-        Game.main.gameSpeed = val;
-        image.sprite = sprites[val];
+        if (!Game.main.isMultiplayer)
+        {
+            Game.main.gameSpeed = val;
+        }
+        else
+        {
+            Game.main.multiplayerManager.ChangeSpeedValRpc(val);
+        }
     }
 }

@@ -87,7 +87,10 @@ public class Age
         }
         a = clone.a;
     }
-
+    public int NumDays()
+    {
+        return d + m * 30 + y * 360;
+    }
     public Age(int TenMins = 0,int Hours = 0,int Days = 0,int Months = 0, int Years = 0, bool mainTime = false)
     {
         Game.main.tenMinTick.AddListener(TenMinTick);

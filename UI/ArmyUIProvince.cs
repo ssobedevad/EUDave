@@ -153,27 +153,29 @@ public class ArmyUIProvince : MonoBehaviour
     {
         string percent = "";       
         float armysize = army.ArmySize();
+        TileData tile = army.tile;
         if (army.civID > -1)
         {
-            Civilisation civ = Game.main.civs[army.civID];
-            foreach (var aot in army.tile.armiesOnTile)
+            Civilisation civ = Game.main.civs[army.civID];           
+            foreach (var aot in tile.armiesOnTile)
             {
                 if (civ.atWarTogether.Contains(aot.civID) && aot != army)
                 {
                     armysize += aot.ArmySize();
                 }
             }
-            if (civ.atWarWith.Contains(army.tile.civID))
+            if (civ.atWarWith.Contains(tile.civID))
             {
                 percent += "Base: 1%\n";
-                percent += army.tile.fortLevel > 0 ? "From Fort Level: " + army.tile.fortLevel + "%\n" : "";
-                percent += army.tile.localAttritionForEnemies.v > 0? "From Local Bonuses: " + army.tile.localAttritionForEnemies.v + "%\n" : "";
-                percent += army.tile.civ.attritionForEnemies.v > 0 ? "From Global Bonuses: " + army.tile.civ.attritionForEnemies.v + "%\n" : "";
+                percent += tile.fortLevel > 0 ? "From Fort Level: " + tile.fortLevel + "%\n" : "";
+                percent += tile.localAttritionForEnemies.v > 0? "From Local Bonuses: " + tile.localAttritionForEnemies.v + "%\n" : "";
+                percent += tile.civ.attritionForEnemies.v > 0 ? "From Global Bonuses: " + tile.civ.attritionForEnemies.v + "%\n" : "";
             }            
         }
-        if (armysize / 1000f > army.tile.supplyLimit)
+        int supplyLimit = tile.supplyLimit;
+        if (armysize / 1000f > supplyLimit)
         {
-            percent += "From Supply: " + Mathf.Round(100f * Mathf.Clamp((armysize / 1000f - army.tile.supplyLimit) * (10f / ((float)army.tile.supplyLimit)), 0f, 5f)) / 100f + "%\n";
+            percent += "From Supply: " + Mathf.Round(100f * Mathf.Clamp((armysize / 1000f - supplyLimit) * (10f / ((float)supplyLimit)), 0f, 5f)) / 100f + "%\n";
         }
         if(army.civID > -1) 
         { Civilisation civ = Game.main.civs[army.civID]; percent += "Multiplied By: " + Mathf.Round(100f * (1f + civ.landAttrition.v)) + "%"; }

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using Unity.Burst.Intrinsics;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,7 +23,14 @@ public class GeneralSelectorUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         if (civ.milPower >= 50)
         {
-            civ.milPower -= 50;
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.CivActionRpc(civ.CivID, MultiplayerManager.CivActions.SpendMil, 50);
+            }
+            else
+            {
+                civ.milPower -= 50;
+            }
             civ.BuyGeneral();
         }
     }
@@ -36,7 +44,6 @@ public class GeneralSelectorUI : MonoBehaviour
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
         List<General> generals = civ.generals.ToList();
-        generals.RemoveAll(i => !i.active);
         while (generalList.Count != generals.Count)
         {
             if (generalList.Count > generals.Count)
@@ -60,7 +67,7 @@ public class GeneralSelectorUI : MonoBehaviour
             Image[] images = generalList[i].GetComponentsInChildren<Image>();
             TextMeshProUGUI[] texts = generalList[i].GetComponentsInChildren<TextMeshProUGUI>();
 
-            texts[0].text = general.name + " - " + general.meleeSkill + " " + general.flankingSkill + " " + general.rangedSkill + " " + general.siegeSkill + " " + general.maneuverSkill;
+            texts[0].text = general.name + " - " + general.combatSkill + " " + general.siegeSkill + " " + general.maneuverSkill;
         }
     }
     void SelectGeneral(int id)
@@ -68,8 +75,16 @@ public class GeneralSelectorUI : MonoBehaviour
         if (Player.myPlayer.myCivID == -1) { return; }
         Civilisation civ = Player.myPlayer.myCiv;
         List<General> generals = civ.generals.ToList();
-        generals.RemoveAll(i => !i.active);
-        Player.myPlayer.selectedArmies[0].AssignGeneral(generals[id]);
+        if (Game.main.isMultiplayer)
+        {
+            Army selected = Player.myPlayer.selectedArmies[0];
+            TileData data = selected.tile;
+            selected.GetComponent<NetworkArmy>().EquipGeneralRpc(id);
+        }
+        else
+        {
+            Player.myPlayer.selectedArmies[0].AssignGeneral(generals[id]);
+        }
         CloseMenu();
     }
 }

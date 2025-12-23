@@ -16,7 +16,17 @@ public class PlayerCTAUI : MonoBehaviour
     void Accept()
     {
         if(Player.myPlayer.myCivID == -1) { return; }
-        war.JoinWar(Player.myPlayer.myCiv, joinAsAttackerAlly);
+        if (Game.main.isMultiplayer)
+        {
+            if (war.networkWar != null)
+            {
+                war.networkWar.JoinWarRpc(Player.myPlayer.myCivID,joinAsAttackerAlly);
+            }
+        }
+        else
+        {
+            war.JoinWar(Player.myPlayer.myCiv, joinAsAttackerAlly);
+        }
         Destroy(gameObject);
     }
     void Decline()

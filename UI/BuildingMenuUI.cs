@@ -25,11 +25,25 @@ public class BuildingMenuUI : MonoBehaviour
         Civilisation civ = Player.myPlayer.myCiv;
         if (!tile.buildings.Contains(id) && !tile.buildQueue.Contains(id) && (tile.civ == civ  || tile.civ.overlordID == civ.CivID))
         {
-            tile.StartBuilding(id,civ.CivID);
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.Build, id);
+            }
+            else
+            {
+                tile.StartBuilding(id, civ.CivID);
+            }
         }
         else if (tile.buildings.Contains(id))
         {
-            tile.RemoveBuilding(id);
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.TileActionRpc(tile.pos, MultiplayerManager.TileActions.RemoveBuilding, id);
+            }
+            else
+            {
+                tile.RemoveBuilding(id);
+            }
         }
     }
     private void OnGUI()

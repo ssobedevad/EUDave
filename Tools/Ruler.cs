@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using Unity.Netcode;
 using UnityEngine;
 
 [Serializable]
@@ -67,7 +67,7 @@ public class Ruler
         string name = GenerateName(dynastyId == -1 ? civ : Game.main.civs[dynastyId]);
         return new Ruler(Mathf.Max(0,admin + BonusAdminSkill), Mathf.Max(0, diplo +BonusDiploSkill), Mathf.Max(0, mil +BonusMilSkill),Age.zero, CivID, name);
     }
-    static string GenerateName(Civilisation civ)
+    public static string GenerateName(Civilisation civ)
     {
         string name = "";
         name += civ.government == 0 ? "King " : civ.government == 1 ? "Baron " : civ.government == 2 ? "Grand General " : civ.government == 3 ? "Tribal Leader " : "Holy Leader ";
@@ -90,27 +90,60 @@ public class Ruler
     }
     void CheckDeath()
     {
+        if (Game.main.isMultiplayer && !NetworkManager.Singleton.IsServer) { return; }
         if (age.y > 0)
         {
             if (UnityEngine.Random.Range(0f, 1000f) < (float)age.m/12f + age.y)
             {
-                Kill();
+                if (Game.main.isMultiplayer)
+                {
+                    if (civID > -1 && Game.main.civs[civID].ruler == this)
+                    {
+                        Game.main.multiplayerManager.CivActionRpc(civID, MultiplayerManager.CivActions.RulerDeath, 0);
+                    }
+                    else if (civID > -1 && Game.main.civs[civID].heir == this)
+                    {
+                        Game.main.multiplayerManager.CivActionRpc(civID, MultiplayerManager.CivActions.RulerDeath, 1);
+                    }
+                }
+                else
+                {
+                    Kill();
+                }
             }
         }
         if(traits.Count < Mathf.Min(3, age.y + 1))
         {
-            AddTrait();
+            if (Game.main.isMultiplayer)
+            {
+                if (civID > -1 && Game.main.civs[civID].ruler == this)
+                {
+                    Game.main.multiplayerManager.CivActionRpc(civID, MultiplayerManager.CivActions.RulerTrait, GetTrait());
+                }
+                else if (civID > -1 && Game.main.civs[civID].heir == this)
+                {
+                    Game.main.multiplayerManager.CivActionRpc(civID, MultiplayerManager.CivActions.HeirTrait, GetTrait());
+                }
+            }
+            else
+            {
+                AddTrait(GetTrait());
+            }
         }
     }
-    void AddTrait()
+    public int GetTrait()
     {
         List<WeightedChoice> traitList = new List<WeightedChoice>();
         for (int i = 0; i < Map.main.rulerTraits.Length; i++)
         {
             Trait rulerTrait = Map.main.rulerTraits[i];
-            traitList.Add(new WeightedChoice(i, traits.Exists(i=>i.name == rulerTrait.name) ? 0 : 10));
+            traitList.Add(new WeightedChoice(i, traits.Exists(i => i.name == rulerTrait.name) ? 0 : 10));
         }
-        Trait chosen = Map.main.rulerTraits[WeightedChoiceManager.getChoice(traitList).choiceID];
+        return WeightedChoiceManager.getChoice(traitList).choiceID;
+    }
+    public void AddTrait(int trait)
+    {       
+        Trait chosen = Map.main.rulerTraits[trait];
         traits.Add(chosen);
         if(civID > -1 && Game.main.civs[civID].ruler == this)
         {

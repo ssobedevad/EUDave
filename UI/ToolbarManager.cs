@@ -12,6 +12,7 @@ public class ToolbarManager : MonoBehaviour
     [SerializeField] TextMeshProUGUI civName;
     [SerializeField] TextMeshProUGUI coins, manpower, admin, diplo, mil;
     [SerializeField] TextMeshProUGUI prestige,stability,government;
+    [SerializeField] TextMeshProUGUI missionaries, diplomats;
     [SerializeField] TextMeshProUGUI Age;
     [SerializeField] Button openCivMenu;
 
@@ -23,6 +24,7 @@ public class ToolbarManager : MonoBehaviour
     void OpenCivMenu()
     {
         UIManager.main.CivUI.SetActive(!UIManager.main.CivUI.activeSelf);
+        UIManager.main.CivUI.GetComponent<CivUIPanel>().OpenMenu(0);
         Map.main.tileMapManager.DeselectTile();
         Player.myPlayer.selectedArmies.Clear();
         
@@ -123,6 +125,10 @@ public class ToolbarManager : MonoBehaviour
             hoverText += (civ.prestige >= 0 ? "<#00ff00>" : "<#ff0000>") + "Tax Efficiency: " +(civ.prestige >= 0? "+" : "")+ Mathf.Round(civ.prestige * 0.1f) + "%\n";
             hoverText += "Morale: " + (civ.prestige >= 0 ? "+" : "") + Mathf.Round(civ.prestige * 0.1f) + "%\n";
             hoverText += "Population Growth: " + (civ.prestige >= 0 ? "+" : "") + Mathf.Round(civ.prestige * 0.1f) + "%\n";
+            hoverText += "Tax Efficiency: " + (civ.prestige >= 0 ? "+" : "") + Mathf.Round(civ.prestige * 0.1f) + "%\n";
+            hoverText += "Improve Relations: " + (civ.prestige >= 0 ? "+" : "") + Mathf.Round(civ.prestige * 0.1f) + "%\n";
+            hoverText += "Aggressive Expansion Impact: " + (civ.prestige >= 0 ? "" : "+") + Mathf.Round(civ.prestige * -0.1f) + "%\n";
+
             prestige.GetComponent<HoverText>().text = hoverText;
             prestige.text = Mathf.Round(civ.prestige) + "<sprite index=0>";
             hoverText = "Stability: " + Mathf.Round(civ.stability * 100f) / 100f + "<sprite index=6>\n\n";            
@@ -141,6 +147,48 @@ public class ToolbarManager : MonoBehaviour
             stability.GetComponent<HoverText>().text = hoverText;
             stability.text = Mathf.Round(civ.stability) + "<sprite index=6>";
             government.text = Mathf.Round(civ.governmentPower) + "<sprite index=0>";
+            missionaries.text = civ.avaliableMissionaries + "/" + (int)civ.maximumMissionaries.v + " <sprite index=10>";
+            hoverText = "Missionaries:\n\n";
+            foreach(var missionary in civ.deployedMissionaries)
+            {
+                TileData tile = Map.main.GetTile(missionary);
+                hoverText += tile.Name + ": " + Mathf.Round(tile.conversionProgress * 100f) + "%\n";
+            }
+            for(int i = 0; i < civ.avaliableMissionaries;i++)
+            {
+                hoverText +="Idle\n";
+            }
+            missionaries.GetComponent<HoverText>().text = hoverText;
+            diplomats.text = civ.avaliableDiplomats + "/" + (int)civ.maximumDiplomats.v + " <sprite index=2>";
+            hoverText = "Diplomats:\n\n";
+            foreach (var diplomat in civ.deployedDiplomats)
+            {
+                if (diplomat.Action == DiplomatAction.Travelling)
+                {
+                    hoverText += "Travelling: " +diplomat.Distance+ " days remaining\n";
+                }
+                else if (diplomat.Action == DiplomatAction.Establishing && Player.myPlayer.myCivID > -1)
+                {
+                    float relations = 0;
+                    Civilisation target = Game.main.civs[diplomat.targetCivId];
+                    if (target.opinionOfThem[Player.myPlayer.myCivID].ms.Exists(i => i.n == "Improved Relations"))
+                    {
+                        relations = target.opinionOfThem[Player.myPlayer.myCivID].ms.Find(i => i.n == "Improved Relations").v;
+                    }
+                    hoverText += "Improving With: " + target.civName + " ("+Mathf.Round(relations)+")\n";
+                }
+                else if (diplomat.Action == DiplomatAction.Spying && Player.myPlayer.myCivID > -1)
+                {
+                    Civilisation target = Game.main.civs[diplomat.targetCivId];
+                    float spyNet = Player.myPlayer.myCiv.spyNetwork[diplomat.targetCivId];
+                    hoverText += "Spying On:" + target.civName + " (" + Mathf.Round(spyNet) + ")\n";
+                }
+            }
+            for (int i = 0; i < civ.avaliableDiplomats; i++)
+            {
+                hoverText += "Idle\n";
+            }
+            diplomats.GetComponent<HoverText>().text = hoverText;
         }
     }
 }

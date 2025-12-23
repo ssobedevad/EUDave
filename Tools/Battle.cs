@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 public class Battle
@@ -29,6 +30,7 @@ public class Battle
     public bool active = false;
     public int battleLength;
     public int attackPhases;
+    public NetworkBattle networkBattle;
     BattleUI bui;
 
     public static int GetEstimatedBattleLength(float attackerStrength,float defenderStrength)
@@ -99,7 +101,6 @@ public class Battle
         }
         attackingFrontLine = new BattleLine((int)attackerCiv.combatWidth.v);
         defendingFrontLine = new BattleLine((int)defenderCiv.combatWidth.v );
-        PhaseTick();
         attackingArmies.Add(attacker);
         attackerCount += (int)attacker.ArmySize();
         defendingArmies.Add(defender);
@@ -154,42 +155,74 @@ public class Battle
             army.EnterBattle();
             CheckGeneral(false, army);
         }
+        if(Game.main.isMultiplayer && networkBattle != null)
+        {
+            networkBattle.SendBattleDataRpc();
+        }
     }
-    void BattleEnd(bool attackerWin = true, bool wipe = false)
+    public void DoBattleEnd(bool attackerWin = true, bool wipe = false,int winnerCasualties = -1, int loserCasualties = -1)
     {
+        int winnerCasualtiesReal = attackerWin ? attackerCasualties : defenderCasualties;
+        int loserCasualtiesReal = attackerWin ? defenderCasualties : attackerCasualties;
+        if(winnerCasualties > winnerCasualtiesReal || loserCasualties > loserCasualtiesReal)
+        {
+            HourTick();
+        }
         UIManager.main.WorldSpaceUI.Remove(bui.gameObject);
         Civilisation winnerCiv = attackerWin ? attackerCiv : defenderCiv;
         Civilisation loserCiv = attackerWin ? defenderCiv : attackerCiv;       
-        int winnerCasualties = attackerWin ? attackerCasualties : defenderCasualties;
-        int loserCasualties = attackerWin ? defenderCasualties : attackerCasualties;        
         List<Army> winners = attackerWin ? attackingArmies : defendingArmies;
         List<Army> losers = attackerWin ? defendingArmies : attackingArmies;
-        foreach (var winner in winners)
+        if (!Game.main.isMultiplayer || NetworkManager.Singleton.IsServer)
         {
-            winner.ExitBattle();
-            winner.WinBattleMorale();
-        }
-        if (!wipe)
-        {
-            foreach (var loser in losers)
+            foreach (var winner in winners)
             {
-                loser.ExitBattle();
-                if (loser != null)
+                if (winner != null)
                 {
-                    loser.SetRetreat(loser.RetreatProvince());
+                    winner.WinBattleMorale();
+                    winner.ExitBattle();
+                }
+            }
+            if (!wipe)
+            {
+                foreach (var loser in losers)
+                {
+                    if (loser != null)
+                    {
+                        loser.SetRetreat(loser.RetreatProvince());
+                        loser.ExitBattle();
+                    }
+                }
+            }
+            else
+            {
+                foreach (var loser in losers)
+                {
+                    if (loser != null)
+                    {
+                        if (Game.main.isMultiplayer)
+                        {
+                            loser.GetComponent<NetworkArmy>().ExitEnterRpc(false, loser.pos);
+                        }
+                        else
+                        {
+                            loser.OnExitTile(loser.tile);
+                        }
+                        loser.ExitBattle();
+                        GameObject.Destroy(loser.gameObject);
+                    }
                 }
             }
         }
-
-        winnerCiv.AddPrestige(Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) *(1f + winnerCiv.battlePrestige.v));
-        winnerCiv.AddArmyTradition(Mathf.Min((winnerCasualties + 1f) / (winnerCiv.forceLimit.v * 1000f + 1f) * 12f , 5f) * (1f + winnerCiv.battleTraditon.v));
+        winnerCiv.AddPrestige(Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) * (1f + winnerCiv.battlePrestige.v));
+        winnerCiv.AddArmyTradition(Mathf.Min((winnerCasualties + 1f) / (winnerCiv.forceLimit.v * 1000f + 1f) * 12f, 5f) * (1f + winnerCiv.battleTraditon.v));
         loserCiv.AddPrestige(-Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f), 2f) / 2f);
         loserCiv.AddArmyTradition(Mathf.Min((loserCasualties + 1f) / (loserCiv.forceLimit.v * 1000f + 1f) * 12f, 2f) * (1f + loserCiv.battleTraditon.v));
-        
+
         if (WarID > -1)
         {
-            float warScore = Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f) * 6f,10f);   
-            if(winnerCiv == Game.main.ongoingWars[WarID].defenderCiv) { warScore *= -1f; }
+            float warScore = Mathf.Min((loserCasualties + 1f) / (winnerCasualties + 1f) * 6f, 10f);
+            if (winnerCiv == Game.main.ongoingWars[WarID].defenderCiv) { warScore *= -1f; }
             UpdateWar(warScore);
         }
         Game.main.ongoingBattles.Remove(this);
@@ -200,14 +233,30 @@ public class Battle
             UIManager.main.UI.Add(brui.gameObject);
             string attackerName = attackerCiv.civName;
             string defenderName = defenderCiv.civName;
-            bool win = attackerWin ? ( Player.myPlayer.myCivID == winnerCiv.CivID) : (Player.myPlayer.myCivID == winnerCiv.CivID);
-            brui.SetUpText(win? "Victory at " + tile.Name : "Defeat at " + tile.Name ,attackerName, defenderName, attackerCount, defenderCount, attackerCasualties, defenderCasualties, pos);
+            bool win = attackerWin ? (Player.myPlayer.myCivID == winnerCiv.CivID) : (Player.myPlayer.myCivID == winnerCiv.CivID);
+            brui.SetUpText(win ? "Victory at " + tile.Name : "Defeat at " + tile.Name, attackerName, defenderName, attackerCount, defenderCount, attackerCasualties, defenderCasualties, pos);
         }
         if (Map.main.GetTile(pos)._battle == this)
         {
             Map.main.GetTile(pos)._battle = null;
         }
         active = false;
+    }
+    void BattleEnd(bool attackerWin = true, bool wipe = false)
+    {
+        int winnerCasualties = attackerWin ? attackerCasualties : defenderCasualties;
+        int loserCasualties = attackerWin ? defenderCasualties : attackerCasualties;
+        if (Game.main.isMultiplayer)
+        {
+            if (NetworkManager.Singleton.IsServer && networkBattle != null)
+            {
+                networkBattle.EndBattleRpc(attackerWin, wipe, winnerCasualties, loserCasualties);
+            }
+        }
+        else
+        {
+            DoBattleEnd(attackerWin, wipe, winnerCasualties, loserCasualties);
+        }
     }
     void UpdateWar(float warScoreForAttacker)
     {
@@ -218,14 +267,13 @@ public class Battle
         float morale = AverageMorale(attacker);
         int sideA = GetSideSize(attacker);
         int sideB = GetSideSize(!attacker);
-        if (morale <= 0.5 || sideB >= sideA * 10)
+        if (morale < 0.51 || sideB >= sideA * 10)
         {
             List<Army> losers = attacker ? attackingArmies : defendingArmies;
             foreach (var loser in losers)
             {
                 if (loser != null)
                 {
-                    loser.OnExitTile();
                     if (attacker)
                     {
                         attackerCasualties += (int)loser.ArmySize();
@@ -234,7 +282,6 @@ public class Battle
                     {
                         defenderCasualties += (int)loser.ArmySize();
                     }
-                    GameObject.Destroy(loser.gameObject);
                 }
             }
             BattleEnd(!attacker, true);
@@ -262,17 +309,17 @@ public class Battle
             List<Army> losers = attacker ? attackingArmies : defendingArmies;
             foreach (var loser in losers)
             {
-                loser.OnExitTile();
-                if (attacker)
+                if (loser != null)
                 {
-                    attackerCasualties += (int)loser.ArmySize();
-                }
-                else
-                {
-                    defenderCasualties += (int)loser.ArmySize();
-                }
-                GameObject.Destroy(loser.gameObject);    
-                
+                    if (attacker)
+                    {
+                        attackerCasualties += (int)loser.ArmySize();
+                    }
+                    else
+                    {
+                        defenderCasualties += (int)loser.ArmySize();
+                    }
+                }                  
             }
             BattleEnd(!attacker, true);
             return true;
@@ -296,7 +343,7 @@ public class Battle
     {
         if (attackingFrontLine == null) { return; }
         battleLength++;
-        if(battleLength % 3 == 0)
+        if(battleLength % 3 == 1)
         {
             PhaseTick();
         }
@@ -328,6 +375,10 @@ public class Battle
         defenderCasualties += dCasualties;
         UIManager.main.NewCombatText("-" + aCasualties, tile.worldPos() + new Vector3(-0.5f,-0.5f), 2f, true);
         UIManager.main.NewCombatText("-" + dCasualties, tile.worldPos() + new Vector3(0.5f, -0.5f), 2f, true);
+        if(Player.myPlayer.selectedBattle == this)
+        {
+            Debug.Log("Casualties: " + aCasualties + " " + dCasualties + " Battle Length: " + battleLength + " battlePhase: " + attackPhases);
+        }
         if (attackPhases < 4)
         {
             if (CheckWipe(false)) { return; }
@@ -383,8 +434,21 @@ public class Battle
     }
     public void PhaseTick()
     {
-        attackerDiceRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
-        defenderDiceRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+        if (!active) { return; }
+        if (Game.main.isMultiplayer)
+        {
+            if (NetworkManager.Singleton.IsServer && networkBattle != null)
+            {
+                int attackerRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+                int defendingRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+                networkBattle.BattleDiceRollRpc(attackerRoll, defendingRoll);
+            }
+        }
+        else
+        {
+            attackerDiceRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+            defenderDiceRoll = WeightedChoiceManager.getChoice(diceRolls).choiceID;
+        }
         attackPhases++;
     }
     int AttackerAttack()
@@ -397,20 +461,17 @@ public class Battle
                 Regiment attacker = attackingFrontLine.regiments[i];
                 float tactics = defenderCiv.militaryTactics.v * defenderCiv.discipline.v;
                 float discipline = attackerCiv.discipline.v;
-                float combatAbility = attackerCiv.units[attacker.type].combatAbility.v;
-                float baseDamage = attackerCiv.units[attacker.type].meleeDamage.v;
-                float flankDamage = attackerCiv.units[attacker.type].flankingDamage.v;
+                float baseDamage = attackerCiv.units[attacker.type].baseDamage.v;
                 int flankingRange = attackerCiv.units[attacker.type].flankingRange; 
                 int target = FindTarget(defendingFrontLine, i, flankingRange, attacker.type == 1);
                 if (target > -1)
                 {
                     int generalBonus = 0;
-                    if (attackerGeneral != null &&attackerGeneral.active) { generalBonus = (target != i) ? attackerGeneral.flankingSkill : attackerGeneral.meleeSkill; }
-                    if (target != i) { baseDamage = flankDamage; }
+                    if (attackerGeneral != null && attackerGeneral.active) { generalBonus = attackerGeneral.combatSkill; }
                     Regiment defender = defendingFrontLine.regiments[target];
                     if (defender.size > 0 && defender.type > -1)
                     {
-                        float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline, combatAbility: combatAbility);
+                        float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline);
                         float damage = BaseCasualties(attackerDiceRoll + generalBonus, AttackerDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(true));
                         casualties += (int)damage;
@@ -429,20 +490,17 @@ public class Battle
                 Regiment attacker = attackingBackLine.regiments[i];
                 float tactics = defenderCiv.militaryTactics.v * defenderCiv.discipline.v;
                 float discipline = attackerCiv.discipline.v;
-                float combatAbility = attackerCiv.units[attacker.type].combatAbility.v;
-                float baseDamage = attackerCiv.units[attacker.type].rangedDamage.v;
-                float flankDamage = attackerCiv.units[attacker.type].flankingDamage.v;
+                float baseDamage = attackerCiv.units[attacker.type].baseDamage.v;
                 int flankingRange = attackerCiv.units[attacker.type].flankingRange;
                 int target = FindTarget(defendingFrontLine, i, flankingRange,false);
                 if (target > -1)
                 {
                     int generalBonus = 0;
-                    if (attackerGeneral != null && attackerGeneral.active) { generalBonus = (target != i)? attackerGeneral.flankingSkill: attackerGeneral.rangedSkill; }
-                    if (target != i) { baseDamage = flankDamage; }
+                    if (attackerGeneral != null && attackerGeneral.active) { generalBonus = attackerGeneral.combatSkill; }
                     Regiment defender = defendingFrontLine.regiments[target];
                     if (defender.size > 0 && defender.type > -1)
                     {
-                        float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline, combatAbility: combatAbility);
+                        float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline);
                         float damage = BaseCasualties(attackerDiceRoll+ generalBonus, AttackerDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(true));
                         casualties += (int)damage;
@@ -502,20 +560,17 @@ public class Battle
                 Regiment attacker = DefendingLineClone.regiments[i];
                 float tactics = attackerCiv.militaryTactics.v * attackerCiv.discipline.v;
                 float discipline = defenderCiv.discipline.v;
-                float combatAbility = defenderCiv.units[attacker.type].combatAbility.v;
-                float baseDamage = defenderCiv.units[attacker.type].meleeDamage.v;
-                float flankDamage = defenderCiv.units[attacker.type].flankingDamage.v;
+                float baseDamage = attackerCiv.units[attacker.type].baseDamage.v;
                 int flankingRange = defenderCiv.units[attacker.type].flankingRange;               
                 int target = FindTarget(attackingFrontLine, i, flankingRange, attacker.type == 1);
                 if (target > -1)
                 {
                     int generalBonus = 0;
-                    if (defenderGeneral != null && defenderGeneral.active) { generalBonus = (target != i) ? defenderGeneral.flankingSkill : defenderGeneral.meleeSkill; }
-                    if (target != i) { baseDamage = flankDamage; }
+                    if (defenderGeneral != null && defenderGeneral.active) { generalBonus = defenderGeneral.combatSkill; }
                     Regiment defender = attackingFrontLine.regiments[target];
                     if (defender.size > 0 && defender.type > -1)
                     {
-                        float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline, combatAbility: combatAbility);
+                        float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline);
                         float damage = BaseCasualties(defenderDiceRoll + generalBonus, DefenderDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(false));
                         casualties += (int)damage;
@@ -535,20 +590,17 @@ public class Battle
                 Regiment attacker = defendingBackLine.regiments[i];
                 float tactics = attackerCiv.militaryTactics.v * attackerCiv.discipline.v;
                 float discipline = defenderCiv.discipline.v;
-                float combatAbility = defenderCiv.units[attacker.type].combatAbility.v;
-                float baseDamage = defenderCiv.units[attacker.type].rangedDamage.v;
-                float flankDamage = defenderCiv.units[attacker.type].flankingDamage.v;
+                float baseDamage = attackerCiv.units[attacker.type].baseDamage.v;
                 int flankingRange = defenderCiv.units[attacker.type].flankingRange;
                 int target = FindTarget(attackingFrontLine, i, flankingRange, false);
                 if (target > -1)
                 {
                     int generalBonus = 0;
-                    if (defenderGeneral != null && defenderGeneral.active) { generalBonus = (target != i) ? defenderGeneral.flankingSkill : defenderGeneral.rangedSkill; }
-                    if (target != i) { baseDamage = flankDamage;}
+                    if (defenderGeneral != null && defenderGeneral.active) { generalBonus = defenderGeneral.combatSkill; }
                     Regiment defender = attackingFrontLine.regiments[target];
                     if (defender.size > 0 && defender.type > -1)
                     {
-                        float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline, combatAbility: combatAbility);
+                        float modifiers = Modifiers(attacker.size, battleLength, tactics, baseDamage, discipline: discipline);
                         float damage = BaseCasualties(defenderDiceRoll + generalBonus, DefenderDiceRollBonus()) * modifiers;
                         defender.TakeCasualties((int)damage, AverageMaxMorale(false));
                         casualties += (int)damage;
@@ -567,9 +619,9 @@ public class Battle
     {
         return 15 + 5 * (diceRoll + diceRollBonus + terrain);
     }
-    public float Modifiers(int strength, int BattleLength,float milTactics, float baseDamage, float combatAbility = 0, float discipline = 1f)
+    public float Modifiers(int strength, int BattleLength,float milTactics, float baseDamage,  float discipline = 1f)
     {
-        return (float)strength / 1000f * baseDamage/milTactics * (1f + combatAbility) * (discipline) * (1f + (float)BattleLength / 100f);
+        return (float)strength / 1000f * baseDamage/milTactics * (discipline) * (1f + (float)BattleLength / 100f);
     }
     public float AverageMaxMorale(bool attacker)
     {

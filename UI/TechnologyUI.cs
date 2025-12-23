@@ -269,10 +269,17 @@ public class TechnologyUI : MonoBehaviour
         int amount = GetTechCost(tech, civ);
         if (resource >= amount)
         {
-            tech.TakeTech(civ.CivID);
-            if (id == 0) { civ.adminPower -= amount; civ.adminTech++; }
-            else if (id == 1) { civ.diploPower -= amount; civ.diploTech++; }
-            else if (id == 2) { civ.milPower -= amount;civ.milTech++; }
+            if (Game.main.isMultiplayer)
+            {
+                Game.main.multiplayerManager.CivActionRpc(civ.CivID, MultiplayerManager.CivActions.BuyTech, id);
+            }
+            else
+            {
+                tech.TakeTech(civ.CivID);
+                if (id == 0) { civ.adminPower -= amount; civ.adminTech++; }
+                else if (id == 1) { civ.diploPower -= amount; civ.diploTech++; }
+                else if (id == 2) { civ.milPower -= amount; civ.milTech++; }
+            }
         }
     }
 }

@@ -48,8 +48,8 @@ using UnityEngine;
         attackerGeneral = battle.attackerGeneral;
         defenderGeneral = battle.defenderGeneral;
 
-        attackingFleets = battle.attackingArmies.ConvertAll(i => new SaveGameFleet(i));
-        defendingFleets = battle.defendingArmies.ConvertAll(i => new SaveGameFleet(i));
+        attackingFleets = battle.attackingFleets.ConvertAll(i => new SaveGameFleet(i));
+        defendingFleets = battle.defendingFleets.ConvertAll(i => new SaveGameFleet(i));
 
         attackingReserves = battle.attackingReserves;
         attackingRetreated = battle.attackingRetreated;
@@ -79,8 +79,8 @@ using UnityEngine;
         battle.attackerGeneral = attackerGeneral;
         battle.defenderGeneral = defenderGeneral;
 
-        battle.attackingArmies = attackingFleets.ConvertAll(i => i.NewFleet());
-        battle.defendingArmies = defendingFleets.ConvertAll(i => i.NewFleet());
+        battle.attackingFleets = attackingFleets.ConvertAll(i => i.NewFleet());
+        battle.defendingFleets = defendingFleets.ConvertAll(i => i.NewFleet());
 
         battle.attackingReserves = attackingReserves;
         battle.attackingRetreated = attackingRetreated;

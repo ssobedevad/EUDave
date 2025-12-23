@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 
 public static class Pathfinding
@@ -51,7 +52,17 @@ public static class Pathfinding
                         {
                             if (tile.civID > -1 && tile.civ.AccessOffer(civ) && !civ.isPlayer && civ.atWarWith.Count > 0 && civ.diplomaticCapacity < civ.diplomaticCapacityMax.v)
                             {
-                                civ.AccessRequest(tile.civID);
+                                if (Game.main.isMultiplayer)
+                                {
+                                    if (NetworkManager.Singleton.IsServer)
+                                    {
+                                        Game.main.multiplayerManager.CivRequestAccessRpc(civ.CivID, tile.civID);
+                                    }
+                                }
+                                else
+                                {
+                                    civ.AccessRequest(tile.civID);
+                                }
                             }
                             else
                             {
