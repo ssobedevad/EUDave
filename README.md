@@ -27,13 +27,13 @@ https://www.youtube.com/playlist?list=PLUTKysaxBObL_jExx7FeMu5fOiSNh7C6f
 
 The Game is written for unity.
 
-You can either download from itch.io:
+You can either download from itch.io: (Most Up To Date Version)
 
 https://dave2923.itch.io/funny-map-game
 
 or
 
-Download a zip file of the project at https://github.com/ssobedevad/EUDave-Builds
+Download a zip file of the project at https://github.com/ssobedevad/EUDave-Builds 
 
 <img width="911" height="430" alt="image" src="https://github.com/user-attachments/assets/2317ab54-3bd1-4f79-86f3-c2b820bec273" />
 
@@ -189,6 +189,17 @@ There are no units in the back row as there are no ranged units in this combat.
 
 ### Asynchronous Saving and Loading
 The Game has a lot of data associated with it and due to it's chaotic nature it cannot be recreated with a small amount of data. This mean that I had save files of around 600-700Mb to serialize and deserialize which took about a minute initally. I found a very well documented C# Package called messagepack which allowed me to cut down the size to ~180Mb and the speed down to a few seconds. However, the game still became unresponsive during this time and this lead me to research asynchronous tasks. As the creation of the data could easily happen in 1 frame the serialization could be placed in an asynchronous task and then this would let me display a loading screen and maintain functionality in the game while waiting for the task to complete. The same was applied to deserialization and this creates a very smooth save file loading that was necessary to allow for minially invasive autosaving in the game.
+
+### Multiplayer and Networking
+Multiplayer is difficult for games that have this much constantly changing data.
+
+Initially I wanted to keep the majority of the logic running on all machines and just send accross inputs from the players, this works in theory but desynchronises very easily as with a few delays there can be different decisions made by the AI on both ends. Then, to try to eliminate this I synchronised all armies and navies as Netobjects which spawns them on both clients and stores them in a synchronised array allowing you to reference the same object on both devices. This allowed me to keep combat the same which was the majority of the visible desync problems, then a similar process was used for battles and wars, all of these involved sending a data package from the creator using the savegame functions I already created allowing me to recreate the object exactly the same on the other end. I then removed all of the AI controller logic from running on any clients and then sent any 'inputs' from the server to the clients and then treated the player inputs in the same manner when being sent back to the server.
+
+For connecting the devices I used unity free multiplayer services lobby and relay, lobby allows you to create game sessions and have people query and join them and then relay handles the transfer of data between devices using a relay server which prevents the need for port forwarding. 
+
+### Creating a Query Task for Missions and Rewards
+In order to be able to set goals you have to be able to create a way to check if certain requirements are met. The way I do this is by creating a class that handles a Query that contains a function to check if it met and a function to return a generated human readable description of the condition. Each query consists of a name and enum for the query type and then a set of data (int,float,string) as well as a boolean for whether the condition is inverted. For checking locations I made a very similar class for handling that that can be used by the general query for certain query types. In order to create layered queries I created a struct that contains enough data to recreate a query from it without becoming recursive this also allows me to use load relative data from the master query, such as stats about that specific country, into the sub queries and this allows you to query almost any situation that you would want to check. This is such an important feature as to get an immersive mission system it requires variety as well as more unique goals that encourage the player to make certain decisions.  
+
 ## References
 RedBlobGames Hexagonal Grids https://www.redblobgames.com/grids/hexagons/
 
